@@ -25,3 +25,16 @@ export type {
   ConsoleTab,
   IdeStore,
 } from "./ide";
+
+export type {
+  AccessTable,
+  AccessColumn,
+  ZohoForm,
+  ZohoField,
+  FieldMapping,
+  TableMapping,
+  ValidationResult,
+  ValidationDetail,
+  UploadState,
+  DatabaseStore,
+} from "./database";
