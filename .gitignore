@@ -24,5 +24,8 @@ config/zoho-api.yaml
 # Node
 node_modules/
 
+# Web build output
+web/dist/
+
 # Worktrees
 .worktrees/

@@ -6,6 +6,17 @@ Deluge scripts and `.ds` exports — with zero external dependencies.
 Tidally locked to the Zoho/Deluge ecosystem. Built for teams that treat
 Creator apps as code, not click-ops.
 
+## ForgeDS IDE
+
+**[Launch ForgeDS IDE](https://holgerrgevers.github.io/ForgeDS/)** -- AI-powered web IDE for Zoho Creator development.
+
+- Describe your app in plain language, AI generates the code
+- Visual .ds code editor with element inspection
+- Database migration management (Access to Zoho)
+- Custom API builder with AI assistance
+
+> Requires the ForgeDS bridge server running locally. See [IDE Setup](#ide-setup) below.
+
 ## What it does
 
 | Capability | Tool | Rules/Features |
@@ -134,6 +145,30 @@ forgeds-upload --config config/zoho-api.yaml  # Upload (mock by default)
 - Python >= 3.10
 - Zero external dependencies (stdlib only)
 - Optional: `pyodbc` for Access database operations (Windows only)
+
+## IDE Setup
+
+The ForgeDS IDE is a web app that connects to a local bridge server for AI-powered code generation.
+
+### Prerequisites
+
+- Python >= 3.10
+- [Claude Code](https://claude.ai/claude-code) CLI installed
+- ForgeDS installed (`pip install git+https://github.com/HolgerRGevers/ForgeDS.git`)
+
+### Running the Bridge
+
+```bash
+# Install bridge dependencies
+pip install websockets
+
+# Start the bridge server
+cd ForgeDS
+python -m bridge
+# Bridge running on ws://localhost:9876
+```
+
+Then open [https://holgerrgevers.github.io/ForgeDS/](https://holgerrgevers.github.io/ForgeDS/) in your browser.
 
 ## License
 
