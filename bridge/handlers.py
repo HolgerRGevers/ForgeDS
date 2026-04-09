@@ -940,3 +940,339 @@ async def handle_mock_upload(data: dict, send_fn: SendFn) -> dict:
         "total_records": total_records,
         "errors": errors,
     }
+
+
+# ---------------------------------------------------------------------------
+# generate_api_code -- AI-generate Deluge function code (mock)
+# ---------------------------------------------------------------------------
+
+def _generate_deluge_code(prompt: str, api_config: dict) -> str:
+    """Generate realistic Deluge function code based on prompt keywords and API config."""
+    func_name = api_config.get("functionName", "custom_api_function")
+    method = api_config.get("method", "GET").upper()
+    params = api_config.get("parameters", [])
+
+    # Build parameter list for function signature
+    param_names = [p.get("name", "param") for p in params] if params else []
+    param_str = ", ".join(param_names) if param_names else ""
+    sig = f"map {func_name}({param_str})"
+
+    lower_prompt = prompt.lower()
+
+    if "pending claims" in lower_prompt or "pending" in lower_prompt:
+        body = (
+            '    response = Map();\n'
+            '    pendingClaims = Expense_Claims[Status == "Pending"];\n'
+            '    if (pendingClaims != null && pendingClaims.count() > 0)\n'
+            '    {\n'
+            '        totalCount = pendingClaims.count();\n'
+            '        totalAmount = 0;\n'
+            '        for each claim in pendingClaims\n'
+            '        {\n'
+            '            totalAmount = totalAmount + ifnull(claim.Amount_ZAR, 0);\n'
+            '        }\n'
+            '        response.put("count", totalCount);\n'
+            '        response.put("total_amount", totalAmount);\n'
+            '        response.put("status", "success");\n'
+            '    }\n'
+            '    else\n'
+            '    {\n'
+            '        response.put("count", 0);\n'
+            '        response.put("total_amount", 0);\n'
+            '        response.put("status", "success");\n'
+            '    }\n'
+            '    return response;'
+        )
+    elif "claim status" in lower_prompt or "by id" in lower_prompt:
+        id_param = param_names[0] if param_names else "claim_id"
+        body = (
+            '    response = Map();\n'
+            f'    claimRec = Expense_Claims[ID == {id_param}];\n'
+            '    if (claimRec != null && claimRec.count() > 0)\n'
+            '    {\n'
+            '        rec = claimRec.first();\n'
+            '        response.put("claim_id", rec.Claim_ID);\n'
+            '        response.put("employee", ifnull(rec.Employee_Name, ""));\n'
+            '        response.put("amount_zar", ifnull(rec.Amount_ZAR, 0));\n'
+            '        response.put("status", ifnull(rec.Status, "Unknown"));\n'
+            '        response.put("esg_category", ifnull(rec.ESG_Category, ""));\n'
+            '        response.put("carbon_kg", ifnull(rec.Estimated_Carbon_KG, 0));\n'
+            '        response.put("result", "found");\n'
+            '    }\n'
+            '    else\n'
+            '    {\n'
+            '        response.put("result", "not_found");\n'
+            f'        response.put("message", "No claim found with ID: " + {id_param});\n'
+            '    }\n'
+            '    return response;'
+        )
+    elif "esg" in lower_prompt or "carbon" in lower_prompt or "sustainability" in lower_prompt:
+        body = (
+            '    response = Map();\n'
+            '    approvedClaims = Expense_Claims[Status == "Approved"];\n'
+            '    totalCarbon = 0;\n'
+            '    esgBreakdown = Map();\n'
+            '    if (approvedClaims != null && approvedClaims.count() > 0)\n'
+            '    {\n'
+            '        for each claim in approvedClaims\n'
+            '        {\n'
+            '            carbonKg = ifnull(claim.Estimated_Carbon_KG, 0);\n'
+            '            totalCarbon = totalCarbon + carbonKg;\n'
+            '            category = ifnull(claim.ESG_Category, "Uncategorised");\n'
+            '            existing = ifnull(esgBreakdown.get(category), 0);\n'
+            '            esgBreakdown.put(category, existing + carbonKg);\n'
+            '        }\n'
+            '    }\n'
+            '    response.put("total_carbon_kg", totalCarbon);\n'
+            '    response.put("claim_count", ifnull(approvedClaims.count(), 0));\n'
+            '    response.put("esg_breakdown", esgBreakdown);\n'
+            '    response.put("status", "success");\n'
+            '    return response;'
+        )
+    elif "journal entry" in lower_prompt or "accounting" in lower_prompt:
+        id_param = param_names[0] if param_names else "claim_id"
+        body = (
+            '    response = Map();\n'
+            f'    claimRec = Expense_Claims[ID == {id_param}];\n'
+            '    if (claimRec != null && claimRec.count() > 0)\n'
+            '    {\n'
+            '        rec = claimRec.first();\n'
+            '        glRec = GL_Accounts[ID == rec.GL_Account];\n'
+            '        if (glRec != null && glRec.count() > 0)\n'
+            '        {\n'
+            '            glCode = glRec.GL_Code;\n'
+            '            amount = ifnull(rec.Amount_ZAR, 0);\n'
+            '            journalEntry = Map();\n'
+            '            journalEntry.put("gl_code", glCode);\n'
+            '            journalEntry.put("debit", amount);\n'
+            '            journalEntry.put("credit", 0);\n'
+            '            journalEntry.put("description", "Expense claim: " + rec.Claim_ID);\n'
+            '            journalEntry.put("date", zoho.currentdate);\n'
+            '            response.put("journal_entry", journalEntry);\n'
+            '            response.put("status", "success");\n'
+            '        }\n'
+            '        else\n'
+            '        {\n'
+            '            response.put("status", "error");\n'
+            '            response.put("message", "GL Account not found for claim");\n'
+            '        }\n'
+            '    }\n'
+            '    else\n'
+            '    {\n'
+            '        response.put("status", "error");\n'
+            f'        response.put("message", "Claim not found: " + {id_param});\n'
+            '    }\n'
+            '    return response;'
+        )
+    else:
+        # Default: generic CRUD template based on method
+        if method == "POST":
+            body = (
+                '    response = Map();\n'
+                '    // Insert new record from API parameters\n'
+                '    row = insert into Expense_Claims\n'
+                '    [\n'
+                '        Employee_Name = ifnull(employee_name, "")\n'
+                '        Amount_ZAR = ifnull(amount, 0)\n'
+                '        Status = "Draft"\n'
+                '        Added_User = zoho.loginuser\n'
+                '    ];\n'
+                '    response.put("record_id", row.ID);\n'
+                '    response.put("status", "created");\n'
+                '    return response;'
+            )
+        elif method == "PUT":
+            id_param = param_names[0] if param_names else "record_id"
+            body = (
+                '    response = Map();\n'
+                f'    rec = Expense_Claims[ID == {id_param}];\n'
+                '    if (rec != null && rec.count() > 0)\n'
+                '    {\n'
+                '        target = rec.first();\n'
+                '        // Update fields as needed\n'
+                '        response.put("status", "updated");\n'
+                f'        response.put("record_id", {id_param});\n'
+                '    }\n'
+                '    else\n'
+                '    {\n'
+                '        response.put("status", "not_found");\n'
+                '    }\n'
+                '    return response;'
+            )
+        elif method == "DELETE":
+            id_param = param_names[0] if param_names else "record_id"
+            body = (
+                '    response = Map();\n'
+                f'    rec = Expense_Claims[ID == {id_param}];\n'
+                '    if (rec != null && rec.count() > 0)\n'
+                '    {\n'
+                '        // Remove record\n'
+                f'        delete from Expense_Claims[ID == {id_param}];\n'
+                '        response.put("status", "deleted");\n'
+                f'        response.put("record_id", {id_param});\n'
+                '    }\n'
+                '    else\n'
+                '    {\n'
+                '        response.put("status", "not_found");\n'
+                '    }\n'
+                '    return response;'
+            )
+        else:
+            # GET (default)
+            body = (
+                '    response = Map();\n'
+                '    records = Expense_Claims[Status != null];\n'
+                '    resultList = List();\n'
+                '    if (records != null && records.count() > 0)\n'
+                '    {\n'
+                '        for each rec in records\n'
+                '        {\n'
+                '            item = Map();\n'
+                '            item.put("id", rec.ID);\n'
+                '            item.put("employee", ifnull(rec.Employee_Name, ""));\n'
+                '            item.put("amount", ifnull(rec.Amount_ZAR, 0));\n'
+                '            item.put("status", ifnull(rec.Status, ""));\n'
+                '            resultList.add(item);\n'
+                '        }\n'
+                '    }\n'
+                '    response.put("records", resultList);\n'
+                '    response.put("count", resultList.size());\n'
+                '    return response;'
+            )
+
+    return f"{sig}\n{{\n{body}\n}}"
+
+
+async def handle_generate_api_code(data: dict) -> dict:
+    """Generate Deluge function code based on prompt and API config. Mock implementation."""
+    prompt = data.get("prompt", "")
+    api_config = data.get("apiConfig", {})
+
+    await asyncio.sleep(0.3)
+
+    code = _generate_deluge_code(prompt, api_config)
+    return {"code": code}
+
+
+# ---------------------------------------------------------------------------
+# get_api_list -- return saved APIs (mock)
+# ---------------------------------------------------------------------------
+
+_SAMPLE_APIS = [
+    {
+        "id": "api-001",
+        "name": "Get_Dashboard_Summary",
+        "functionName": "get_dashboard_summary",
+        "method": "GET",
+        "description": "Returns aggregate dashboard data including claim counts, totals, and ESG metrics",
+        "authType": "oauth2",
+        "accessScope": "all_users",
+        "parameters": [],
+        "responseType": "json",
+        "status": "active",
+    },
+    {
+        "id": "api-002",
+        "name": "Submit_Expense_Claim",
+        "functionName": "submit_expense_claim",
+        "method": "POST",
+        "description": "Submit a new expense claim via API with employee details and amount",
+        "authType": "oauth2",
+        "accessScope": "selective_users",
+        "parameters": [
+            {"name": "employee_name", "type": "string", "required": True},
+            {"name": "amount", "type": "number", "required": True},
+            {"name": "gl_account_id", "type": "number", "required": True},
+            {"name": "description", "type": "string", "required": False},
+        ],
+        "responseType": "json",
+        "status": "active",
+    },
+    {
+        "id": "api-003",
+        "name": "Get_Claim_Status",
+        "functionName": "get_claim_status",
+        "method": "GET",
+        "description": "Look up the status of a specific expense claim by ID",
+        "authType": "oauth2",
+        "accessScope": "all_users",
+        "parameters": [
+            {"name": "claim_id", "type": "number", "required": True},
+        ],
+        "responseType": "json",
+        "status": "active",
+    },
+]
+
+
+async def handle_get_api_list(data: dict) -> dict:
+    """Return a list of saved/configured APIs. Mock implementation."""
+    await asyncio.sleep(0.2)
+    return {"apis": _SAMPLE_APIS}
+
+
+# ---------------------------------------------------------------------------
+# export_api -- export API as .dg file + setup instructions (mock)
+# ---------------------------------------------------------------------------
+
+async def handle_export_api(data: dict) -> dict:
+    """Export an API definition as a .dg file with setup instructions. Mock implementation."""
+    api = data.get("api", {})
+    func_name = api.get("functionName", "custom_api_function")
+    api_name = api.get("name", "Custom_API")
+    method = api.get("method", "GET")
+    description = api.get("description", "Custom API endpoint")
+    auth_type = api.get("authType", "oauth2")
+    access_scope = api.get("accessScope", "all_users")
+    params = api.get("parameters", [])
+
+    # Generate realistic code for the export
+    code = _generate_deluge_code(description, api)
+
+    # Add a file header comment
+    param_names = [p.get("name", "param") for p in params] if params else []
+    header = (
+        f"// Custom API: {api_name}\n"
+        f"// Method: {method}\n"
+        f"// Auth: {auth_type}\n"
+        f"// Description: {description}\n"
+    )
+    if param_names:
+        header += f"// Parameters: {', '.join(param_names)}\n"
+    header += "//\n// Generated by ForgeDS IDE\n\n"
+
+    file_content = header + code
+
+    # Build setup instructions
+    setup_instructions = [
+        "1. Go to Zoho Creator > Microservices > Custom API Builder",
+        "2. Click \"Create\"",
+        f"3. Set Name to \"{api_name}\"",
+        f"4. Set Link Name to \"{func_name}\"",
+        f"5. Set Method to \"{method}\"",
+    ]
+
+    if params:
+        param_list = ", ".join(param_names)
+        setup_instructions.append(f"6. Add parameters: {param_list}")
+        step = 7
+    else:
+        step = 6
+
+    setup_instructions.extend([
+        f"{step}. Paste the generated Deluge code into the script editor",
+        f"{step + 1}. Set Authentication to \"{auth_type}\"",
+        f"{step + 2}. Set Access to \"{access_scope}\"",
+        f"{step + 3}. Click \"Save\" and test the endpoint",
+    ])
+
+    await asyncio.sleep(0.2)
+
+    return {
+        "file": {
+            "name": f"{func_name}.dg",
+            "path": f"src/deluge/custom-api/{func_name}.dg",
+            "content": file_content,
+        },
+        "setupInstructions": setup_instructions,
+    }

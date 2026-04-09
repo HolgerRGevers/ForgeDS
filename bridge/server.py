@@ -13,6 +13,9 @@ from websockets.asyncio.server import ServerConnection
 from bridge.handlers import (
     handle_ai_chat,
     handle_build_project,
+    handle_export_api,
+    handle_generate_api_code,
+    handle_get_api_list,
     handle_get_schema,
     handle_get_status,
     handle_inspect_element,
@@ -103,6 +106,18 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
 
             result = await handle_mock_upload(data, send_upload_stream)
             await _send_json(ws, {"id": msg_id, "type": "stream_end", "data": {"result": result}})
+
+        elif msg_type == "generate_api_code":
+            result = await handle_generate_api_code(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "get_api_list":
+            result = await handle_get_api_list(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "export_api":
+            result = await handle_export_api(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
 
         else:
             await _send_json(ws, {
