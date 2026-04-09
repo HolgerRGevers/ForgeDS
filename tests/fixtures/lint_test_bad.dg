@@ -1,0 +1,110 @@
+// ============================================================
+// Test fixture: intentional violations of every lint rule.
+// Expected: all DG001-DG018 codes should fire.
+// Run: python tools/lint_deluge.py tests/lint_test_bad.dg
+// ============================================================
+
+// DG001: Banned function lpad
+padded = lpad(claimNum, 4, "0");
+
+// DG002: Banned zoho.loginuserrole
+role = zoho.loginuserrole;
+
+// DG003: Won't fire here (not in scheduled/ path) -- tested separately
+
+// DG004: Unknown field reference
+badField = input.nonexistent_field;
+
+// DG005: Query result used without null guard
+glRec = gl_accounts[expense_category == "Travel"];
+glCode = glRec.gl_code;
+
+// DG008: Single quotes for text
+input.status = 'Approved';
+
+// DG011: Unknown status value
+input.status = "Pending Review";
+
+// DG013: Mixed && and || without parentheses
+if (a > 1 && b < 2 || c == 3)
+{
+    info "ambiguous";
+}
+
+// DG014: Wrong threshold fallback
+thresholdAmount = 1000;
+
+// DG015: Demo email
+sendmail
+[
+    from : zoho.adminuserid
+    to : "hod.demo@yourdomain.com"
+    subject : "Test"
+    message : "Test body"
+];
+
+// DG016: Real email (info level)
+sendmail
+[
+    from : zoho.adminuserid
+    to : "real.person@company.co.za"
+    subject : "Test"
+    message : "Test body"
+];
+
+// DG006 + DG007: Missing Added_User and wrong value
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "Submitted"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Missing Added_User entirely"
+];
+
+// DG009: Colon in insert block
+row = insert into approval_history
+[
+    claim : input.ID
+    action_1 = "Submitted"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Uses colon instead of equals"
+    Added_User = zoho.loginuser
+];
+
+// DG010: Missing required sendmail param (no 'to')
+sendmail
+[
+    from : zoho.adminuserid
+    subject : "Missing to"
+    message : "No recipient"
+];
+
+// DG012: Unknown action_1 value
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "Custom Unknown Action"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Unknown action"
+    Added_User = zoho.loginuser
+];
+
+// DG007: Wrong Added_User value
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "Submitted"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Wrong Added_User"
+    Added_User = zoho.loginuserid
+];
+
+// DG017: Reserved word as variable name
+return = 42;
+
+// DG018: Unknown zoho system variable
+badVar = zoho.nonexistent;

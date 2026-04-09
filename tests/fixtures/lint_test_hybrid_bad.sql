@@ -1,0 +1,22 @@
+-- Test fixture for lint_hybrid.py
+-- This file is not directly linted by the hybrid linter.
+-- The hybrid linter validates cross-environment schema alignment.
+--
+-- To test the hybrid linter, run:
+--   python tools/lint_hybrid.py --verbose
+--
+-- The hybrid linter reads from both deluge_lang.db and access_vba_lang.db
+-- to detect schema mismatches, type mapping issues, and coverage gaps.
+--
+-- Expected hybrid diagnostics:
+--   HY002: CURRENCY fields (Amount_ZAR, Max_Amount_ZAR) - precision check
+--   HY003: MEMO fields (Description, Rejection_Reason, Comments) - length check
+--   HY013: BIT fields (Active, POPIA_Consent, Receipt_Required) - boolean transform
+--   HY005: Field name mismatches (Department_Name vs name, Client_Name vs name)
+--
+-- To test data validation mode:
+--   1. Create exports/csv/ with test CSV files containing bad data
+--   2. Run: python tools/lint_hybrid.py --data exports/csv/ --verbose
+--
+-- To test script cross-reference mode:
+--   Run: python tools/lint_hybrid.py --scripts src/deluge/ --verbose

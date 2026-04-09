@@ -1,0 +1,13 @@
+# Zoho Creator API credentials — DO NOT COMMIT THIS FILE
+# Copy to config/zoho-api.yaml in your project and fill in values
+
+auth:
+  client_id: "YOUR_CLIENT_ID"
+  client_secret: "YOUR_CLIENT_SECRET"
+  refresh_token: "YOUR_REFRESH_TOKEN"
+  token_url: "https://accounts.zoho.com/oauth/v2/token"
+
+api:
+  base_url: "https://creator.zoho.com/api/v2.1"
+  owner: "your_zoho_username"
+  app: "your_app_link_name"

@@ -1,0 +1,2 @@
+// Test DG003: hoursBetween in scheduled context
+hours = hoursBetween(claim.Submission_Date, zoho.currenttime);

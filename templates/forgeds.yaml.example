@@ -1,0 +1,36 @@
+# forgeds.yaml — project-level configuration for ForgeDS engine
+# Copy this file to your Zoho Creator project root as "forgeds.yaml"
+
+project:
+  name: "My Zoho Creator App"
+  version: "0.1.0"
+
+# Deluge linter settings
+lint:
+  threshold_fallback: "999.99"
+  dual_threshold_fallback: "5000.00"
+  demo_email_domains:
+    - "yourdomain.com"
+    - "example.com"
+    - "placeholder.com"
+
+# Cross-environment mapping (hybrid linter + validator + uploader)
+schema:
+  mandatory_zoho_fields:
+    - ["form_name", "field_name"]
+
+  table_to_form:
+    AccessTableName: "zoho_form_name"
+
+  fk_relationships:
+    - child: ["ChildTable", "FK_Column"]
+      parent: ["ParentTable", "PK_Column"]
+
+  upload_order:
+    - ["ParentTable", "parent_form"]
+    - ["ChildTable", "child_form"]
+
+  exclude_fields: ["ID", "Added_User"]
+
+# Seed data paths (relative to project root)
+seed_data_dir: "config/seed-data"

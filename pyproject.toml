@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forgeds"
+version = "0.1.0"
+description = "Zoho Creator rapid development engine — linting, scaffolding, .ds editing, and import pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Holger Gevers"}
+]
+keywords = ["zoho", "creator", "deluge", "linter", "development"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.scripts]
+forgeds-lint = "forgeds.core.lint_deluge:main"
+forgeds-lint-access = "forgeds.access.lint_access:main"
+forgeds-lint-hybrid = "forgeds.hybrid.lint_hybrid:main"
+forgeds-build-db = "forgeds.core.build_deluge_db:main"
+forgeds-build-access-db = "forgeds.access.build_access_vba_db:main"
+forgeds-scaffold = "forgeds.core.scaffold_deluge:main"
+forgeds-parse-ds = "forgeds.core.parse_ds_export:main"
+forgeds-ds-editor = "forgeds.core.ds_editor:main"
+forgeds-validate = "forgeds.hybrid.validate_import:main"
+forgeds-upload = "forgeds.hybrid.upload_to_creator:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
