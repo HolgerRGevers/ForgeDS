@@ -242,6 +242,37 @@ def generate_threshold_check() -> str:
 
 
 # ============================================================
+# Custom API template
+# ============================================================
+
+def generate_custom_api_boilerplate(name: str) -> str:
+    """Generate Custom API-specific boilerplate (request extraction, response map)."""
+    return (
+        "// --- Request Parameters ---\n"
+        "// Parameters are defined in the Custom API Builder wizard (Step 2: Request).\n"
+        "// Access them using the parameter names defined in the wizard.\n"
+        "// UNCERTAIN: Exact parameter access syntax needs Creator verification.\n"
+        "// Possible patterns:\n"
+        "//   paramValue = param.get(\"param_name\");\n"
+        "//   paramValue = crmAPIRequest.get(\"params\").get(\"param_name\");\n"
+        "\n"
+        "// --- Business Logic ---\n"
+        "// Query forms, compute values, call external services.\n"
+        "// No input.FieldName here -- this is API context, not form context.\n"
+        "// No alert or cancel submit -- use response map for error reporting.\n"
+        "\n"
+        "// TODO: Add business logic here\n"
+        "\n"
+        "// --- Build Response ---\n"
+        "// Response keys MUST match the Custom API Builder wizard (Step 3: Response).\n"
+        "// UNCERTAIN: Exact response construction syntax needs Creator verification.\n"
+        "// Possible pattern:\n"
+        "//   response = Map();\n"
+        "//   response.put(\"key_name\", value);\n"
+    )
+
+
+# ============================================================
 # Scaffold assembly
 # ============================================================
 
@@ -265,7 +296,15 @@ def scaffold_script(
         parts.append("// Note: Uses thisapp.permissions.isUserInRole() - zoho.loginuserrole does NOT exist")
     elif context == "scheduled":
         parts.append("// Note: Uses daysBetween (not hoursBetween) due to Free Trial daily-only schedule constraint")
+    elif context == "custom-api":
+        parts.append("// Note: Custom API context -- no input.FieldName, no alert, no cancel submit.")
     parts.append("")
+
+    # Custom API gets its own boilerplate instead of the form-oriented includes
+    if context == "custom-api":
+        parts.append(generate_custom_api_boilerplate(name))
+        parts.append("")
+        return "\n".join(parts)
 
     # Optional boilerplate sections
     if "threshold-check" in includes:
@@ -322,7 +361,7 @@ def main() -> None:
     parser.add_argument("--trigger", default="", help="Trigger event (for new scripts)")
     parser.add_argument("--purpose", default="", help="One-line purpose (for new scripts)")
     parser.add_argument("--context", default="form-workflow",
-                        choices=["form-workflow", "approval-script", "scheduled"],
+                        choices=["form-workflow", "approval-script", "scheduled", "custom-api"],
                         help="Script context type")
     parser.add_argument("--include", default="",
                         help="Comma-separated boilerplate: audit-trail,sendmail,self-approval,gl-lookup,threshold-check")
