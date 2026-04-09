@@ -11,9 +11,13 @@ import websockets
 from websockets.asyncio.server import ServerConnection
 
 from bridge.handlers import (
+    handle_ai_chat,
     handle_build_project,
     handle_get_status,
+    handle_inspect_element,
     handle_lint_check,
+    handle_parse_ds,
+    handle_read_file,
     handle_refine_prompt,
 )
 
@@ -63,6 +67,22 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
 
         elif msg_type == "get_status":
             result = await handle_get_status()
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "parse_ds":
+            result = await handle_parse_ds(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "read_file":
+            result = await handle_read_file(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "inspect_element":
+            result = await handle_inspect_element(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "ai_chat":
+            result = await handle_ai_chat(data)
             await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
 
         else:

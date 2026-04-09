@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any, Callable, Coroutine
 
 from bridge import __version__
@@ -234,3 +236,330 @@ async def handle_get_status() -> dict:
         },
         "status": "running",
     }
+
+
+# ---------------------------------------------------------------------------
+# parse_ds -- parse a .ds export and return app structure (mock)
+# ---------------------------------------------------------------------------
+async def handle_parse_ds(data: dict) -> dict:
+    """Parse a .ds export and return app structure. Mock implementation."""
+    file_path = data.get("file_path", "")
+    await asyncio.sleep(0.2)
+
+    return {
+        "name": "expense_reimbursement",
+        "displayName": "Expense Reimbursement Management",
+        "tree": [
+            {
+                "id": "app-root",
+                "label": "Expense Reimbursement Management",
+                "type": "application",
+                "isExpanded": True,
+                "children": [
+                    {
+                        "id": "forms-section",
+                        "label": "Forms",
+                        "type": "section",
+                        "isExpanded": True,
+                        "children": [
+                            {
+                                "id": "form-expense-claims",
+                                "label": "Expense Claims",
+                                "type": "form",
+                                "isExpanded": False,
+                                "children": [
+                                    {"id": "field-section", "label": "Fields", "type": "section", "isExpanded": False, "children": [
+                                        {"id": "field-claim-id", "label": "Claim_ID", "type": "field", "fieldType": "Auto Number"},
+                                        {"id": "field-employee", "label": "Employee_Name", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-amount", "label": "Amount_ZAR", "type": "field", "fieldType": "Decimal"},
+                                        {"id": "field-department", "label": "Department", "type": "field", "fieldType": "Lookup"},
+                                        {"id": "field-gl-account", "label": "GL_Account", "type": "field", "fieldType": "Lookup"},
+                                        {"id": "field-status", "label": "Status", "type": "field", "fieldType": "Picklist"},
+                                        {"id": "field-esg-category", "label": "ESG_Category", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-carbon-kg", "label": "Estimated_Carbon_KG", "type": "field", "fieldType": "Decimal"},
+                                    ]},
+                                    {"id": "wf-section-ec", "label": "Workflows", "type": "section", "isExpanded": False, "children": [
+                                        {"id": "wf-on-validate", "label": "On Validate (hard stops)", "type": "workflow", "trigger": "on_validate", "filePath": "src/deluge/form-workflows/expense_claim.on_validate.dg"},
+                                        {"id": "wf-on-success", "label": "Self-approval prevention + routing", "type": "workflow", "trigger": "on_success", "filePath": "src/deluge/form-workflows/expense_claim.on_success.dg"},
+                                        {"id": "wf-on-load", "label": "Employee Name auto-populate", "type": "workflow", "trigger": "on_load", "filePath": "src/deluge/form-workflows/expense_claim.on_load.auto_populate.dg"},
+                                    ]},
+                                ],
+                            },
+                            {
+                                "id": "form-approval-history",
+                                "label": "Approval History",
+                                "type": "form",
+                                "isExpanded": False,
+                                "children": [
+                                    {"id": "field-section-ah", "label": "Fields", "type": "section", "children": [
+                                        {"id": "field-ah-claim", "label": "Claim", "type": "field", "fieldType": "Lookup"},
+                                        {"id": "field-ah-action", "label": "action_1", "type": "field", "fieldType": "Picklist"},
+                                        {"id": "field-ah-actor", "label": "Actor", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-ah-added-user", "label": "Added_User", "type": "field", "fieldType": "Text"},
+                                    ]},
+                                ],
+                            },
+                            {
+                                "id": "form-gl-accounts",
+                                "label": "GL Accounts",
+                                "type": "form",
+                                "isExpanded": False,
+                                "children": [
+                                    {"id": "field-section-gl", "label": "Fields", "type": "section", "children": [
+                                        {"id": "field-gl-code", "label": "GL_Code", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-gl-name", "label": "Account_Name", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-gl-esg", "label": "ESG_Category", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-gl-carbon", "label": "Carbon_Factor", "type": "field", "fieldType": "Decimal"},
+                                    ]},
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "id": "reports-section",
+                        "label": "Reports",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "report-all-claims", "label": "All Expense Claims", "type": "report"},
+                            {"id": "report-my-claims", "label": "My Claims", "type": "report"},
+                            {"id": "report-pending", "label": "Pending Approvals Manager", "type": "report"},
+                            {"id": "report-audit", "label": "AuditTrail", "type": "report"},
+                        ],
+                    },
+                    {
+                        "id": "pages-section",
+                        "label": "Pages",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "page-mgmt-dash", "label": "Management Dashboard", "type": "page"},
+                            {"id": "page-emp-dash", "label": "Employee Dashboard", "type": "page"},
+                        ],
+                    },
+                    {
+                        "id": "schedules-section",
+                        "label": "Schedules",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "schedule-sla", "label": "SLA Enforcement Daily", "type": "schedule", "trigger": "daily", "filePath": "src/deluge/scheduled/sla_enforcement_daily.dg"},
+                        ],
+                    },
+                    {
+                        "id": "apis-section",
+                        "label": "Custom APIs",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "api-dashboard", "label": "Get_Dashboard_Summary", "type": "api", "filePath": "src/deluge/custom-api/get_dashboard_summary.dg"},
+                            {"id": "api-claim-status", "label": "Get_Claim_Status", "type": "api", "filePath": "src/deluge/custom-api/get_claim_status.dg"},
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# read_file -- read a file and return its content
+# ---------------------------------------------------------------------------
+_EXTENSION_LANGUAGE_MAP = {
+    ".dg": "deluge",
+    ".json": "json",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".py": "python",
+    ".ds": "deluge",
+    ".md": "markdown",
+    ".sql": "sql",
+    ".txt": "text",
+}
+
+_MOCK_CONTENT = {
+    "deluge": (
+        "// Deluge workflow script\n"
+        "claimAmt = input.Amount_ZAR;\n"
+        "threshold = ifnull(Compliance_Config[Config_Key == \"CLAIM_THRESHOLD\" && Active == true].Threshold_Value, 999.99);\n"
+        "if (claimAmt > threshold)\n"
+        "{\n"
+        "    alert \"Amount exceeds approval threshold\";\n"
+        "    cancel submit;\n"
+        "}\n"
+    ),
+    "json": '{\n  "project": "expense_reimbursement",\n  "version": "0.1"\n}\n',
+    "yaml": "project:\n  name: expense_reimbursement\n  platform: zoho-creator\n",
+}
+
+
+async def handle_read_file(data: dict) -> dict:
+    """Read a file from disk and return its content with detected language.
+
+    If the file does not exist, returns mock content for demo purposes.
+    """
+    file_path = data.get("file_path", "")
+
+    ext = Path(file_path).suffix.lower() if file_path else ""
+    language = _EXTENSION_LANGUAGE_MAP.get(ext, "text")
+
+    if file_path and os.path.isfile(file_path):
+        try:
+            content = Path(file_path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            return {"error": f"Failed to read file: {exc}", "content": "", "language": language}
+    else:
+        # Return mock content for demo purposes
+        content = _MOCK_CONTENT.get(language, "// File not found — mock content\n")
+
+    return {"content": content, "language": language}
+
+
+# ---------------------------------------------------------------------------
+# inspect_element -- return inspector data for an element (mock)
+# ---------------------------------------------------------------------------
+_FIELD_INSPECTOR_DEFAULTS = {
+    "field-claim-id": {
+        "properties": {"type": "Auto Number", "form": "Expense Claims", "displayName": "Claim ID", "required": True, "unique": True},
+        "relationships": [{"target": "Approval History.Claim", "type": "lookup_target"}],
+        "usages": [{"script": "expense_claim.on_success.dg", "line": 3, "context": "claimId = input.Claim_ID;"}],
+    },
+    "field-amount": {
+        "properties": {"type": "Decimal", "form": "Expense Claims", "displayName": "Amount (ZAR)", "required": True, "unique": False},
+        "relationships": [{"target": "GL_Accounts.Carbon_Factor", "type": "calculation_input"}],
+        "usages": [
+            {"script": "expense_claim.on_validate.dg", "line": 2, "context": "claimAmt = input.Amount_ZAR;"},
+            {"script": "expense_claim.on_success.dg", "line": 12, "context": "input.Estimated_Carbon_KG = input.Amount_ZAR * carbonFactor;"},
+        ],
+    },
+    "field-status": {
+        "properties": {"type": "Picklist", "form": "Expense Claims", "displayName": "Status", "required": True, "unique": False,
+                        "values": ["Draft", "Submitted", "Approved", "Rejected", "Paid"]},
+        "relationships": [],
+        "usages": [{"script": "expense_claim.on_success.dg", "line": 5, "context": "input.Status = \"Submitted\";"}],
+    },
+}
+
+
+async def handle_inspect_element(data: dict) -> dict:
+    """Return inspector data for a tree element. Mock implementation.
+
+    Returns properties, relationships, and code usages appropriate for
+    the element type.
+    """
+    element_id = data.get("element_id", "")
+    element_type = data.get("element_type", "")
+
+    # Field-level inspection
+    if element_type == "field" and element_id in _FIELD_INSPECTOR_DEFAULTS:
+        return _FIELD_INSPECTOR_DEFAULTS[element_id]
+
+    if element_type == "field":
+        return {
+            "properties": {"type": "Text", "form": "Unknown", "displayName": element_id, "required": False, "unique": False},
+            "relationships": [],
+            "usages": [],
+        }
+
+    if element_type == "workflow":
+        return {
+            "properties": {"trigger": "on_success", "form": "Expense Claims", "scriptFile": f"src/deluge/form-workflows/{element_id}.dg"},
+            "relationships": [
+                {"target": "Expense Claims", "type": "form_event"},
+                {"target": "Approval History", "type": "inserts_into"},
+            ],
+            "usages": [],
+        }
+
+    if element_type == "form":
+        return {
+            "properties": {"fieldCount": 8, "hasWorkflows": True, "displayName": element_id},
+            "relationships": [
+                {"target": "GL Accounts", "type": "lookup_source"},
+                {"target": "Approval History", "type": "lookup_target"},
+            ],
+            "usages": [],
+        }
+
+    if element_type == "report":
+        return {
+            "properties": {"sourceForm": "Expense Claims", "displayName": element_id},
+            "relationships": [{"target": "Expense Claims", "type": "data_source"}],
+            "usages": [],
+        }
+
+    if element_type == "schedule":
+        return {
+            "properties": {"trigger": "daily", "scriptFile": "src/deluge/scheduled/sla_enforcement_daily.dg"},
+            "relationships": [{"target": "Expense Claims", "type": "queries"}],
+            "usages": [],
+        }
+
+    if element_type == "api":
+        return {
+            "properties": {"method": "GET", "scriptFile": f"src/deluge/custom-api/{element_id}.dg"},
+            "relationships": [{"target": "Expense Claims", "type": "queries"}],
+            "usages": [],
+        }
+
+    # Fallback
+    return {
+        "properties": {"displayName": element_id, "type": element_type},
+        "relationships": [],
+        "usages": [],
+    }
+
+
+# ---------------------------------------------------------------------------
+# ai_chat -- process AI chat message (mock)
+# ---------------------------------------------------------------------------
+async def handle_ai_chat(data: dict) -> dict:
+    """Process an AI chat message and return a mock response.
+
+    A future version will route to Claude Code CLI with ForgeDS context.
+    """
+    message = data.get("message", "")
+    await asyncio.sleep(0.3)
+
+    # Generate a contextual mock response based on keywords
+    lower = message.lower()
+
+    if "validate" in lower or "validation" in lower:
+        response = (
+            "For form validation in Deluge, use the `on_validate` trigger. "
+            "This runs before the record is saved, allowing you to enforce "
+            "hard stops with `cancel submit`. Example:\n\n"
+            "```\nclaimAmt = input.Amount_ZAR;\n"
+            "threshold = ifnull(Compliance_Config[Config_Key == \"CLAIM_THRESHOLD\" "
+            "&& Active == true].Threshold_Value, 999.99);\n"
+            "if (claimAmt > threshold)\n{\n"
+            "    alert \"Amount exceeds threshold\";\n"
+            "    cancel submit;\n}\n```"
+        )
+    elif "approval" in lower:
+        response = (
+            "The approval workflow uses segregation of duties: a submitter "
+            "cannot approve their own claim. The `on_success` trigger checks "
+            "`zoho.loginuser` against the submitter and routes to the "
+            "appropriate approver based on the department's `Approving_Manager` field. "
+            "Every approval action is logged into the `Approval_History` form with "
+            "`Added_User = zoho.loginuser`."
+        )
+    elif "esg" in lower or "carbon" in lower:
+        response = (
+            "ESG tracking is integrated at the GL Account level. Each GL Account "
+            "has an `ESG_Category` and `Carbon_Factor`. When a claim is approved, "
+            "the system calculates `Estimated_Carbon_KG = Amount_ZAR * Carbon_Factor` "
+            "using `ifnull(glRec.Carbon_Factor, 0)` for safety. This aligns with "
+            "ISSB (IFRS S1/S2) and GRI Standards."
+        )
+    else:
+        response = (
+            "I can help with Deluge scripting for your Zoho Creator app. "
+            "Ask me about form validation, approval workflows, ESG tracking, "
+            "GL account lookups, or any other aspect of the expense reimbursement system. "
+            "I follow the project conventions including null guards, "
+            "Added_User requirements, and South African compliance rules."
+        )
+
+    return {"response": response, "model": "mock"}
