@@ -38,3 +38,16 @@ export type {
   UploadState,
   DatabaseStore,
 } from "./database";
+
+export type {
+  HttpMethod,
+  AuthMode,
+  UserScope,
+  ContentType,
+  ResponseType,
+  ApiParameter,
+  StatusCodeMapping,
+  CustomApiDefinition,
+  WizardStep,
+  ApiStore,
+} from "./api";
