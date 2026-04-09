@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppTreeExplorer,
   DevConsole,
@@ -7,7 +7,7 @@ import {
 } from "../components/ide";
 import { useIdeStore } from "../stores/ideStore";
 import { useBridgeStore } from "../stores/bridgeStore";
-import type { AppStructure, TreeNode } from "../types/ide";
+import type { AppStructure, InspectorData, TreeNode } from "../types/ide";
 
 /** Build the flat nodeIndex from a tree of TreeNodes. */
 function buildNodeIndex(tree: TreeNode[]): Map<string, TreeNode> {
@@ -31,9 +31,17 @@ export default function IdePage() {
   const status = useBridgeStore((s) => s.status);
   const send = useBridgeStore((s) => s.send);
 
+  const tabs = useIdeStore((s) => s.tabs);
+  const selectedNodeId = useIdeStore((s) => s.selectedNodeId);
+  const appStructure = useIdeStore((s) => s.appStructure);
   const loadAppStructure = useIdeStore((s) => s.loadAppStructure);
+  const updateTabContent = useIdeStore((s) => s.updateTabContent);
   const addConsoleEntry = useIdeStore((s) => s.addConsoleEntry);
   const setDiagnostics = useIdeStore((s) => s.setDiagnostics);
+  const setInspectorData = useIdeStore((s) => s.setInspectorData);
+
+  // Track which tabs have had their content loaded
+  const loadedTabsRef = useRef<Set<string>>(new Set());
 
   const loadDs = useCallback(async () => {
     try {
@@ -100,6 +108,79 @@ export default function IdePage() {
     // Only run when status transitions to connected
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  // Critical #1: Load file content into new tabs via read_file bridge call
+  useEffect(() => {
+    if (status !== "connected") return;
+
+    for (const tab of tabs) {
+      if (tab.content === "" && !loadedTabsRef.current.has(tab.id)) {
+        loadedTabsRef.current.add(tab.id);
+        send("read_file", { file_path: tab.path })
+          .then((response) => {
+            const data = response as unknown as { content: string; language: string };
+            if (data.content) {
+              updateTabContent(tab.id, data.content);
+            }
+          })
+          .catch((err) => {
+            addConsoleEntry({
+              type: "error",
+              message: `Failed to load ${tab.path}: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          });
+      }
+    }
+  }, [tabs, status, send, updateTabContent, addConsoleEntry]);
+
+  // Important #2: Fetch rich inspector data when selectedNodeId changes
+  useEffect(() => {
+    if (status !== "connected" || !selectedNodeId || !appStructure) return;
+
+    const node = appStructure.nodeIndex.get(selectedNodeId);
+    if (!node) return;
+
+    send("inspect_element", { element_id: selectedNodeId, element_type: node.type })
+      .then((response) => {
+        const data = response as unknown as {
+          properties: Record<string, unknown>;
+          relationships: Array<{ target: string; type: string }>;
+          usages: Array<{ script: string; line: number; context: string }>;
+        };
+
+        const properties = Object.entries(data.properties ?? {}).map(
+          ([key, value]) => ({ label: key, value: String(value) }),
+        );
+
+        const relationships = (data.relationships ?? []).map((rel) => ({
+          targetId: rel.target,
+          targetLabel: rel.target,
+          targetType: node.type,
+          relationship: rel.type,
+        }));
+
+        const usages = (data.usages ?? []).map((u) => ({
+          file: u.script,
+          line: u.line,
+          context: u.context,
+        }));
+
+        const inspectorData: InspectorData = {
+          type: node.type === "field" ? "field" : node.type === "form" ? "form" : "variable",
+          name: node.label,
+          properties,
+          relationships,
+          usages,
+        };
+        setInspectorData(inspectorData);
+      })
+      .catch((err) => {
+        addConsoleEntry({
+          type: "error",
+          message: `Inspector failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      });
+  }, [selectedNodeId, status, appStructure, send, setInspectorData, addConsoleEntry]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

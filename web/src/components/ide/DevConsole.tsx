@@ -211,7 +211,7 @@ interface ChatMessage {
 
 interface AiChatTabProps {
   bridgeStatus: string;
-  onSend: (message: string) => void;
+  onSend: (message: string) => Promise<string>;
 }
 
 function AiChatTab({ bridgeStatus, onSend }: AiChatTabProps) {
@@ -228,23 +228,33 @@ function AiChatTab({ bridgeStatus, onSend }: AiChatTabProps) {
     }
   }, [messages.length]);
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || !isConnected) return;
 
     const userMsg: ChatMessage = { id: ++msgIdRef.current, role: "user", text };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-
-    onSend(text);
-
-    // Simulate AI response placeholder
+    const aiMsgId = ++msgIdRef.current;
     const aiMsg: ChatMessage = {
-      id: ++msgIdRef.current,
+      id: aiMsgId,
       role: "ai",
       text: "Thinking...",
     };
-    setMessages((prev) => [...prev, aiMsg]);
+
+    setMessages((prev) => [...prev, userMsg, aiMsg]);
+    setInput("");
+
+    try {
+      const responseText = await onSend(text);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === aiMsgId ? { ...m, text: responseText } : m)),
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiMsgId ? { ...m, text: "Error: failed to get response." } : m,
+        ),
+      );
+    }
   }, [input, isConnected, onSend]);
 
   const handleKeyDown = useCallback(
@@ -334,10 +344,10 @@ export function DevConsole() {
   }, []);
 
   const handleAiSend = useCallback(
-    (message: string) => {
-      bridgeSend("ai_chat", { message }).catch(() => {
-        // Error is captured in bridgeStore.error
-      });
+    async (message: string): Promise<string> => {
+      const result = await bridgeSend("ai_chat", { message });
+      const data = result as unknown as { response: string };
+      return data.response ?? "No response received.";
     },
     [bridgeSend],
   );

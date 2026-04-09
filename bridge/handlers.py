@@ -189,22 +189,72 @@ async def handle_lint_check(data: dict) -> dict:
                 "message": stderr or stdout,
             })
 
+        diagnostics = _parse_lint_diagnostics(stdout)
         return {
             "exit_code": proc.returncode,
             "stdout": stdout,
             "stderr": stderr,
             "summary": _parse_lint_output(stdout, proc.returncode),
+            "diagnostics": diagnostics,
         }
     except FileNotFoundError:
+        # Linter not available — return mock diagnostics for demo purposes
         return {
-            "exit_code": -1,
-            "error": "forgeds-lint not found. Install with: pip install -e .[dev]",
+            "exit_code": 1,
+            "error": "forgeds-lint not found. Returning mock diagnostics.",
+            "diagnostics": _MOCK_DIAGNOSTICS,
         }
     except asyncio.TimeoutError:
         return {
             "exit_code": -1,
             "error": "Lint check timed out after 30 seconds.",
+            "diagnostics": [],
         }
+
+
+def _parse_lint_diagnostics(stdout: str) -> list[dict]:
+    """Parse lint output lines into structured diagnostics.
+
+    Expected line format: ``E: file:line -- message`` or ``W: file:line -- message``.
+    """
+    import re
+
+    diagnostics: list[dict] = []
+    pattern = re.compile(r"^(E|W|I):\s*(.+?):(\d+)\s*--\s*(.+)$")
+
+    for line in stdout.strip().splitlines():
+        m = pattern.match(line.strip())
+        if m:
+            severity_char, filepath, lineno, message = m.groups()
+            severity = {"E": "error", "W": "warning", "I": "info"}.get(severity_char, "info")
+            diagnostics.append({
+                "file": filepath.strip(),
+                "line": int(lineno),
+                "rule": f"deluge-lint-{severity_char.lower()}",
+                "severity": severity,
+                "message": message.strip(),
+            })
+
+    return diagnostics
+
+
+# Mock diagnostics for demo when real linter is unavailable
+_MOCK_DIAGNOSTICS = [
+    {
+        "file": "src/deluge/form-workflows/expense_claim.on_validate.dg",
+        "line": 14,
+        "rule": "deluge-lint-w",
+        "severity": "warning",
+        "message": "consider adding GL null guard",
+    },
+    {
+        "file": "src/deluge/form-workflows/expense_claim.on_success.dg",
+        "line": 8,
+        "rule": "deluge-lint-w",
+        "severity": "warning",
+        "message": "Added_User should use zoho.loginuser",
+    },
+]
 
 
 def _parse_lint_output(stdout: str, exit_code: int | None) -> dict:

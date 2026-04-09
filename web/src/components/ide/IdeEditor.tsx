@@ -129,9 +129,17 @@ export function IdeEditor() {
 
         const identifier = word.word;
 
-        // Look up in the node index
+        // Look up in the node index — search by label (case-insensitive)
+        // since cursor words are field names like "Amount_ZAR", not node IDs like "field-amount"
         if (appStructure?.nodeIndex) {
-          const node = appStructure.nodeIndex.get(identifier);
+          let node: import("../../types/ide").TreeNode | undefined;
+          const lowerIdentifier = identifier.toLowerCase();
+          for (const candidate of appStructure.nodeIndex.values()) {
+            if (candidate.label.toLowerCase() === lowerIdentifier) {
+              node = candidate;
+              break;
+            }
+          }
           if (node) {
             const data: InspectorData = {
               type:
