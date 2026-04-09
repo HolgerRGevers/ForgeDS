@@ -13,9 +13,11 @@ import type {
   BuildMessage,
   CodeFile,
   ProjectHistoryItem,
+  RepoFile,
 } from "../types/prompt";
+import type { PromptMode } from "../components/ModeToggle";
 
-type WorkflowStage = "input" | "refined" | "building" | "complete";
+type WorkflowStage = "input" | "planning" | "refined" | "building" | "complete";
 
 const HISTORY_KEY = "forgeds-project-history";
 
@@ -41,11 +43,13 @@ export default function PromptPage() {
   const [stage, setStage] = useState<WorkflowStage>("input");
   const [isLoading, setIsLoading] = useState(false);
   const [promptText, setPromptText] = useState("");
+  const [mode, setMode] = useState<PromptMode>("plan");
   const [sections, setSections] = useState<RefinedSection[]>([]);
   const [buildMessages, setBuildMessages] = useState<BuildMessage[]>([]);
   const [generatedFiles, setGeneratedFiles] = useState<CodeFile[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [planSteps, setPlanSteps] = useState<string[]>([]);
 
   // Project history
   const [history, setHistory] = useState<ProjectHistoryItem[]>(() =>
@@ -59,30 +63,63 @@ export default function PromptPage() {
   // --- Handlers ---
 
   const handlePromptSubmit = useCallback(
-    async (prompt: string, files: File[]) => {
+    async (prompt: string, files: File[], repoFiles: RepoFile[] = []) => {
       setPromptText(prompt);
       setIsLoading(true);
+
+      // Build context from repo files
+      const repoContext = repoFiles.map((rf) => ({
+        path: rf.path,
+        content: rf.content,
+        source: rf.repoName,
+      }));
+
       try {
         const fileNames = files.map((f) => f.name);
         const response = await send("refine_prompt", {
           prompt,
           files: fileNames,
+          repoContext,
+          mode,
         });
-        // Parse response into RefinedSection[]
-        const refined = (response.sections as RefinedSection[] | undefined) ?? [
-          {
-            id: "1",
-            title: "Project Overview",
-            icon: "📋",
-            content: prompt,
-            items: [],
-            isEditable: true,
-          },
-        ];
-        setSections(refined);
-        setStage("refined");
+
+        if (mode === "plan") {
+          // In plan mode, show planning output first
+          const steps = (response.planSteps as string[] | undefined) ?? [
+            "Analyze requirements",
+            "Identify forms and fields",
+            "Design workflows",
+            "Generate code",
+          ];
+          setPlanSteps(steps);
+          const refined = (response.sections as RefinedSection[] | undefined) ?? [
+            {
+              id: "1",
+              title: "Project Overview",
+              icon: "📋",
+              content: prompt,
+              items: steps,
+              isEditable: true,
+            },
+          ];
+          setSections(refined);
+          setStage("planning");
+        } else {
+          // Code mode — go straight to refined
+          const refined = (response.sections as RefinedSection[] | undefined) ?? [
+            {
+              id: "1",
+              title: "Project Overview",
+              icon: "📋",
+              content: prompt,
+              items: [],
+              isEditable: true,
+            },
+          ];
+          setSections(refined);
+          setStage("refined");
+        }
       } catch {
-        // On error, still allow moving forward with a fallback section
         setSections([
           {
             id: "fallback",
@@ -93,12 +130,12 @@ export default function PromptPage() {
             isEditable: true,
           },
         ]);
-        setStage("refined");
+        setStage(mode === "plan" ? "planning" : "refined");
       } finally {
         setIsLoading(false);
       }
     },
-    [send],
+    [send, mode],
   );
 
   const handleSectionUpdate = useCallback(
@@ -177,6 +214,7 @@ export default function PromptPage() {
     setBuildMessages([]);
     setGeneratedFiles([]);
     setActiveFileIndex(0);
+    setPlanSteps([]);
   }, []);
 
   const handleOpenIDE = useCallback(() => {
@@ -201,13 +239,58 @@ export default function PromptPage() {
 
   // --- Render center area based on stage ---
 
+  /** Approve the plan and move to code generation. */
+  const handleApprovePlan = useCallback(() => {
+    setMode("code");
+    setStage("refined");
+  }, []);
+
   function renderCenter() {
     switch (stage) {
       case "input":
         return (
           <div className="flex h-full items-center justify-center p-6">
             <div className="w-full max-w-2xl">
-              <PromptInput onSubmit={handlePromptSubmit} isLoading={isLoading} />
+              <PromptInput
+                onSubmit={handlePromptSubmit}
+                isLoading={isLoading}
+                mode={mode}
+                onModeChange={setMode}
+              />
+            </div>
+          </div>
+        );
+      case "planning":
+        return (
+          <div className="h-full overflow-y-auto p-6">
+            <div className="mx-auto max-w-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">
+                  Plan
+                </h2>
+                <span className="rounded-full bg-blue-600/20 px-3 py-1 text-xs font-medium text-blue-400">
+                  Plan Mode
+                </span>
+              </div>
+              <div className="space-y-2">
+                {planSteps.map((step, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 rounded-lg border border-gray-800 bg-gray-900 px-4 py-3"
+                  >
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-700 text-xs font-medium text-gray-300">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-gray-300">{step}</span>
+                  </div>
+                ))}
+              </div>
+              <RefinedPrompt
+                sections={sections}
+                onSectionUpdate={handleSectionUpdate}
+                onConfirm={handleApprovePlan}
+                onStartOver={handleStartOver}
+              />
             </div>
           </div>
         );

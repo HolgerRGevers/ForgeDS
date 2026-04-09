@@ -19,10 +19,19 @@ export interface RefinedPromptProps {
   onStartOver: () => void;
 }
 
+/** A file attached from a GitHub repository. */
+export interface RepoFile {
+  path: string;
+  content: string;
+  repoName: string;
+}
+
 /** Props for the PromptInput component. */
 export interface PromptInputProps {
-  onSubmit: (prompt: string, files: File[]) => void;
+  onSubmit: (prompt: string, files: File[], repoFiles: RepoFile[]) => void;
   isLoading: boolean;
+  mode: "plan" | "code";
+  onModeChange: (mode: "plan" | "code") => void;
 }
 
 /** A single progress message displayed during build. */

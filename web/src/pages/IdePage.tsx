@@ -4,10 +4,14 @@ import {
   DevConsole,
   IdeEditor,
   InspectorPanel,
+  RepoExplorer,
+  SourceControlPanel,
 } from "../components/ide";
 import { useIdeStore } from "../stores/ideStore";
 import { useBridgeStore } from "../stores/bridgeStore";
 import type { AppStructure, InspectorData, TreeNode } from "../types/ide";
+
+type ExplorerMode = "repo" | "ds";
 
 /** Build the flat nodeIndex from a tree of TreeNodes. */
 function buildNodeIndex(tree: TreeNode[]): Map<string, TreeNode> {
@@ -26,10 +30,14 @@ export default function IdePage() {
   const [showExplorer, setShowExplorer] = useState(true);
   const [showInspector, setShowInspector] = useState(true);
   const [showConsole, setShowConsole] = useState(true);
+  const [explorerMode, setExplorerMode] = useState<ExplorerMode>("repo");
+  const [showSourceControl, setShowSourceControl] = useState(false);
 
   const connect = useBridgeStore((s) => s.connect);
   const status = useBridgeStore((s) => s.status);
   const send = useBridgeStore((s) => s.send);
+
+
 
   const tabs = useIdeStore((s) => s.tabs);
   const selectedNodeId = useIdeStore((s) => s.selectedNodeId);
@@ -182,6 +190,38 @@ export default function IdePage() {
       });
   }, [selectedNodeId, status, appStructure, send, setInspectorData, addConsoleEntry]);
 
+  /** Handle file selection from the RepoExplorer. */
+  const handleRepoFileSelect = useCallback(
+    (path: string, content: string) => {
+      const name = path.split("/").pop() ?? path;
+      const ext = name.split(".").pop() ?? "";
+      const langMap: Record<string, string> = {
+        dg: "deluge",
+        ds: "plaintext",
+        py: "python",
+        json: "json",
+        yaml: "yaml",
+        yml: "yaml",
+        md: "markdown",
+        sql: "sql",
+        csv: "plaintext",
+        txt: "plaintext",
+      };
+      const tab = {
+        id: path,
+        name,
+        path,
+        content,
+        language: langMap[ext] ?? "plaintext",
+        isDirty: false,
+      };
+      // Open the tab in the IDE editor
+      const { openTab } = useIdeStore.getState();
+      openTab(tab);
+    },
+    [],
+  );
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Toolbar */}
@@ -201,9 +241,55 @@ export default function IdePage() {
           active={showConsole}
           onClick={() => setShowConsole((v) => !v)}
         />
+        <ToolbarToggle
+          label="Source Control"
+          active={showSourceControl}
+          onClick={() => setShowSourceControl((v) => !v)}
+        />
         <div className="mx-2 h-4 w-px bg-gray-600" />
-        <ToolbarButton label="Lint" onClick={runLint} />
-        <ToolbarButton label="Load .ds" onClick={loadDs} />
+
+        {/* Explorer mode toggle */}
+        {showExplorer && (
+          <div className="inline-flex rounded border border-gray-700 bg-gray-800 p-0.5">
+            <button
+              type="button"
+              onClick={() => setExplorerMode("repo")}
+              className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                explorerMode === "repo"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+              title="GitHub repository files"
+            >
+              Repo
+            </button>
+            <button
+              type="button"
+              onClick={() => setExplorerMode("ds")}
+              className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                explorerMode === "ds"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+              title=".ds export structure"
+            >
+              .ds Tree
+            </button>
+          </div>
+        )}
+
+        <div className="mx-2 h-4 w-px bg-gray-600" />
+        {status === "connected" && (
+          <>
+            <ToolbarButton label="Lint" onClick={runLint} />
+            <ToolbarButton label="Load .ds" onClick={loadDs} />
+          </>
+        )}
+        {status !== "connected" && (
+          <span className="text-[10px] text-gray-500">
+            Bridge offline — GitHub mode active
+          </span>
+        )}
       </div>
 
       {/* Main content area */}
@@ -213,7 +299,11 @@ export default function IdePage() {
           {/* Left panel: Explorer */}
           {showExplorer && (
             <div className="h-full w-[250px] shrink-0 border-r border-gray-700 overflow-hidden">
-              <AppTreeExplorer />
+              {explorerMode === "repo" ? (
+                <RepoExplorer onFileSelect={handleRepoFileSelect} />
+              ) : (
+                <AppTreeExplorer />
+              )}
             </div>
           )}
 
@@ -222,10 +312,10 @@ export default function IdePage() {
             <IdeEditor />
           </div>
 
-          {/* Right panel: Inspector */}
-          {showInspector && (
+          {/* Right panel: Inspector or Source Control */}
+          {(showInspector || showSourceControl) && (
             <div className="h-full w-[300px] shrink-0 border-l border-gray-700 overflow-hidden">
-              <InspectorPanel />
+              {showSourceControl ? <SourceControlPanel /> : <InspectorPanel />}
             </div>
           )}
         </div>

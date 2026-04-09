@@ -51,3 +51,16 @@ export type {
   WizardStep,
   ApiStore,
 } from "./api";
+
+export type {
+  GitHubUser,
+  RepoInfo,
+  GitTreeNode,
+  FileChange,
+  CommitInfo,
+  BranchInfo,
+  DeviceCodeResponse,
+  AuthStatus,
+  AuthStore,
+  RepoStore,
+} from "./github";

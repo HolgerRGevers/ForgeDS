@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { UserMenu } from "./UserMenu";
+import type { ConnectionStatus as ConnStatus } from "../types/bridge";
 
 interface AppShellProps {
   children: ReactNode;
+  bridgeStatus?: ConnStatus;
 }
 
 const navItems = [
@@ -13,7 +16,7 @@ const navItems = [
   { to: "/api", label: "API", phase: 4 },
 ];
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, bridgeStatus }: AppShellProps) {
   return (
     <div className="flex h-screen flex-col bg-gray-950 text-gray-100">
       {/* Header */}
@@ -47,8 +50,16 @@ export function AppShell({ children }: AppShellProps) {
           ))}
         </nav>
 
-        {/* Connection status */}
-        <ConnectionStatus />
+        {/* Right side: bridge status + user menu */}
+        <div className="flex items-center gap-3">
+          {bridgeStatus === "connected" && <ConnectionStatus />}
+          {bridgeStatus === "connecting" && (
+            <span className="text-xs text-yellow-500" title="Bridge connecting...">
+              Bridge...
+            </span>
+          )}
+          <UserMenu />
+        </div>
       </header>
 
       {/* Main content */}
