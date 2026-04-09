@@ -5,7 +5,7 @@ import type { BridgeStore } from "../types/bridge";
 export const useBridgeStore = create<BridgeStore>((set) => {
   // Keep Zustand in sync with the raw client's connection state.
   bridge.onStatusChange((status) => {
-    set({ status, error: status === "disconnected" ? null : null });
+    set({ status });
   });
 
   return {

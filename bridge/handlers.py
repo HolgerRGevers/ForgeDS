@@ -35,68 +35,47 @@ async def handle_refine_prompt(data: dict) -> dict:
     await asyncio.sleep(0.3)
 
     return {
-        "original_prompt": raw_prompt,
-        "refined": {
-            "project_name": "Expense_Reimbursement_Manager",
-            "description": "Employee expense claim submission and approval workflow with ESG tracking",
-            "forms": [
-                {
-                    "name": "Expense_Claims",
-                    "fields": [
-                        {"name": "Claim_Reference", "type": "Auto Number", "prefix": "EXP-"},
-                        {"name": "Employee_Name", "type": "Name"},
-                        {"name": "Department", "type": "Dropdown", "values": ["Finance", "Operations", "IT", "HR"]},
-                        {"name": "Claim_Date", "type": "Date"},
-                        {"name": "Amount_ZAR", "type": "Currency"},
-                        {"name": "GL_Account", "type": "Lookup", "target": "GL_Accounts"},
-                        {"name": "Description", "type": "Multi Line"},
-                        {"name": "Receipt", "type": "File Upload"},
-                        {"name": "Status", "type": "Dropdown", "values": ["Draft", "Submitted", "Approved", "Rejected"]},
-                        {"name": "ESG_Category", "type": "Single Line"},
-                        {"name": "Estimated_Carbon_KG", "type": "Decimal"},
-                    ],
-                },
-                {
-                    "name": "GL_Accounts",
-                    "fields": [
-                        {"name": "Account_Code", "type": "Single Line"},
-                        {"name": "Account_Name", "type": "Single Line"},
-                        {"name": "ESG_Category", "type": "Dropdown", "values": ["Travel", "Energy", "Procurement", "Other"]},
-                        {"name": "Carbon_Factor", "type": "Decimal"},
-                    ],
-                },
-                {
-                    "name": "Approval_History",
-                    "fields": [
-                        {"name": "Claim_Reference", "type": "Lookup", "target": "Expense_Claims"},
-                        {"name": "Action", "type": "Dropdown", "values": ["Approved", "Rejected", "Escalated"]},
-                        {"name": "Approver", "type": "Name"},
-                        {"name": "Comments", "type": "Multi Line"},
-                        {"name": "Added_User", "type": "Added User"},
-                    ],
-                },
-            ],
-            "workflows": [
-                {
-                    "name": "on_submit_validate",
-                    "trigger": "Form submission -- Expense_Claims",
-                    "description": "Validates amount thresholds, prevents self-approval, writes audit trail",
-                },
-                {
-                    "name": "on_approval_update",
-                    "trigger": "Approval -- Expense_Claims",
-                    "description": "Populates ESG fields, writes to Approval_History, sends notification",
-                },
-            ],
-            "reports": [
-                {"name": "All_Claims", "form": "Expense_Claims", "type": "List"},
-                {"name": "Pending_Approvals", "form": "Expense_Claims", "type": "List", "filter": "Status == Submitted"},
-                {"name": "Approval_Audit_Trail", "form": "Approval_History", "type": "List"},
-            ],
-        },
-        "warnings": [
-            "Free Trial does not support hoursBetween -- using daysBetween instead",
-            "Self-approval prevention requires thisapp.permissions.isUserInRole()",
+        "sections": [
+            {
+                "id": "forms",
+                "title": "Forms",
+                "icon": "[F]",
+                "content": "The following forms will be created for the expense reimbursement workflow",
+                "items": ["Expense_Claims", "GL_Accounts", "Approval_History"],
+                "isEditable": True,
+            },
+            {
+                "id": "workflows",
+                "title": "Workflows",
+                "icon": "[W]",
+                "content": "Event-driven scripts for form actions",
+                "items": ["on_submit_validate", "on_approval_update", "auto_populate_esg"],
+                "isEditable": True,
+            },
+            {
+                "id": "reports",
+                "title": "Reports & Dashboards",
+                "icon": "[R]",
+                "content": "Reporting views for claims and audit trails",
+                "items": ["All_Claims", "Pending_Approvals", "Approval_Audit_Trail"],
+                "isEditable": True,
+            },
+            {
+                "id": "approvals",
+                "title": "Approval Processes",
+                "icon": "[A]",
+                "content": "Multi-level approval workflow with segregation of duties",
+                "items": ["Line Manager Approval", "HoD Approval"],
+                "isEditable": True,
+            },
+            {
+                "id": "apis",
+                "title": "API Endpoints",
+                "icon": "[API]",
+                "content": "Custom API endpoints for external integrations",
+                "items": ["Get_Dashboard_Summary", "Get_Claim_Status"],
+                "isEditable": True,
+            },
         ],
     }
 
@@ -110,8 +89,9 @@ async def handle_build_project(data: dict, send_fn: SendFn) -> dict:
     Sends incremental stream messages via send_fn, then returns a
     final summary.
     """
-    project = data.get("project", {})
-    project_name = project.get("project_name", "Untitled_App")
+    sections = data.get("sections", [])
+    # Derive project name from first section title or fallback
+    project_name = sections[0].get("title", "Untitled_App") if sections else "Untitled_App"
 
     steps = [
         {"step": 1, "total": 5, "message": "Creating project scaffold for %s..." % project_name},
@@ -121,7 +101,7 @@ async def handle_build_project(data: dict, send_fn: SendFn) -> dict:
         {"step": 5, "total": 5, "message": "Build complete."},
     ]
 
-    generated_files: list[str] = []
+    generated_files: list[dict[str, str]] = []
 
     for step in steps:
         await send_fn({"chunk": step})
@@ -130,15 +110,30 @@ async def handle_build_project(data: dict, send_fn: SendFn) -> dict:
         # Simulate file generation on step 3
         if step["step"] == 3:
             generated_files = [
-                "src/deluge/form-workflows/%s/on_submit_validate.dg" % project_name,
-                "src/deluge/approval-scripts/%s/on_approval_update.dg" % project_name,
-                "src/deluge/scheduled/%s/daily_compliance_check.dg" % project_name,
+                {
+                    "name": "on_submit_validate.dg",
+                    "path": "src/deluge/form-workflows/on_submit_validate.dg",
+                    "content": "// On Submit Validate workflow\nclaimAmt = input.Amount_ZAR;\nthreshold = ifnull(Compliance_Config[Config_Key == \"CLAIM_THRESHOLD\" && Active == true].Threshold_Value, 999.99);",
+                    "language": "deluge",
+                },
+                {
+                    "name": "on_approval_update.dg",
+                    "path": "src/deluge/approval-scripts/on_approval_update.dg",
+                    "content": "// On Approval Update\nglRec = GL_Accounts[ID == input.GL_Account];\nif (glRec != null && glRec.count() > 0)\n{\n    input.ESG_Category = glRec.ESG_Category;\n    carbonFactor = ifnull(glRec.Carbon_Factor, 0);\n    input.Estimated_Carbon_KG = input.Amount_ZAR * carbonFactor;\n}",
+                    "language": "deluge",
+                },
+                {
+                    "name": "forgeds.yaml",
+                    "path": "forgeds.yaml",
+                    "content": "project:\n  name: \"%s\"\n  platform: zoho-creator" % project_name,
+                    "language": "yaml",
+                },
             ]
 
     return {
         "status": "success",
         "project_name": project_name,
-        "files_generated": generated_files,
+        "files": generated_files,
         "lint_result": {
             "errors": 0,
             "warnings": 1,
