@@ -12,3 +12,16 @@ export type {
   RefinedPromptProps,
   PromptInputProps,
 } from "./prompt";
+
+export type {
+  TreeNode,
+  AppStructure,
+  EditorTab,
+  LintDiagnostic,
+  InspectedElementType,
+  RelationshipLink,
+  InspectorData,
+  ConsoleEntry,
+  ConsoleTab,
+  IdeStore,
+} from "./ide";
