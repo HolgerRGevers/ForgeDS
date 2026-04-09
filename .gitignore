@@ -21,5 +21,8 @@ Thumbs.db
 # Project secrets
 config/zoho-api.yaml
 
+# Node
+node_modules/
+
 # Worktrees
 .worktrees/
