@@ -6,3 +6,9 @@ export type {
   ConnectionListener,
   ConnectionStatus,
 } from "./bridge";
+
+export type {
+  RefinedSection,
+  RefinedPromptProps,
+  PromptInputProps,
+} from "./prompt";
