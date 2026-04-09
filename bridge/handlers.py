@@ -613,3 +613,330 @@ async def handle_ai_chat(data: dict) -> dict:
         )
 
     return {"response": response, "model": "mock"}
+
+
+# ---------------------------------------------------------------------------
+# get_schema -- return Access tables and Zoho forms (mock)
+# ---------------------------------------------------------------------------
+
+_ACCESS_TABLES = [
+    {
+        "name": "tblExpenseClaims",
+        "columns": [
+            {"name": "ClaimID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "EmployeeName", "type": "TEXT", "length": 100},
+            {"name": "AmountZAR", "type": "CURRENCY"},
+            {"name": "DepartmentID", "type": "LONG", "foreignKey": "tblDepartments.DeptID"},
+            {"name": "GLAccountID", "type": "LONG", "foreignKey": "tblGLAccounts.GLID"},
+            {"name": "ClaimDate", "type": "DATETIME"},
+            {"name": "Status", "type": "TEXT", "length": 20},
+            {"name": "IsApproved", "type": "BOOLEAN"},
+        ],
+    },
+    {
+        "name": "tblDepartments",
+        "columns": [
+            {"name": "DeptID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "DeptName", "type": "TEXT", "length": 50},
+            {"name": "ApprovingManager", "type": "TEXT", "length": 100},
+        ],
+    },
+    {
+        "name": "tblGLAccounts",
+        "columns": [
+            {"name": "GLID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "GLCode", "type": "TEXT", "length": 10},
+            {"name": "AccountName", "type": "TEXT", "length": 100},
+            {"name": "ESGCategory", "type": "TEXT", "length": 50},
+            {"name": "CarbonFactor", "type": "DOUBLE"},
+        ],
+    },
+    {
+        "name": "tblClients",
+        "columns": [
+            {"name": "ClientID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "ClientName", "type": "TEXT", "length": 100},
+            {"name": "ContactEmail", "type": "TEXT", "length": 100},
+            {"name": "IsActive", "type": "BOOLEAN"},
+        ],
+    },
+    {
+        "name": "tblApprovalHistory",
+        "columns": [
+            {"name": "HistoryID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "ClaimID", "type": "LONG", "foreignKey": "tblExpenseClaims.ClaimID"},
+            {"name": "ActionType", "type": "TEXT", "length": 20},
+            {"name": "Actor", "type": "TEXT", "length": 100},
+            {"name": "ActionDate", "type": "DATETIME"},
+            {"name": "Comments", "type": "TEXT", "length": 255},
+        ],
+    },
+]
+
+_ZOHO_FORMS = [
+    {
+        "name": "Expense_Claims",
+        "fields": [
+            {"name": "Claim_ID", "type": "Auto Number"},
+            {"name": "Employee_Name", "type": "Text"},
+            {"name": "Amount_ZAR", "type": "Decimal"},
+            {"name": "Department", "type": "Lookup"},
+            {"name": "GL_Account", "type": "Lookup"},
+            {"name": "Claim_Date", "type": "DateTime"},
+            {"name": "Status", "type": "Picklist"},
+            {"name": "Is_Approved", "type": "Checkbox"},
+        ],
+    },
+    {
+        "name": "Departments",
+        "fields": [
+            {"name": "Dept_Name", "type": "Text"},
+            {"name": "Approving_Manager", "type": "Text"},
+            {"name": "ID", "type": "Auto Number"},
+        ],
+    },
+    {
+        "name": "GL_Accounts",
+        "fields": [
+            {"name": "GL_Code", "type": "Text"},
+            {"name": "Account_Name", "type": "Text"},
+            {"name": "ESG_Category", "type": "Text"},
+            {"name": "Carbon_Factor", "type": "Decimal"},
+            {"name": "ID", "type": "Auto Number"},
+        ],
+    },
+    {
+        "name": "Clients",
+        "fields": [
+            {"name": "Client_Name", "type": "Text"},
+            {"name": "Contact_Email", "type": "Text"},
+            {"name": "Is_Active", "type": "Checkbox"},
+            {"name": "ID", "type": "Auto Number"},
+        ],
+    },
+    {
+        "name": "Approval_History",
+        "fields": [
+            {"name": "Claim", "type": "Lookup"},
+            {"name": "action_1", "type": "Picklist"},
+            {"name": "Actor", "type": "Text"},
+            {"name": "Action_Date", "type": "DateTime"},
+            {"name": "Comments", "type": "Text"},
+            {"name": "Added_User", "type": "Text"},
+        ],
+    },
+]
+
+# Pre-computed table name mapping (Access -> Zoho)
+_TABLE_NAME_MAP = {
+    "tblExpenseClaims": "Expense_Claims",
+    "tblDepartments": "Departments",
+    "tblGLAccounts": "GL_Accounts",
+    "tblClients": "Clients",
+    "tblApprovalHistory": "Approval_History",
+}
+
+# Type mismatches worth flagging
+_TYPE_MISMATCHES = {
+    ("CURRENCY", "Decimal"): "CURRENCY (4dp fixed-point) -> Decimal (2dp) — precision loss possible",
+    ("BOOLEAN", "Checkbox"): "Access BOOLEAN (-1/0) -> Zoho Checkbox (true/false) — value mapping required",
+    ("DATETIME", "DateTime"): "Access DATETIME (no timezone) -> Zoho DateTime (UTC) — timezone awareness gap",
+}
+
+
+def _build_table_mappings() -> list[dict]:
+    """Generate field-level mappings between Access tables and Zoho forms."""
+    mappings = []
+    for access_tbl in _ACCESS_TABLES:
+        zoho_name = _TABLE_NAME_MAP.get(access_tbl["name"])
+        if not zoho_name:
+            continue
+        zoho_form = next((f for f in _ZOHO_FORMS if f["name"] == zoho_name), None)
+        if not zoho_form:
+            continue
+
+        field_maps = []
+        zoho_fields = {f["name"]: f for f in zoho_form["fields"]}
+        for col in access_tbl["columns"]:
+            # Simple heuristic: match by similar name
+            best_match = None
+            for zf_name in zoho_fields:
+                if col["name"].replace("ID", "").replace("_", "").lower() in zf_name.replace("_", "").lower():
+                    best_match = zf_name
+                    break
+            mismatch = None
+            if best_match:
+                zoho_type = zoho_fields[best_match]["type"]
+                key = (col["type"], zoho_type)
+                mismatch = _TYPE_MISMATCHES.get(key)
+            field_maps.append({
+                "accessColumn": col["name"],
+                "zohoField": best_match,
+                "accessType": col["type"],
+                "zohoType": zoho_fields[best_match]["type"] if best_match else None,
+                "mismatch": mismatch,
+            })
+
+        mappings.append({
+            "accessTable": access_tbl["name"],
+            "zohoForm": zoho_name,
+            "status": "mapped",
+            "fieldMappings": field_maps,
+        })
+    return mappings
+
+
+async def handle_get_schema(data: dict) -> dict:
+    """Return Access tables, Zoho forms, and auto-generated mappings.
+
+    Mock implementation returning realistic ERM schema data.
+    """
+    await asyncio.sleep(0.2)
+    return {
+        "accessTables": _ACCESS_TABLES,
+        "zohoForms": _ZOHO_FORMS,
+        "tableMappings": _build_table_mappings(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# run_validation -- run validation checks (mock)
+# ---------------------------------------------------------------------------
+
+_LINT_HYBRID_DETAILS = [
+    {"severity": "info", "rule": "HY001", "message": "Schema alignment: tblExpenseClaims -> Expense_Claims OK"},
+    {"severity": "info", "rule": "HY001", "message": "Schema alignment: tblDepartments -> Departments OK"},
+    {"severity": "info", "rule": "HY001", "message": "Schema alignment: tblGLAccounts -> GL_Accounts OK"},
+    {"severity": "warning", "rule": "HY003", "message": "Type mismatch: CURRENCY (4dp) -> Decimal (2dp) for Amount field in tblExpenseClaims"},
+    {"severity": "warning", "rule": "HY004", "message": "Access BOOLEAN (-1/0) requires value mapping to Zoho Checkbox (true/false) in tblClients.IsActive"},
+]
+
+_VALIDATE_DETAILS = [
+    {"severity": "info", "rule": "DV001", "message": "Picklist values for Status match seed data: Draft, Submitted, Approved, Rejected, Paid"},
+    {"severity": "info", "rule": "DV002", "message": "Foreign key integrity: tblExpenseClaims.DepartmentID -> tblDepartments.DeptID OK (10/10 valid)"},
+    {"severity": "warning", "rule": "DV003", "message": "3 records in tblExpenseClaims have NULL GLAccountID — will import as empty Lookup"},
+    {"severity": "info", "rule": "DV004", "message": "Date range check: ClaimDate values span 2024-01-15 to 2026-03-28 — all valid"},
+    {"severity": "error", "rule": "DV005", "message": "Duplicate EmployeeName+ClaimDate found in 2 records — possible duplicate claims"},
+]
+
+
+async def handle_run_validation(data: dict) -> dict:
+    """Run validation checks. Mock implementation.
+
+    Args:
+        data: Dict with ``tool`` ("lint-hybrid" or "validate") and
+              ``tables`` (list of table names to validate).
+    """
+    import datetime
+    import uuid
+
+    tool = data.get("tool", "lint-hybrid")
+    tables = data.get("tables", [])
+
+    await asyncio.sleep(0.4)
+
+    if tool == "lint-hybrid":
+        details = _LINT_HYBRID_DETAILS
+    else:
+        details = _VALIDATE_DETAILS
+
+    # Filter details to requested tables if specified
+    if tables:
+        filtered = []
+        for d in details:
+            if any(t in d["message"] for t in tables) or not any(
+                tbl in d["message"] for tbl in _TABLE_NAME_MAP
+            ):
+                filtered.append(d)
+        if filtered:
+            details = filtered
+
+    info_count = sum(1 for d in details if d["severity"] == "info")
+    warn_count = sum(1 for d in details if d["severity"] == "warning")
+    err_count = sum(1 for d in details if d["severity"] == "error")
+
+    if err_count > 0:
+        status = "error"
+    elif warn_count > 0:
+        status = "warning"
+    else:
+        status = "pass"
+
+    parts = []
+    if info_count:
+        parts.append(f"{info_count} checks passed")
+    if warn_count:
+        parts.append(f"{warn_count} warnings")
+    if err_count:
+        parts.append(f"{err_count} errors")
+    summary = ", ".join(parts) if parts else "No checks run"
+
+    return {
+        "id": f"val-{uuid.uuid4().hex[:8]}",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "tool": tool,
+        "status": status,
+        "summary": summary,
+        "details": details,
+    }
+
+
+# ---------------------------------------------------------------------------
+# mock_upload -- simulate data upload with streaming progress
+# ---------------------------------------------------------------------------
+
+# Realistic record counts per table
+_TABLE_RECORD_COUNTS = {
+    "tblExpenseClaims": 85,
+    "tblDepartments": 10,
+    "tblGLAccounts": 25,
+    "tblClients": 18,
+    "tblApprovalHistory": 120,
+    "Expense_Claims": 85,
+    "Departments": 10,
+    "GL_Accounts": 25,
+    "Clients": 18,
+    "Approval_History": 120,
+}
+
+
+async def handle_mock_upload(data: dict, send_fn: SendFn) -> dict:
+    """Simulate data upload with streaming progress.
+
+    Sends incremental progress messages via send_fn for each table,
+    simulating batch upload (50 records at a time), then returns a
+    final summary.
+    """
+    tables = data.get("tables", list(_TABLE_NAME_MAP.values()))
+    batch_size = 50
+    total_records = 0
+    errors: list[str] = []
+
+    for table in tables:
+        record_count = _TABLE_RECORD_COUNTS.get(table, 30)
+        uploaded = 0
+
+        while uploaded < record_count:
+            batch = min(batch_size, record_count - uploaded)
+            uploaded += batch
+            progress = int((uploaded / record_count) * 100)
+
+            await send_fn({
+                "chunk": {
+                    "table": table,
+                    "progress": progress,
+                    "uploaded": uploaded,
+                    "total": record_count,
+                    "status": "uploading" if uploaded < record_count else "complete",
+                },
+            })
+            await asyncio.sleep(0.2)
+
+        total_records += record_count
+
+    return {
+        "status": "success",
+        "tables_uploaded": len(tables),
+        "total_records": total_records,
+        "errors": errors,
+    }

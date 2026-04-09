@@ -13,12 +13,15 @@ from websockets.asyncio.server import ServerConnection
 from bridge.handlers import (
     handle_ai_chat,
     handle_build_project,
+    handle_get_schema,
     handle_get_status,
     handle_inspect_element,
     handle_lint_check,
+    handle_mock_upload,
     handle_parse_ds,
     handle_read_file,
     handle_refine_prompt,
+    handle_run_validation,
 )
 
 HOST = "localhost"
@@ -84,6 +87,22 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
         elif msg_type == "ai_chat":
             result = await handle_ai_chat(data)
             await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "get_schema":
+            result = await handle_get_schema(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "run_validation":
+            result = await handle_run_validation(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "mock_upload":
+            # Streaming: send chunks, then a final stream_end
+            async def send_upload_stream(chunk_data: dict) -> None:
+                await _send_json(ws, {"id": msg_id, "type": "stream", "data": chunk_data})
+
+            result = await handle_mock_upload(data, send_upload_stream)
+            await _send_json(ws, {"id": msg_id, "type": "stream_end", "data": {"result": result}})
 
         else:
             await _send_json(ws, {
