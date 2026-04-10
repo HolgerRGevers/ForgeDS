@@ -1,0 +1,51 @@
+// ============================================================
+// Script:   daily_overdue_checker.reference.dg
+// Location: Scheduled Task > Daily
+// Trigger:  scheduled
+// Purpose:  Zia stress test — record iteration, invokeUrl, map ops
+// Context:  scheduled
+// Design:   All [] action blocks wrapped inside {} control flow
+// Note:     Uses daysBetween (not hoursBetween) — Free Trial constraint
+// Version:  v2.1 (Zia Stress Test)
+// ============================================================
+
+// Query overdue invoices — scheduled context, no input.FieldName
+records = Invoices[Status == "Pending" && Due_Date < zoho.currentdate];
+
+if (records != null && records.count() > 0)
+{
+    for each rec in records
+    {
+        days = daysBetween(rec.Due_Date, zoho.currentdate);
+
+        if (days > 30)
+        {
+            // Update status — inside {} control flow
+            rec.Status = "Escalated";
+
+            // invokeUrl with POST — [] inside {} (DG010 target)
+            params = Map();
+            params.put("invoice_id", rec.ID);
+            params.put("days_overdue", days);
+            params.put("vendor", ifnull(rec.Vendor_Name, "Unknown"));
+
+            resp = invokeUrl
+            [
+                url : "https://api.example.com/notify"
+                type : POST
+                parameters : params.toString()
+                headers : {"Content-Type": "application/json"}
+            ];
+
+            // Audit trail — [] inside {} (DG006, DG009)
+            row = insert into Audit_Log
+            [
+                action = "Overdue Escalation"
+                record_id = rec.ID
+                details = "Invoice overdue by " + days + " days"
+                timestamp = zoho.currenttime
+                Added_User = zoho.adminuser
+            ];
+        }
+    }
+}
