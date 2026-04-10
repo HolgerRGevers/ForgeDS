@@ -87,6 +87,40 @@ Deluge code guidelines:
 
 Generate complete, runnable files — not stubs or placeholders.`;
 
+// ── JSON Extraction ──────────────────────────────────────────────────────
+
+/**
+ * Robustly extract a JSON object from Claude's response text.
+ * Handles markdown fences, explanatory text before/after JSON, etc.
+ */
+function extractJson(text) {
+  // Try 1: direct parse
+  try { return JSON.parse(text); } catch { /* continue */ }
+
+  // Try 2: strip markdown fences
+  const fenceMatch = text.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/);
+  if (fenceMatch) {
+    try { return JSON.parse(fenceMatch[1]); } catch { /* continue */ }
+  }
+
+  // Try 3: find the outermost { ... } block
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try { return JSON.parse(text.slice(firstBrace, lastBrace + 1)); } catch { /* continue */ }
+  }
+
+  // Try 4: find the outermost [ ... ] block (array)
+  const firstBracket = text.indexOf("[");
+  const lastBracket = text.lastIndexOf("]");
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    try { return JSON.parse(text.slice(firstBracket, lastBracket + 1)); } catch { /* continue */ }
+  }
+
+  // Give up — return raw text wrapped
+  return null;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 
 async function validateGitHubToken(token) {
@@ -145,10 +179,7 @@ async function handleRefine(body, apiKey) {
 
   const data = await res.json();
   const text = data.content?.[0]?.text ?? "{}";
-
-  // Parse JSON from response (handle potential markdown fences)
-  const cleaned = text.replace(/^```json?\n?/, "").replace(/\n?```$/, "").trim();
-  return JSON.parse(cleaned);
+  return extractJson(text);
 }
 
 async function handleBuild(body, apiKey) {
@@ -239,31 +270,11 @@ async function handleBuild(body, apiKey) {
         }
       }
 
-      // Done — parse the accumulated text
-      const cleaned = accumulated
-        .replace(/^[\s\S]*?```json\s*\n?/, "")
-        .replace(/\n?\s*```[\s\S]*$/, "")
-        .trim();
+      // Done — parse the accumulated text using robust extraction
+      let result = extractJson(accumulated);
 
-      let result;
-      try {
-        result = JSON.parse(cleaned || accumulated);
-      } catch {
-        try {
-          result = JSON.parse(accumulated);
-        } catch {
-          result = {
-            files: [{
-              name: "generated_code.dg",
-              path: "src/deluge/generated_code.dg",
-              content: accumulated,
-              language: "deluge",
-            }],
-          };
-        }
-      }
-
-      if (!result.files || !Array.isArray(result.files)) {
+      // Fallback: wrap raw text as a single file
+      if (!result || !result.files || !Array.isArray(result.files)) {
         result = {
           files: [{
             name: "generated_code.dg",

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   PromptInput,
@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from "../stores/authStore";
 import { useRepoStore } from "../stores/repoStore";
 import { useIdeStore } from "../stores/ideStore";
+import { usePromptStore } from "../stores/promptStore";
 import { useToastStore } from "../stores/toastStore";
 import {
   refinePrompt,
@@ -20,14 +21,10 @@ import {
 import { TokenExpiredError } from "../services/github-api";
 import type {
   RefinedSection,
-  BuildMessage,
-  CodeFile,
   ProjectHistoryItem,
   RepoFile,
 } from "../types/prompt";
-import type { PromptMode } from "../components/ModeToggle";
-
-type WorkflowStage = "input" | "planning" | "refined" | "building" | "complete";
+import { useState } from "react";
 
 const HISTORY_KEY = "forgeds-project-history";
 
@@ -50,19 +47,20 @@ export default function PromptPage() {
   const handleTokenExpired = useAuthStore((s) => s.handleTokenExpired);
   const toast = useToastStore;
 
-  // Workflow state
-  const [stage, setStage] = useState<WorkflowStage>("input");
-  const [isLoading, setIsLoading] = useState(false);
-  const [promptText, setPromptText] = useState("");
-  const [mode, setMode] = useState<PromptMode>("plan");
-  const [sections, setSections] = useState<RefinedSection[]>([]);
-  const [buildMessages, setBuildMessages] = useState<BuildMessage[]>([]);
-  const [generatedFiles, setGeneratedFiles] = useState<CodeFile[]>([]);
-  const [activeFileIndex, setActiveFileIndex] = useState(0);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [planSteps, setPlanSteps] = useState<string[]>([]);
+  // Prompt workflow state from store (persists across navigation)
+  const stage = usePromptStore((s) => s.stage);
+  const isLoading = usePromptStore((s) => s.isLoading);
+  const mode = usePromptStore((s) => s.mode);
+  const sections = usePromptStore((s) => s.sections);
+  const buildMessages = usePromptStore((s) => s.buildMessages);
+  const generatedFiles = usePromptStore((s) => s.generatedFiles);
+  const activeFileIndex = usePromptStore((s) => s.activeFileIndex);
+  const planSteps = usePromptStore((s) => s.planSteps);
+  const rightPanelOpen = usePromptStore((s) => s.rightPanelOpen);
 
-  // Project history
+  const ps = usePromptStore.getState;
+
+  // Project history (localStorage)
   const [history, setHistory] = useState<ProjectHistoryItem[]>(() =>
     loadHistory(),
   );
@@ -104,10 +102,10 @@ export default function PromptPage() {
         return;
       }
 
-      setPromptText(prompt);
-      setIsLoading(true);
+      const store = usePromptStore.getState();
+      store.setPromptText(prompt);
+      store.setIsLoading(true);
 
-      // Build context from repo files
       const repoContext = repoFiles.map((rf) => ({
         path: rf.path,
         content: rf.content,
@@ -134,7 +132,7 @@ export default function PromptPage() {
             "Design workflows",
             "Generate code",
           ];
-          setPlanSteps(steps);
+          store.setPlanSteps(steps);
           const refined = response.sections ?? [
             {
               id: "1",
@@ -145,8 +143,8 @@ export default function PromptPage() {
               isEditable: true,
             },
           ];
-          setSections(refined);
-          setStage("planning");
+          store.setSections(refined);
+          store.setStage("planning");
         } else {
           const refined = response.sections ?? [
             {
@@ -158,13 +156,12 @@ export default function PromptPage() {
               isEditable: true,
             },
           ];
-          setSections(refined);
-          setStage("refined");
+          store.setSections(refined);
+          store.setStage("refined");
         }
       } catch (err) {
         handleError(err);
-        // Still show the prompt as a fallback section so user can retry
-        setSections([
+        store.setSections([
           {
             id: "fallback",
             title: "Your Prompt",
@@ -174,9 +171,9 @@ export default function PromptPage() {
             isEditable: true,
           },
         ]);
-        setStage(mode === "plan" ? "planning" : "refined");
+        store.setStage(mode === "plan" ? "planning" : "refined");
       } finally {
-        setIsLoading(false);
+        store.setIsLoading(false);
       }
     },
     [token, handleTokenExpired, handleError, mode],
@@ -184,9 +181,7 @@ export default function PromptPage() {
 
   const handleSectionUpdate = useCallback(
     (sectionId: string, updates: Partial<RefinedSection>) => {
-      setSections((prev) =>
-        prev.map((s) => (s.id === sectionId ? { ...s, ...updates } : s)),
-      );
+      usePromptStore.getState().updateSection(sectionId, updates);
     },
     [],
   );
@@ -197,45 +192,43 @@ export default function PromptPage() {
       return;
     }
 
-    setStage("building");
-    setBuildMessages([]);
-    setGeneratedFiles([]);
-    setActiveFileIndex(0);
+    const store = usePromptStore.getState();
+    store.setStage("building");
+    store.setBuildMessages([]);
+    store.setGeneratedFiles([]);
+    store.setActiveFileIndex(0);
 
-    const addMessage = (msg: BuildMessage) => {
-      setBuildMessages((prev) => [...prev, msg]);
+    const addMessage = (msg: { text: string; type: "info" | "success" | "error" | "warning" }) => {
+      usePromptStore.getState().addBuildMessage({
+        timestamp: new Date().toLocaleTimeString(),
+        ...msg,
+      });
     };
 
-    addMessage({
-      timestamp: new Date().toLocaleTimeString(),
-      text: "Starting build...",
-      type: "info",
-    });
+    addMessage({ text: "Starting build...", type: "info" });
 
     try {
       if (!isConfigured()) {
         throw new ClaudeApiNotConfiguredError();
       }
 
+      const currentSections = usePromptStore.getState().sections;
+      const currentPrompt = usePromptStore.getState().promptText;
+
       const result = await buildProject(
         token,
-        { sections, prompt: promptText },
+        { sections: currentSections, prompt: currentPrompt },
         (chunk) => {
           if (chunk.message) {
-            addMessage({
-              timestamp: new Date().toLocaleTimeString(),
-              text: chunk.message,
-              type: chunk.type ?? "info",
-            });
+            addMessage({ text: chunk.message, type: chunk.type ?? "info" });
           }
         },
       );
 
       const files = result.files ?? [];
-      setGeneratedFiles(files);
+      usePromptStore.getState().setGeneratedFiles(files);
 
       addMessage({
-        timestamp: new Date().toLocaleTimeString(),
         text: `Build complete! Generated ${files.length} file(s).`,
         type: "success",
       });
@@ -247,11 +240,7 @@ export default function PromptPage() {
         const ts = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
         const branchName = `forgeds/${ts}`;
 
-        addMessage({
-          timestamp: now.toLocaleTimeString(),
-          text: `Committing to branch ${branchName}...`,
-          type: "info",
-        });
+        addMessage({ text: `Committing to branch ${branchName}...`, type: "info" });
 
         try {
           const uploadFiles = files.map((f) => ({
@@ -266,7 +255,6 @@ export default function PromptPage() {
           );
 
           addMessage({
-            timestamp: new Date().toLocaleTimeString(),
             text: `Committed to ${repo.full_name} on branch ${branchName}`,
             type: "success",
           });
@@ -277,21 +265,17 @@ export default function PromptPage() {
           );
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Commit failed";
-          addMessage({
-            timestamp: new Date().toLocaleTimeString(),
-            text: `Auto-commit failed: ${msg}`,
-            type: "warning",
-          });
+          addMessage({ text: `Auto-commit failed: ${msg}`, type: "warning" });
           toast.getState().error("Auto-commit failed", msg);
         }
       }
 
-      setStage("complete");
+      usePromptStore.getState().setStage("complete");
 
       // Save to history
       const entry: ProjectHistoryItem = {
         id: crypto.randomUUID(),
-        prompt: promptText,
+        prompt: currentPrompt,
         timestamp: Date.now(),
         fileCount: files.length,
       };
@@ -306,36 +290,30 @@ export default function PromptPage() {
     } catch (err) {
       handleError(err);
       addMessage({
-        timestamp: new Date().toLocaleTimeString(),
         text: err instanceof Error ? err.message : "Build failed. Please try again.",
         type: "error",
       });
     }
-  }, [token, handleTokenExpired, handleError, sections, promptText, toast]);
+  }, [token, handleTokenExpired, handleError, toast]);
 
   const handleStartOver = useCallback(() => {
-    setStage("input");
-    setPromptText("");
-    setSections([]);
-    setBuildMessages([]);
-    setGeneratedFiles([]);
-    setActiveFileIndex(0);
-    setPlanSteps([]);
+    usePromptStore.getState().reset();
   }, []);
 
   const handleOpenIDE = useCallback(() => {
-    // Pass generated files to IDE as open tabs
-    if (generatedFiles.length > 0) {
-      useIdeStore.getState().loadGeneratedFiles(generatedFiles);
+    const files = usePromptStore.getState().generatedFiles;
+    if (files.length > 0) {
+      useIdeStore.getState().loadGeneratedFiles(files);
     }
     navigate("/ide");
-  }, [navigate, generatedFiles]);
+  }, [navigate]);
 
   const handleHistorySelect = useCallback((id: string) => {
     const item = loadHistory().find((h) => h.id === id);
     if (item) {
-      setPromptText(item.prompt);
-      setStage("input");
+      const store = usePromptStore.getState();
+      store.reset();
+      store.setPromptText(item.prompt);
     }
   }, []);
 
@@ -347,12 +325,10 @@ export default function PromptPage() {
     setHistory([]);
   }, []);
 
-  // --- Render center area based on stage ---
-
-  /** Approve the plan and move to code generation. */
   const handleApprovePlan = useCallback(() => {
-    setMode("code");
-    setStage("refined");
+    const store = usePromptStore.getState();
+    store.setMode("code");
+    store.setStage("refined");
   }, []);
 
   function renderCenter() {
@@ -365,7 +341,7 @@ export default function PromptPage() {
                 onSubmit={handlePromptSubmit}
                 isLoading={isLoading}
                 mode={mode}
-                onModeChange={setMode}
+                onModeChange={(m) => usePromptStore.getState().setMode(m)}
               />
             </div>
           </div>
@@ -375,9 +351,7 @@ export default function PromptPage() {
           <div className="h-full overflow-y-auto p-6">
             <div className="mx-auto max-w-2xl space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
-                  Plan
-                </h2>
+                <h2 className="text-lg font-semibold text-white">Plan</h2>
                 <span className="rounded-full bg-blue-600/20 px-3 py-1 text-xs font-medium text-blue-400">
                   Plan Mode
                 </span>
@@ -451,7 +425,6 @@ export default function PromptPage() {
 
   return (
     <div className="flex h-full">
-      {/* Left sidebar */}
       <aside className="w-64 shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-900">
         <ProjectHistory
           items={history}
@@ -461,26 +434,23 @@ export default function PromptPage() {
         />
       </aside>
 
-      {/* Center */}
       <div className="flex-1 overflow-hidden">{renderCenter()}</div>
 
-      {/* Right panel toggle */}
       <button
         type="button"
-        onClick={() => setRightPanelOpen((v) => !v)}
+        onClick={() => ps().setRightPanelOpen(!rightPanelOpen)}
         className="flex w-6 shrink-0 items-center justify-center border-l border-gray-800 bg-gray-900 text-gray-500 transition-colors hover:text-white"
         title={rightPanelOpen ? "Collapse preview" : "Expand preview"}
       >
         {rightPanelOpen ? "\u203A" : "\u2039"}
       </button>
 
-      {/* Right panel */}
       {rightPanelOpen && (
         <aside className="w-96 shrink-0 overflow-hidden border-l border-gray-800 bg-gray-900">
           <CodePreview
             files={generatedFiles}
             activeFileIndex={activeFileIndex}
-            onFileSelect={setActiveFileIndex}
+            onFileSelect={(i) => ps().setActiveFileIndex(i)}
           />
         </aside>
       )}
