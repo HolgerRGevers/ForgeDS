@@ -20,6 +20,9 @@ Thumbs.db
 
 # Project secrets
 config/zoho-api.yaml
+.env
+web/.env
+web/.env.*
 
 # Node
 node_modules/
