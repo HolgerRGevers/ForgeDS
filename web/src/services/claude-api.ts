@@ -112,6 +112,9 @@ export async function buildProject(
 ): Promise<BuildResponse> {
   ensureConfigured();
 
+  // Send progress updates while waiting for the API
+  onChunk({ message: "Sending specification to Claude...", type: "info" });
+
   const res = await fetch(`${CLAUDE_PROXY}/api/build`, {
     method: "POST",
     headers: {
@@ -125,48 +128,18 @@ export async function buildProject(
     return handleErrorResponse(res);
   }
 
-  // Read SSE stream
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response stream");
+  onChunk({ message: "Parsing generated files...", type: "info" });
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let finalResult: BuildResponse = { files: [] };
+  const result: BuildResponse = await res.json();
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-
-    // Process complete SSE lines
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? ""; // Keep incomplete line in buffer
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (!payload) continue;
-
-      try {
-        const chunk: BuildChunk = JSON.parse(payload);
-
-        if (chunk.done && chunk.files) {
-          finalResult = { files: chunk.files };
-          onChunk({
-            message: `Generated ${chunk.files.length} file(s)`,
-            type: "success",
-          });
-        } else if (chunk.message) {
-          onChunk(chunk);
-        }
-      } catch {
-        // Skip unparseable chunks
-      }
-    }
+  if (result.files && result.files.length > 0) {
+    onChunk({
+      message: `Generated ${result.files.length} file(s)`,
+      type: "success",
+    });
   }
 
-  return finalResult;
+  return result;
 }
 
 export function isConfigured(): boolean {

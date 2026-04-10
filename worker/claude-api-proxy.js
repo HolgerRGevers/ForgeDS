@@ -160,6 +160,7 @@ async function handleBuild(body, apiKey) {
   }
   userMessage += `Specification:\n${JSON.stringify(sections, null, 2)}`;
 
+  // Non-streaming call — simpler and more reliable for JSON parsing
   const res = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: {
@@ -170,7 +171,6 @@ async function handleBuild(body, apiKey) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: MAX_TOKENS_BUILD,
-      stream: true,
       system: BUILD_SYSTEM,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -181,101 +181,54 @@ async function handleBuild(body, apiKey) {
     throw new Error(`Anthropic API ${res.status}: ${err}`);
   }
 
-  // Stream SSE from Anthropic → transform into our progress format → forward to client
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
+  const data = await res.json();
+  const text = data.content?.[0]?.text ?? "";
 
-  let accumulated = "";
-  let chunkCount = 0;
+  // Parse JSON from response — strip markdown fences if present
+  const cleaned = text
+    .replace(/^[\s\S]*?```json\s*\n?/, "")
+    .replace(/\n?\s*```[\s\S]*$/, "")
+    .trim();
 
-  const transformStream = new TransformStream({
-    async transform(chunk, controller) {
-      const text = decoder.decode(chunk);
-      const lines = text.split("\n");
+  let result;
+  try {
+    result = JSON.parse(cleaned || text);
+  } catch {
+    // If JSON parsing fails, try the raw text
+    try {
+      result = JSON.parse(text);
+    } catch {
+      // Last resort: wrap raw text as a single file
+      result = {
+        files: [
+          {
+            name: "generated_code.dg",
+            path: "src/deluge/generated_code.dg",
+            content: text,
+            language: "deluge",
+          },
+        ],
+      };
+    }
+  }
 
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const payload = line.slice(6).trim();
-        if (payload === "[DONE]") continue;
+  // Ensure result has files array
+  if (!result.files || !Array.isArray(result.files)) {
+    result = {
+      files: [
+        {
+          name: "generated_code.dg",
+          path: "src/deluge/generated_code.dg",
+          content: text,
+          language: "deluge",
+        },
+      ],
+    };
+  }
 
-        try {
-          const event = JSON.parse(payload);
-
-          // content_block_delta — accumulate text
-          if (event.type === "content_block_delta" && event.delta?.text) {
-            accumulated += event.delta.text;
-            chunkCount++;
-
-            // Send progress updates periodically
-            if (chunkCount % 20 === 0) {
-              const progress = {
-                step: Math.min(Math.floor(chunkCount / 20), 4) + 1,
-                total: 5,
-                message: getProgressMessage(chunkCount),
-                type: "info",
-              };
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify(progress)}\n\n`),
-              );
-            }
-          }
-
-          // message_stop — done, parse final result
-          if (event.type === "message_stop") {
-            // Parse the accumulated JSON
-            const cleaned = accumulated
-              .replace(/^```json?\n?/, "")
-              .replace(/\n?```$/, "")
-              .trim();
-
-            let result;
-            try {
-              result = JSON.parse(cleaned);
-            } catch {
-              // If JSON parsing fails, wrap raw text as a single file
-              result = {
-                files: [
-                  {
-                    name: "generated_code.dg",
-                    path: "src/deluge/generated_code.dg",
-                    content: accumulated,
-                    language: "deluge",
-                  },
-                ],
-              };
-            }
-
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ done: true, ...result })}\n\n`,
-              ),
-            );
-          }
-        } catch {
-          // Skip unparseable lines
-        }
-      }
-    },
+  return new Response(JSON.stringify(result), {
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
-
-  const sseStream = res.body.pipeThrough(transformStream);
-
-  return new Response(sseStream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      ...CORS_HEADERS,
-    },
-  });
-}
-
-function getProgressMessage(chunks) {
-  if (chunks < 20) return "Analyzing specification...";
-  if (chunks < 40) return "Generating form definitions...";
-  if (chunks < 60) return "Writing Deluge workflows...";
-  if (chunks < 80) return "Creating report configurations...";
-  return "Finalizing code generation...";
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────
