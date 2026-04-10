@@ -112,7 +112,6 @@ export async function buildProject(
 ): Promise<BuildResponse> {
   ensureConfigured();
 
-  // Send progress updates while waiting for the API
   onChunk({ message: "Sending specification to Claude...", type: "info" });
 
   const res = await fetch(`${CLAUDE_PROXY}/api/build`, {
@@ -128,18 +127,56 @@ export async function buildProject(
     return handleErrorResponse(res);
   }
 
-  onChunk({ message: "Parsing generated files...", type: "info" });
+  // Read SSE stream with proper line buffering
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response stream");
 
-  const result: BuildResponse = await res.json();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalResult: BuildResponse = { files: [] };
 
-  if (result.files && result.files.length > 0) {
-    onChunk({
-      message: `Generated ${result.files.length} file(s)`,
-      type: "success",
-    });
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Split on double-newline (SSE event boundary)
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+
+    for (const event of events) {
+      for (const line of event.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (!payload) continue;
+
+        try {
+          const chunk = JSON.parse(payload) as BuildChunk & { error?: string };
+
+          if (chunk.error) {
+            throw new Error(chunk.error);
+          }
+
+          if (chunk.done && chunk.files) {
+            finalResult = { files: chunk.files };
+            onChunk({
+              message: `Generated ${chunk.files.length} file(s)`,
+              type: "success",
+            });
+          } else if (chunk.message) {
+            onChunk(chunk);
+          }
+        } catch (err) {
+          if (err instanceof Error && err.message !== "Unexpected end of JSON input") {
+            throw err;
+          }
+        }
+      }
+    }
   }
 
-  return result;
+  return finalResult;
 }
 
 export function isConfigured(): boolean {

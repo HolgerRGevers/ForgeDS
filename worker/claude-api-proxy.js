@@ -160,7 +160,9 @@ async function handleBuild(body, apiKey) {
   }
   userMessage += `Specification:\n${JSON.stringify(sections, null, 2)}`;
 
-  // Non-streaming call — simpler and more reliable for JSON parsing
+  // Use streaming to prevent Cloudflare 524 timeout on long generations.
+  // We accumulate the full text server-side, then send the parsed JSON
+  // as one final SSE event once Claude finishes.
   const res = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: {
@@ -171,6 +173,7 @@ async function handleBuild(body, apiKey) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: MAX_TOKENS_BUILD,
+      stream: true,
       system: BUILD_SYSTEM,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -181,53 +184,115 @@ async function handleBuild(body, apiKey) {
     throw new Error(`Anthropic API ${res.status}: ${err}`);
   }
 
-  const data = await res.json();
-  const text = data.content?.[0]?.text ?? "";
+  const encoder = new TextEncoder();
 
-  // Parse JSON from response — strip markdown fences if present
-  const cleaned = text
-    .replace(/^[\s\S]*?```json\s*\n?/, "")
-    .replace(/\n?\s*```[\s\S]*$/, "")
-    .trim();
+  // Read the entire stream, accumulate text, send keepalive pings
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
 
-  let result;
-  try {
-    result = JSON.parse(cleaned || text);
-  } catch {
-    // If JSON parsing fails, try the raw text
+  // Process stream in background
+  (async () => {
     try {
-      result = JSON.parse(text);
-    } catch {
-      // Last resort: wrap raw text as a single file
-      result = {
-        files: [
-          {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+      let buffer = "";
+      let chunkCount = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (!payload || payload === "[DONE]") continue;
+
+          try {
+            const event = JSON.parse(payload);
+
+            if (event.type === "content_block_delta" && event.delta?.text) {
+              accumulated += event.delta.text;
+              chunkCount++;
+
+              // Send keepalive progress every 30 chunks (~every few seconds)
+              if (chunkCount % 30 === 0) {
+                const msg = chunkCount < 60
+                  ? "Generating form definitions..."
+                  : chunkCount < 120
+                    ? "Writing Deluge workflows..."
+                    : chunkCount < 180
+                      ? "Creating report configurations..."
+                      : "Finalizing code generation...";
+                await writer.write(
+                  encoder.encode(`data: ${JSON.stringify({ message: msg, type: "info" })}\n\n`),
+                );
+              }
+            }
+          } catch {
+            // skip unparseable
+          }
+        }
+      }
+
+      // Done — parse the accumulated text
+      const cleaned = accumulated
+        .replace(/^[\s\S]*?```json\s*\n?/, "")
+        .replace(/\n?\s*```[\s\S]*$/, "")
+        .trim();
+
+      let result;
+      try {
+        result = JSON.parse(cleaned || accumulated);
+      } catch {
+        try {
+          result = JSON.parse(accumulated);
+        } catch {
+          result = {
+            files: [{
+              name: "generated_code.dg",
+              path: "src/deluge/generated_code.dg",
+              content: accumulated,
+              language: "deluge",
+            }],
+          };
+        }
+      }
+
+      if (!result.files || !Array.isArray(result.files)) {
+        result = {
+          files: [{
             name: "generated_code.dg",
             path: "src/deluge/generated_code.dg",
-            content: text,
+            content: accumulated,
             language: "deluge",
-          },
-        ],
-      };
+          }],
+        };
+      }
+
+      // Send final result
+      await writer.write(
+        encoder.encode(`data: ${JSON.stringify({ done: true, ...result })}\n\n`),
+      );
+    } catch (err) {
+      await writer.write(
+        encoder.encode(`data: ${JSON.stringify({ error: err.message || "Build failed" })}\n\n`),
+      );
+    } finally {
+      await writer.close();
     }
-  }
+  })();
 
-  // Ensure result has files array
-  if (!result.files || !Array.isArray(result.files)) {
-    result = {
-      files: [
-        {
-          name: "generated_code.dg",
-          path: "src/deluge/generated_code.dg",
-          content: text,
-          language: "deluge",
-        },
-      ],
-    };
-  }
-
-  return new Response(JSON.stringify(result), {
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      ...CORS_HEADERS,
+    },
   });
 }
 
