@@ -146,18 +146,19 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
   );
 
   const handleZipConfirm = useCallback(async (confirmed: ExtractedFile[]) => {
-    if (!selectedRepo) return;
+    // The modal now handles repo creation internally, so selectedRepo
+    // should be set by the time onConfirm fires
+    const repo = useRepoStore.getState().selectedRepo;
+    if (!repo) return;
     setIsZipUploading(true);
     setZipUploadProgress(0);
     try {
-      const filesToUpload = confirmed.map((f) => ({
-        path: f.targetPath,
-        content: f.content,
-        isBinary: f.isBinary,
-      }));
-      // Upload one at a time so we can track progress
-      for (let i = 0; i < filesToUpload.length; i++) {
-        await batchUploadFiles([filesToUpload[i]], `Add ${confirmed[i].name}`);
+      for (let i = 0; i < confirmed.length; i++) {
+        const f = confirmed[i];
+        await batchUploadFiles(
+          [{ path: f.targetPath, content: f.content, isBinary: f.isBinary }],
+          `Add ${f.name}`,
+        );
         setZipUploadProgress(i + 1);
       }
       setShowZipPreview(false);
@@ -167,7 +168,7 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
     } finally {
       setIsZipUploading(false);
     }
-  }, [selectedRepo, batchUploadFiles]);
+  }, [batchUploadFiles]);
 
   const handleSubmit = useCallback(async () => {
     if (prompt.trim() && !isLoading) {
@@ -455,7 +456,6 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
           onCancel={() => { setShowZipPreview(false); setExtractedFiles([]); }}
           isUploading={isZipUploading}
           uploadProgress={zipUploadProgress}
-          repoSelected={!!selectedRepo}
         />
       )}
     </div>
