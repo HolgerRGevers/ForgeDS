@@ -65,6 +65,30 @@ export async function getRepo(
   return request<RepoRaw>(token, `/repos/${owner}/${repo}`);
 }
 
+// ── Create repository ────────────────────────────────────────────────────
+
+export interface CreateRepoOptions {
+  name: string;
+  description?: string;
+  private?: boolean;
+  auto_init?: boolean;
+}
+
+export async function createRepo(
+  token: string,
+  options: CreateRepoOptions,
+): Promise<RepoRaw> {
+  return request<RepoRaw>(token, `/user/repos`, {
+    method: "POST",
+    body: JSON.stringify({
+      name: options.name,
+      description: options.description ?? "",
+      private: options.private ?? false,
+      auto_init: options.auto_init ?? true,
+    }),
+  });
+}
+
 // ── Branches ──────────────────────────────────────────────────────────────
 
 export interface BranchRaw {
@@ -150,6 +174,29 @@ export async function createOrUpdateFile(
   const body: Record<string, string> = {
     message,
     content: btoa(unescape(encodeURIComponent(content))), // UTF-8 safe Base64
+  };
+  if (sha) body.sha = sha;
+  if (branch) body.branch = branch;
+
+  return request(token, `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function createOrUpdateFileBase64(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+  base64Content: string,
+  message: string,
+  sha?: string,
+  branch?: string,
+): Promise<{ content: ContentRaw; commit: { sha: string } }> {
+  const body: Record<string, string> = {
+    message,
+    content: base64Content,
   };
   if (sha) body.sha = sha;
   if (branch) body.branch = branch;

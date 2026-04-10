@@ -13,3 +13,5 @@ export { RepoSelector } from "./RepoSelector";
 export { SkillMarketplace } from "./SkillMarketplace";
 export { SkillPicker } from "./SkillPicker";
 export { UserMenu } from "./UserMenu";
+export { CreateRepoWizard } from "./CreateRepoWizard";
+export { ZipPreviewModal } from "./ZipPreviewModal";

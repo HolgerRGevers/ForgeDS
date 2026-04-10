@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRepoStore } from "../stores/repoStore";
+import { CreateRepoWizard } from "./CreateRepoWizard";
 
 interface RepoSelectorProps {
   compact?: boolean;
@@ -14,6 +15,7 @@ export function RepoSelector({ compact = false }: RepoSelectorProps) {
     useRepoStore();
 
   const [open, setOpen] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,17 +28,28 @@ export function RepoSelector({ compact = false }: RepoSelectorProps) {
     function handle(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setShowWizard(false);
       }
     }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
+  const handleOpen = () => {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen && !selectedRepo) {
+      setShowWizard(true);
+    } else {
+      setShowWizard(false);
+    }
+  };
+
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpen}
         className={`flex items-center gap-1.5 rounded-md border border-gray-700 bg-gray-800 text-gray-300 transition-colors hover:border-gray-500 hover:text-white ${
           compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"
         }`}
@@ -62,41 +75,64 @@ export function RepoSelector({ compact = false }: RepoSelectorProps) {
       </button>
 
       {open && (
-        <div className="absolute left-0 z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 py-1 shadow-xl">
-          {repoLoading && (
-            <p className="px-3 py-2 text-xs text-gray-500">Loading repos...</p>
-          )}
-          {repos.map((r) => (
-            <button
-              key={r.full_name}
-              type="button"
-              onClick={() => {
-                selectRepo(r.owner, r.name);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-gray-700 ${
-                selectedRepo?.full_name === r.full_name
-                  ? "bg-gray-700/50 text-white"
-                  : "text-gray-300"
-              }`}
-            >
-              <span className="shrink-0">
-                {r.private ? "\u{1F512}" : "\u{1F4C2}"}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate font-medium">{r.full_name}</p>
-                {r.description && (
-                  <p className="truncate text-[10px] text-gray-500">
-                    {r.description}
-                  </p>
-                )}
-              </div>
-            </button>
-          ))}
-          {!repoLoading && repos.length === 0 && (
-            <p className="px-3 py-2 text-xs text-gray-500">
-              No repositories found
-            </p>
+        <div className="absolute right-0 z-50 mt-1 overflow-hidden rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+          {showWizard ? (
+            <CreateRepoWizard
+              onSelectExisting={() => setShowWizard(false)}
+              onCreated={() => { setShowWizard(false); setOpen(false); }}
+              onCancel={() => { setShowWizard(false); setOpen(false); }}
+            />
+          ) : (
+            <div className="max-h-64 w-64 overflow-y-auto py-1">
+              {repoLoading && (
+                <p className="px-3 py-2 text-xs text-gray-500">Loading repos...</p>
+              )}
+              {repos.map((r) => (
+                <button
+                  key={r.full_name}
+                  type="button"
+                  onClick={() => {
+                    selectRepo(r.owner, r.name);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-gray-700 ${
+                    selectedRepo?.full_name === r.full_name
+                      ? "bg-gray-700/50 text-white"
+                      : "text-gray-300"
+                  }`}
+                >
+                  <span className="shrink-0">
+                    {r.private ? "\u{1F512}" : "\u{1F4C2}"}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{r.full_name}</p>
+                    {r.description && (
+                      <p className="truncate text-[10px] text-gray-500">
+                        {r.description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+              {!repoLoading && repos.length === 0 && (
+                <p className="px-3 py-2 text-xs text-gray-500">
+                  No repositories found
+                </p>
+              )}
+              {/* Option to create new even when repos exist */}
+              {!repoLoading && (
+                <button
+                  type="button"
+                  onClick={() => setShowWizard(true)}
+                  className="flex w-full items-center gap-2 border-t border-gray-700 px-3 py-2 text-left text-xs text-blue-400 transition-colors hover:bg-gray-700"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create new repository
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

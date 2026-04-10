@@ -4,10 +4,13 @@ import { ModeToggle } from "./ModeToggle";
 import { RepoSelector } from "./RepoSelector";
 import { RepoFilePicker } from "./RepoFilePicker";
 import { SkillPicker } from "./SkillPicker";
+import { ZipPreviewModal } from "./ZipPreviewModal";
 import { useRepoStore } from "../stores/repoStore";
 import { useSkillStore } from "../stores/skillStore";
+import { extractZip } from "../lib/zip-utils";
+import type { ExtractedFile } from "../lib/zip-utils";
 
-const ACCEPTED_EXTENSIONS = [".ds", ".dg", ".png", ".jpg", ".sql", ".yaml", ".yml", ".json", ".csv", ".md", ".txt"];
+const ACCEPTED_EXTENSIONS = [".ds", ".dg", ".png", ".jpg", ".sql", ".yaml", ".yml", ".json", ".csv", ".md", ".txt", ".zip"];
 
 function isAcceptedFile(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -19,22 +22,51 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
   const [files, setFiles] = useState<File[]>([]);
   const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDropZoneDragOver, setIsDropZoneDragOver] = useState(false);
   const [showRepoPicker, setShowRepoPicker] = useState(false);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
   const [saveToResources, setSaveToResources] = useState(false);
+  const [extractedFiles, setExtractedFiles] = useState<ExtractedFile[]>([]);
+  const [showZipPreview, setShowZipPreview] = useState(false);
+  const [isZipUploading, setIsZipUploading] = useState(false);
+  const [zipUploadProgress, setZipUploadProgress] = useState(0);
+  const [zipError, setZipError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedRepo = useRepoStore((s) => s.selectedRepo);
   const uploadResource = useRepoStore((s) => s.uploadResource);
+  const batchUploadFiles = useRepoStore((s) => s.batchUploadFiles);
   const activeSkillCount = useSkillStore((s) => s.activeSkillIds.length);
 
-  const addFiles = useCallback((incoming: FileList | File[]) => {
+  const processFiles = useCallback(async (incoming: FileList | File[]) => {
     const accepted = Array.from(incoming).filter(isAcceptedFile);
-    setFiles((prev) => {
-      const existingNames = new Set(prev.map((f) => f.name));
-      const unique = accepted.filter((f) => !existingNames.has(f.name));
-      return [...prev, ...unique];
-    });
+    const zipFiles = accepted.filter((f) => f.name.toLowerCase().endsWith(".zip"));
+    const regularFiles = accepted.filter((f) => !f.name.toLowerCase().endsWith(".zip"));
+
+    // Add regular files
+    if (regularFiles.length > 0) {
+      setFiles((prev) => {
+        const existingNames = new Set(prev.map((f) => f.name));
+        const unique = regularFiles.filter((f) => !existingNames.has(f.name));
+        return [...prev, ...unique];
+      });
+    }
+
+    // Handle ZIP files
+    if (zipFiles.length > 0) {
+      try {
+        setZipError(null);
+        const allExtracted: ExtractedFile[] = [];
+        for (const zip of zipFiles) {
+          const extracted = await extractZip(zip);
+          allExtracted.push(...extracted);
+        }
+        setExtractedFiles(allExtracted);
+        setShowZipPreview(true);
+      } catch (err) {
+        setZipError(err instanceof Error ? err.message : "Failed to extract ZIP");
+      }
+    }
   }, []);
 
   const removeFile = useCallback((name: string) => {
@@ -66,10 +98,37 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
       e.stopPropagation();
       setIsDragOver(false);
       if (e.dataTransfer.files.length > 0) {
-        addFiles(e.dataTransfer.files);
+        processFiles(e.dataTransfer.files);
       }
     },
-    [addFiles],
+    [processFiles],
+  );
+
+  const handleDropZoneDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isDropZoneDragOver) setIsDropZoneDragOver(true);
+    },
+    [isDropZoneDragOver],
+  );
+
+  const handleDropZoneDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDropZoneDragOver(false);
+  }, []);
+
+  const handleDropZoneDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDropZoneDragOver(false);
+      if (e.dataTransfer.files.length > 0) {
+        processFiles(e.dataTransfer.files);
+      }
+    },
+    [processFiles],
   );
 
   const handleRepoFilesSelected = useCallback(
@@ -85,6 +144,30 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
     },
     [selectedRepo],
   );
+
+  const handleZipConfirm = useCallback(async (confirmed: ExtractedFile[]) => {
+    if (!selectedRepo) return;
+    setIsZipUploading(true);
+    setZipUploadProgress(0);
+    try {
+      const filesToUpload = confirmed.map((f) => ({
+        path: f.targetPath,
+        content: f.content,
+        isBinary: f.isBinary,
+      }));
+      // Upload one at a time so we can track progress
+      for (let i = 0; i < filesToUpload.length; i++) {
+        await batchUploadFiles([filesToUpload[i]], `Add ${confirmed[i].name}`);
+        setZipUploadProgress(i + 1);
+      }
+      setShowZipPreview(false);
+      setExtractedFiles([]);
+    } catch (err) {
+      setZipError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setIsZipUploading(false);
+    }
+  }, [selectedRepo, batchUploadFiles]);
 
   const handleSubmit = useCallback(async () => {
     if (prompt.trim() && !isLoading) {
@@ -184,7 +267,7 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
               accept={ACCEPTED_EXTENSIONS.join(",")}
               className="hidden"
               onChange={(e) => {
-                if (e.target.files) addFiles(e.target.files);
+                if (e.target.files) processFiles(e.target.files);
                 e.target.value = "";
               }}
             />
@@ -324,6 +407,33 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
         to submit
       </p>
 
+      {/* Dedicated drag-and-drop zone */}
+      <div
+        onDragOver={handleDropZoneDragOver}
+        onDragLeave={handleDropZoneDragLeave}
+        onDrop={handleDropZoneDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 transition-colors ${
+          isDropZoneDragOver
+            ? "border-blue-500 bg-blue-500/10 text-blue-400"
+            : "border-gray-700 bg-gray-800/50 text-gray-500 hover:border-gray-600 hover:text-gray-400"
+        }`}
+      >
+        <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p className="text-sm font-medium">Drag & drop files here</p>
+        <p className="text-[11px]">or click to browse &middot; supports .zip files</p>
+      </div>
+
+      {/* ZIP error */}
+      {zipError && (
+        <div className="flex items-center justify-between rounded-lg border border-red-700/50 bg-red-900/20 px-3 py-2 text-xs text-red-400">
+          <span>{zipError}</span>
+          <button type="button" onClick={() => setZipError(null)} className="text-red-500 hover:text-red-300">&times;</button>
+        </div>
+      )}
+
       {/* Repo file picker modal */}
       {showRepoPicker && (
         <RepoFilePicker
@@ -335,6 +445,18 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
       {/* Skills picker modal */}
       {showSkillPicker && (
         <SkillPicker onClose={() => setShowSkillPicker(false)} />
+      )}
+
+      {/* ZIP preview modal */}
+      {showZipPreview && (
+        <ZipPreviewModal
+          files={extractedFiles}
+          onConfirm={handleZipConfirm}
+          onCancel={() => { setShowZipPreview(false); setExtractedFiles([]); }}
+          isUploading={isZipUploading}
+          uploadProgress={zipUploadProgress}
+          repoSelected={!!selectedRepo}
+        />
       )}
     </div>
   );

@@ -59,6 +59,8 @@ interface RepoState {
   createBranch: (name: string) => Promise<void>;
   deleteBranch: (name: string) => Promise<void>;
   createPR: (title: string, body: string, base: string, draft?: boolean) => Promise<string>;
+  createNewRepo: (name: string, description: string, isPrivate: boolean, autoInit: boolean) => Promise<void>;
+  batchUploadFiles: (files: Array<{ path: string; content: string; isBinary: boolean }>, commitMessage: string) => Promise<void>;
 }
 
 /** Get token or throw. */
@@ -461,5 +463,76 @@ export const useRepoStore = create<RepoState>((set, get) => ({
 
     await get().fetchPullRequests();
     return pr.html_url;
+  },
+
+  createNewRepo: async (name, description, isPrivate, autoInit) => {
+    const raw = await gh.createRepo(token(), {
+      name,
+      description,
+      private: isPrivate,
+      auto_init: autoInit,
+    });
+    const info: RepoInfo = {
+      owner: raw.owner.login,
+      name: raw.name,
+      full_name: raw.full_name,
+      default_branch: raw.default_branch,
+      private: raw.private,
+      updated_at: raw.updated_at,
+      description: raw.description,
+      html_url: raw.html_url,
+      permissions: raw.permissions,
+    };
+    set({ repos: [info, ...get().repos] });
+    await get().selectRepo(raw.owner.login, raw.name);
+  },
+
+  batchUploadFiles: async (files, commitMessage) => {
+    const { selectedRepo, selectedBranch } = get();
+    if (!selectedRepo) throw new Error("No repo selected");
+
+    for (const file of files) {
+      const path = file.path;
+      let sha: string | undefined;
+      try {
+        const existing = await gh.getFileContent(
+          token(),
+          selectedRepo.owner,
+          selectedRepo.name,
+          path,
+          selectedBranch,
+        );
+        sha = existing.sha;
+      } catch {
+        // File doesn't exist yet
+      }
+
+      if (file.isBinary) {
+        await gh.createOrUpdateFileBase64(
+          token(),
+          selectedRepo.owner,
+          selectedRepo.name,
+          path,
+          file.content,
+          commitMessage,
+          sha,
+          selectedBranch,
+        );
+      } else {
+        await gh.createOrUpdateFile(
+          token(),
+          selectedRepo.owner,
+          selectedRepo.name,
+          path,
+          file.content,
+          commitMessage,
+          sha,
+          selectedBranch,
+        );
+      }
+    }
+
+    await get().fetchTree();
+    await get().fetchCommits();
   },
 }));
