@@ -29,12 +29,30 @@ from forgeds._shared.diagnostics import Diagnostic, Severity
 # Data structures
 # ============================================================
 
-VALID_FIELD_TYPES = {
-    "SingleLine", "Number", "Decimal", "Date", "DateTime",
-    "Dropdown", "MultiLine", "Email", "Checkbox", "URL",
-    "Phone", "Currency", "Percent", "RichText", "File",
-    "Image", "Audio", "Video", "Signature",
+# forms.yaml type names -> Zoho .ds export type names
+TYPE_MAP = {
+    "SingleLine": "text",
+    "MultiLine": "textarea",
+    "Dropdown": "picklist",
+    "Number": "number",
+    "Decimal": "decimal",
+    "Date": "date",
+    "DateTime": "datetime",
+    "Email": "email",
+    "Checkbox": "checkbox",
+    "URL": "url",
+    "Phone": "phone",
+    "Currency": "currency",
+    "Percent": "percent",
+    "RichText": "richtext",
+    "File": "upload file",
+    "Image": "image",
+    "Audio": "audio",
+    "Video": "video",
+    "Signature": "signature",
 }
+
+VALID_FIELD_TYPES = set(TYPE_MAP.keys())
 
 
 @dataclass
@@ -420,106 +438,214 @@ def _indent_code(code: str, depth: int) -> str:
     return "\n".join(result)
 
 
+def _zoho_type(field_type: str) -> str:
+    """Map forms.yaml type to Zoho .ds type name."""
+    return TYPE_MAP.get(field_type, field_type.lower())
+
+
+def _format_choices(choices_str: str) -> str:
+    """Convert comma-separated choices to Zoho format: {"A","B","C"}."""
+    items = [c.strip() for c in choices_str.split(",") if c.strip()]
+    return "{" + ",".join(f'"{i}"' for i in items) + "}"
+
+
 def emit_forms(forms: list[FormSpec]) -> list[str]:
-    """Generate the forms { ... } block."""
+    """Generate the forms { ... } block matching real Zoho .ds export format."""
     lines = []
-    lines.append(f"{T}forms")
-    lines.append(f"{T}{{")
+    lines.append(f" {T}forms")
+    lines.append(f"\t{{")
 
     for form in forms:
-        lines.append("")
-        lines.append(f"{T}{T}form {form.link_name}")
-        lines.append(f"{T}{T}{{")
-        lines.append(f'{T}{T}{T}displayname = "{form.display_name}"')
+        lines.append(f"\t\tform {form.link_name}")
+        lines.append(f"\t\t{{")
+        lines.append(f'\t\t\tdisplayname = "{form.display_name}"')
+        lines.append(f'\t\t\tsuccess message = "{form.display_name} Added Successfully"')
+
+        # Section block (required by Zoho)
+        lines.append(f"\t\t\tSection")
+        lines.append(f"\t\t\t(")
+        lines.append(f"\t\t\t\ttype = section")
+        lines.append(f"\t\t\t\trow = 1")
+        lines.append(f"\t\t\t\tcolumn = 0   ")
+        lines.append(f"\t\t\t\twidth = medium")
+        lines.append(f"\t\t\t)")
 
         for fld in form.fields:
-            lines.append("")
             prefix = "must have " if fld.required else ""
-            lines.append(f"{T}{T}{T}{prefix}{fld.name}")
-            lines.append(f"{T}{T}{T}(")
-            lines.append(f"{T}{T}{T}{T}type = {fld.field_type}")
-            lines.append(f'{T}{T}{T}{T}displayname = "{fld.display_name}"')
-            if fld.field_type == "Dropdown" and fld.choices:
-                lines.append(f'{T}{T}{T}{T}choices = "{fld.choices}"')
-            lines.append(f"{T}{T}{T}{T}row = {fld.row}")
-            lines.append(f"{T}{T}{T})")
+            zoho_t = _zoho_type(fld.field_type)
+            lines.append(f"\t\t\t{prefix}{fld.name}")
+            lines.append(f"\t\t\t(")
+            if fld.field_type == "Dropdown":
+                lines.append(f"\t\t\t\ttype = picklist")
+                lines.append(f'\t\t\t\tdisplayname = "{fld.display_name}"')
+                if fld.choices:
+                    lines.append(f"\t\t\t\tvalues = {_format_choices(fld.choices)}")
+            else:
+                lines.append(f"\t\t\t\ttype = {zoho_t}")
+                lines.append(f'\t\t\t\tdisplayname = "{fld.display_name}"')
+                if fld.field_type == "DateTime":
+                    lines.append(f'\t\t\t\ttimedisplayoptions = "hh:mm:ss"')
+                    lines.append(f"\t\t\t\talloweddays = 0,1,2,3,4,5,6")
+                elif fld.field_type == "Date":
+                    lines.append(f"\t\t\t\talloweddays = 0,1,2,3,4,5,6")
+                elif fld.field_type == "Checkbox":
+                    lines.append(f"\t\t\t\tinitial value = false")
+                elif fld.field_type == "MultiLine":
+                    lines.append(f"\t\t\t\theight = 100px")
+            lines.append(f"\t\t\t\trow = 1")
+            lines.append(f"\t\t\t\tcolumn = 1   ")
+            lines.append(f"\t\t\t\twidth = medium")
+            lines.append(f"\t\t\t)")
 
-        lines.append(f"{T}{T}}}")
+        # Actions block (required by Zoho)
+        lines.append(f"\t")
+        lines.append(f"\t\t\tactions")
+        lines.append(f"\t\t\t{{")
+        lines.append(f"\t\t\t\ton add")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\tsubmit")
+        lines.append(f"\t\t\t\t\t(")
+        lines.append(f'\t\t\t\t\t\ttype = submit')
+        lines.append(f'\t\t\t\t\t\tdisplayname = "Submit"')
+        lines.append(f"\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t\treset")
+        lines.append(f"\t\t\t\t\t(")
+        lines.append(f'\t\t\t\t\t\ttype = reset')
+        lines.append(f'\t\t\t\t\t\tdisplayname = "Reset"')
+        lines.append(f"\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t}}")
+        lines.append(f"\t\t\t\ton edit")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\tupdate")
+        lines.append(f"\t\t\t\t\t(")
+        lines.append(f'\t\t\t\t\t\ttype = submit')
+        lines.append(f'\t\t\t\t\t\tdisplayname = "Update"')
+        lines.append(f"\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t\tcancel")
+        lines.append(f"\t\t\t\t\t(")
+        lines.append(f'\t\t\t\t\t\ttype = cancel')
+        lines.append(f'\t\t\t\t\t\tdisplayname = "Cancel"')
+        lines.append(f"\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t}}")
+        lines.append(f"\t\t\t}}")
 
-    lines.append(f"{T}}}")
+        lines.append(f"\t\t}}")
+
+    lines.append(f"\t}}")
     return lines
 
 
 def emit_reports(reports: list[ReportSpec]) -> list[str]:
-    """Generate the reports { ... } block."""
+    """Generate reports block matching real Zoho .ds export format."""
     if not reports:
         return []
 
     lines = []
-    lines.append(f"{T}reports")
-    lines.append(f"{T}{{")
+    lines.append(f"\treports")
+    lines.append(f"\t{{")
 
     for rpt in reports:
-        lines.append("")
-        lines.append(f"{T}{T}{rpt.report_type} {rpt.link_name}")
-        lines.append(f"{T}{T}{{")
-        lines.append(f"{T}{T}{T}form = {rpt.form}")
-        if rpt.filter_expr:
-            lines.append(f'{T}{T}{T}filter = "{rpt.filter_expr}"')
-        lines.append(f'{T}{T}{T}columns = "{rpt.columns}"')
-        lines.append(f"{T}{T}}}")
+        # Build column display list
+        cols = [c.strip() for c in rpt.columns.split(",") if c.strip()]
+        col_entries = "\n".join(
+            f'\t\t\t\t{c} as "{c}"' for c in cols
+        )
 
-    lines.append(f"{T}}}")
+        lines.append(f"\t\t{rpt.report_type} {rpt.link_name}")
+        lines.append(f"\t\t{{")
+        lines.append(f'\t\t\tdisplayName = "{rpt.link_name}"')
+        if rpt.filter_expr:
+            lines.append(f'\t\t\tshow all rows from {rpt.form}  [{rpt.filter_expr}]  ')
+        else:
+            lines.append(f"\t\t\tshow all rows from {rpt.form}    ")
+        lines.append(f"\t\t\t(")
+        for c in cols:
+            lines.append(f'\t\t\t\t{c} as "{c}"')
+        lines.append(f"\t\t\t)")
+        lines.append(f"\t\t}}")
+
+    lines.append(f"\t}}")
     return lines
 
 
 def emit_workflows(workflows: list[WorkflowSpec]) -> list[str]:
-    """Generate the workflow { ... } block."""
+    """Generate workflow block matching real Zoho .ds export format."""
     if not workflows:
         return []
 
     lines = []
-    lines.append(f"{T}workflow")
-    lines.append(f"{T}{{")
+    lines.append(f"\t\tworkflow")
+    lines.append(f"\t\t{{")
+    lines.append(f"\t\tform")
+    lines.append(f"\t\t{{")
 
     for wf in workflows:
-        lines.append("")
-        lines.append(f'{T}{T}{wf.link_name} as "{wf.display_name}"')
-        lines.append(f"{T}{T}{{")
-        lines.append(f"{T}{T}{T}form = {wf.form}")
-        lines.append(f"{T}{T}{T}record event = {wf.record_event}")
-        lines.append(f"{T}{T}{T}{wf.event_type}")
-        lines.append(f"{T}{T}{T}custom deluge script")
-        lines.append(f"{T}{T}{T}(")
-        lines.append(_indent_code(wf.code, 4))
-        lines.append(f"{T}{T}{T})")
-        lines.append(f"{T}{T}}}")
+        lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f"\t\t\t\ttype =  form")
+        lines.append(f"\t\t\t\tform = {wf.form}")
+        lines.append(f"")
+        lines.append(f"\t\t\t\trecord event = {wf.record_event}")
+        lines.append(f"")
+        lines.append(f"\t\t\t\t{wf.event_type}")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\tactions ")
+        lines.append(f"\t\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\t\tcustom deluge script")
+        lines.append(f"\t\t\t\t\t\t(")
+        lines.append(_indent_code(wf.code, 7))
+        lines.append(f"\t\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t\t}}")
+        lines.append(f"\t\t\t\t}}")
+        lines.append(f"")
+        lines.append(f"\t\t\t}}")
 
-    lines.append(f"{T}}}")
+    lines.append(f"\t\t}}")
+
+    # Schedules go inside the same workflow block
+    lines.append(f"")
+    lines.append(f"\t\tschedule")
+    lines.append(f"\t\t{{")
+
+    lines.append(f"\t\t}}")
+
+    lines.append(f"\t\t}}")
     return lines
 
 
 def emit_schedules(schedules: list[ScheduleSpec]) -> list[str]:
-    """Generate the schedule { ... } block."""
+    """Generate schedule block matching real Zoho .ds export format.
+
+    In the real format, schedules live inside the workflow { } block,
+    but for simplicity we emit them as a top-level schedule section
+    which Zoho also accepts.
+    """
     if not schedules:
         return []
 
     lines = []
-    lines.append(f"{T}schedule")
-    lines.append(f"{T}{{")
+    lines.append(f"\t\tschedule")
+    lines.append(f"\t\t{{")
 
     for sched in schedules:
-        lines.append("")
-        lines.append(f'{T}{T}{sched.link_name} as "{sched.display_name}"')
-        lines.append(f"{T}{T}{{")
-        lines.append(f"{T}{T}{T}form = {sched.form}")
-        lines.append(f"{T}{T}{T}on load")
-        lines.append(f"{T}{T}{T}(")
-        lines.append(_indent_code(sched.code, 4))
-        lines.append(f"{T}{T}{T})")
-        lines.append(f"{T}{T}}}")
+        lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f"\t\t\t\ttype =  schedule")
+        lines.append(f"\t\t\t\tform = {sched.form}")
+        lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
+        lines.append(f"\t\t\t\ton start")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\tactions ")
+        lines.append(f"\t\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\ton load")
+        lines.append(f"\t\t\t\t\t(")
+        lines.append(_indent_code(sched.code, 6))
+        lines.append(f"\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t\t}}")
+        lines.append(f"\t\t\t\t}}")
+        lines.append(f"\t\t\t}}")
 
-    lines.append(f"{T}}}")
+    lines.append(f"\t\t}}")
     return lines
 
 
@@ -531,13 +657,24 @@ def emit_application(
     workflows: list[WorkflowSpec],
     schedules: list[ScheduleSpec],
 ) -> str:
-    """Generate the complete .ds file content."""
+    """Generate the complete .ds file content matching real Zoho export format."""
+    from datetime import datetime
+    now = datetime.now().strftime("%d-%b-%Y %H:%M:%S")
+
     lines = []
-    # Sanitize app name for link name (no spaces, alphanumeric + underscore)
-    link_name = re.sub(r"[^A-Za-z0-9_]", "_", app_name)
-    lines.append(f"application {link_name}")
-    lines.append("{")
-    lines.append(f'{T}displayname = "{display_name}"')
+    # Header comment (matching Zoho export style)
+    lines.append("/*")
+    lines.append(f" * Generated by : ForgeDS build-ds")
+    lines.append(f" * Generated on : {now}")
+    lines.append(f" * Version      : 1.0")
+    lines.append(" */")
+
+    # Application declaration (quoted name, like real exports)
+    lines.append(f' application "{display_name}"')
+    lines.append(" {")
+    lines.append(f' \tdate format = "dd-MMM-yyyy"')
+    lines.append(f' \ttime zone = "Africa/Johannesburg"')
+    lines.append(f' \ttime format = "24-hr"')
 
     # Forms
     lines.append("")
@@ -548,15 +685,80 @@ def emit_application(
         lines.append("")
         lines.extend(emit_reports(reports))
 
-    # Workflows
-    if workflows:
+    # Workflows + Schedules (nested inside workflow block, like real exports)
+    if workflows or schedules:
         lines.append("")
-        lines.extend(emit_workflows(workflows))
+        lines.append("")
+        lines.append(f"\t\tworkflow")
+        lines.append(f"\t\t{{")
+        lines.append(f"\t\tform")
+        lines.append(f"\t\t{{")
 
-    # Schedules
-    if schedules:
-        lines.append("")
-        lines.extend(emit_schedules(schedules))
+        for wf in workflows:
+            lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
+            lines.append(f"\t\t\t{{")
+            lines.append(f"\t\t\t\ttype =  form")
+            lines.append(f"\t\t\t\tform = {wf.form}")
+            lines.append(f"")
+            lines.append(f"\t\t\t\trecord event = {wf.record_event}")
+            lines.append(f"")
+            lines.append(f"\t\t\t\t{wf.event_type}")
+            lines.append(f"\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\tactions ")
+            lines.append(f"\t\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\t\tcustom deluge script")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(_indent_code(wf.code, 7))
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t}}")
+            lines.append(f"\t\t\t\t}}")
+            lines.append(f"")
+            lines.append(f"\t\t\t}}")
+
+        lines.append(f"\t\t}}")
+        lines.append(f"")
+
+        # Schedules nested inside workflow block
+        lines.append(f"\t\tschedule")
+        lines.append(f"\t\t{{")
+
+        for sched in schedules:
+            lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
+            lines.append(f"\t\t\t{{")
+            lines.append(f"\t\t\t\ttype =  schedule")
+            lines.append(f"\t\t\t\tform = {sched.form}")
+            lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
+            lines.append(f"\t\t\t\ton start")
+            lines.append(f"\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\tactions ")
+            lines.append(f"\t\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\ton load")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(_indent_code(sched.code, 6))
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t}}")
+            lines.append(f"\t\t\t\t}}")
+            lines.append(f"\t\t\t}}")
+
+        lines.append(f"\t\t}}")
+
+        lines.append(f"")
+        lines.append(f"")
+        lines.append(f"")
+        lines.append(f"\t}}")
+
+    # Web section (minimal, required for import)
+    lines.append(f"\tweb")
+    lines.append(f"\t{{")
+    lines.append(f"\t\tforms")
+    lines.append(f"\t\t{{")
+    for form in forms:
+        lines.append(f"\t\t\tform {form.link_name}")
+        lines.append(f"\t\t\t{{")
+        lines.append(f"\t\t\t\tlabel placement = left")
+        lines.append(f"\t\t\t}}")
+    lines.append(f"\t\t}}")
+    lines.append(f"\t}}")
 
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -590,12 +792,12 @@ def validate_ds(content: str, source: str = "<generated>") -> list[Diagnostic]:
         if ref:
             form_refs.append((i, ref.group(1)))
 
-        # Check for dropdown without choices
-        if re.match(r"\s*type\s*=\s*Dropdown", line.strip()):
+        # Check for dropdown/picklist without choices/values
+        if re.match(r"\s*type\s*=\s*(Dropdown|picklist)", line.strip()):
             # Look ahead for choices in the same field block
             has_choices = False
             for j in range(i, min(i + 10, len(lines))):
-                if "choices" in lines[j]:
+                if "choices" in lines[j] or "values" in lines[j]:
                     has_choices = True
                     break
                 if lines[j].strip() == ")":
@@ -764,9 +966,9 @@ def main() -> None:
             print(f"WARNING: Deluge dir not found: {deluge_dir}", file=sys.stderr)
         # If no manifest, just skip scripts silently
 
-    # Get app name from config
+    # Get app name from config (handle both nested and flat parsing)
     project = config.get("project", {})
-    app_name = project.get("name", "My_App")
+    app_name = project.get("name", "") or config.get("name", "My_App")
     display_name = app_name
 
     # Generate .ds content
