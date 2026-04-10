@@ -47,7 +47,7 @@ VALID_FIELD_TYPES = {
     "text", "textarea", "picklist", "number", "decimal",
     "date", "datetime", "email", "checkbox", "url", "phone",
     "currency", "percent", "richtext", "upload file", "image",
-    "audio", "video", "signature", "autonumber", "list",
+    "audio", "video", "signature", "autonumber", "list", "phonenumber",
     "USD", "percentage",
 }
 
