@@ -747,9 +747,11 @@ def emit_application(
         lines.append(f"")
         lines.append(f"\t}}")
 
-    # Web section (minimal, required for import)
+    # Web section — forms, reports, and menu (required for import)
     lines.append(f"\tweb")
     lines.append(f"\t{{")
+
+    # Web > forms
     lines.append(f"\t\tforms")
     lines.append(f"\t\t{{")
     for form in forms:
@@ -758,6 +760,137 @@ def emit_application(
         lines.append(f"\t\t\t\tlabel placement = left")
         lines.append(f"\t\t\t}}")
     lines.append(f"\t\t}}")
+
+    # Web > reports (quickview + detailview + menu for each report)
+    if reports:
+        lines.append(f"\t\treports")
+        lines.append(f"\t\t{{")
+        for rpt in reports:
+            cols = [c.strip() for c in rpt.columns.split(",") if c.strip()]
+            lines.append(f"\t\t\treport {rpt.link_name}")
+            lines.append(f"\t\t\t{{")
+
+            # Quickview
+            lines.append(f"\t\t\t\tquickview")
+            lines.append(f"\t\t\t\t(")
+            lines.append(f"\t\t\t\t\tlayout")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\ttype = -1")
+            lines.append(f"\t\t\t\t\t\tdatablock1")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tlayout type = -1")
+            lines.append(f"\t\t\t\t\t\t\tfields")
+            lines.append(f"\t\t\t\t\t\t\t(")
+            for c in cols:
+                lines.append(f'\t\t\t\t\t\t\t\t{c} as "{c}"')
+            lines.append(f"\t\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\tmenu")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\theader")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tEdit ")
+            lines.append(f"\t\t\t\t\t\t\tDuplicate ")
+            lines.append(f"\t\t\t\t\t\t\tDelete ")
+            lines.append(f"\t\t\t\t\t\t\tPrint ")
+            lines.append(f"\t\t\t\t\t\t\tAdd ")
+            lines.append(f"\t\t\t\t\t\t\tImport ")
+            lines.append(f"\t\t\t\t\t\t\tExport ")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t\trecord")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tEdit   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tDuplicate   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tDelete   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tPrint   \t   ")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\taction")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\ton click")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tView Record   \t   ")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t\ton right click")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tEdit   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tDuplicate   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tDelete   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tPrint   \t   ")
+            lines.append(f"\t\t\t\t\t\t\tView Record   \t   ")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t)")
+            lines.append(f"")
+
+            # Detailview
+            lines.append(f"\t\t\t\tdetailview")
+            lines.append(f"\t\t\t\t(")
+            lines.append(f"\t\t\t\t\tlayout")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\ttype = 1")
+            lines.append(f"\t\t\t\t\t\tdatablock1")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tlayout type = -2")
+            lines.append(f'\t\t\t\t\t\t\ttitle = "Overview"')
+            lines.append(f"\t\t\t\t\t\t\tfields")
+            lines.append(f"\t\t\t\t\t\t\t(")
+            for c in cols:
+                lines.append(f'\t\t\t\t\t\t\t\t{c} as "{c}"')
+            lines.append(f"\t\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\tmenu")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\theader")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(f"\t\t\t\t\t\t\tEdit ")
+            lines.append(f"\t\t\t\t\t\t\tDuplicate ")
+            lines.append(f"\t\t\t\t\t\t\tDelete ")
+            lines.append(f"\t\t\t\t\t\t\tPrint ")
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t)")
+
+            lines.append(f"\t\t\t}}")
+        lines.append(f"\t\t}}")
+
+    # Web > menu (navigation structure)
+    lines.append(f"\t\tmenu")
+    lines.append(f"\t\t{{")
+    lines.append(f"\t\t\tspace Space")
+    lines.append(f"\t\t\t{{")
+    lines.append(f'\t\t\t\tdisplayname = "Space"')
+    lines.append(f'\t\t\t\ticon = "objects-spaceship"')
+
+    # Build menu sections — one per form with its reports
+    form_reports: dict[str, list[ReportSpec]] = {}
+    for rpt in reports:
+        form_reports.setdefault(rpt.form, []).append(rpt)
+
+    section_num = 0
+    for form in forms:
+        section_num += 1
+        lines.append(f"")
+        lines.append(f"\t\t\t\tsection Section_{section_num}")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f'\t\t\t\t\tdisplayname = "{form.display_name}"')
+        lines.append(f'\t\t\t\t\ticon = "travel-world"')
+        lines.append(f"\t\t\t\t\tform  {form.link_name}")
+        lines.append(f"\t\t\t\t\t{{")
+        lines.append(f'\t\t\t\t\t\ticon = "ui-1-bold-add"')
+        lines.append(f"\t\t\t\t\t}}")
+        for rpt in form_reports.get(form.link_name, []):
+            lines.append(f"\t\t\t\t\treport {rpt.link_name}")
+            lines.append(f"\t\t\t\t\t{{")
+            lines.append(f'\t\t\t\t\t\ticon = "travel-world"')
+            lines.append(f"\t\t\t\t\t}}")
+        lines.append(f"\t\t\t\t}}")
+
+    lines.append(f"\t\t\t}}")
+    lines.append(f"\t\t}}")
+
     lines.append(f"\t}}")
 
     lines.append("}")
