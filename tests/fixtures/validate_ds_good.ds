@@ -1,0 +1,382 @@
+/*
+ * Author       : test.user
+ * Generated on : 10-Apr-2026 09:14:14
+ * Version      : 1.0
+ */
+ application "Test App"
+ {
+ 	date format = "dd-MMM-yyyy"
+ 	time zone = "America/Los_Angeles"
+ 	time format = "24-hr"
+
+ 	forms
+	{
+		form test_form
+		{
+			displayname = "Test Form"
+			success message = "Test Form Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0
+				width = medium
+			)
+			name_field
+			(
+    			type = text
+				displayname = "Name Field"
+	 			row = 1
+	 			column = 1
+				width = medium
+			)
+			status_field
+			(
+				type = picklist
+				displayname = "Status Field"
+				values = {"Open","Closed","Pending"}
+	 			row = 1
+	 			column = 1
+				width = medium
+			)
+
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form second_form
+		{
+			displayname = "Second Form"
+			success message = "Second Form Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0
+				width = medium
+			)
+			title
+			(
+    			type = text
+				displayname = "Title"
+	 			row = 1
+	 			column = 1
+				width = medium
+			)
+
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+	}
+	reports
+	{
+		list test_form_Report
+		{
+			displayName = "All Test Forms"
+			show all rows from test_form
+			(
+				name_field as "Name Field"
+				status_field as "Status Field"
+			)
+		}
+	}
+	pages
+	{
+		page DashBoard
+		{
+			displayname = "Dashboard"
+			Content="<zml>\n<layout>\n<row>\n<column width='100%'>\n<text value='Dashboard'/>\n</column>\n</row>\n</layout>\n</zml>"
+		}
+	}
+
+
+
+		workflow
+		{
+
+
+
+		form
+		{
+			test_workflow as "Test Workflow"
+			{
+				type =  form
+				form = test_form
+
+				record event = on add
+
+				on success
+				{
+					actions
+					{
+						custom deluge script
+						(
+							input.status_field = "Open";
+							info input.name_field;
+						)
+					}
+				}
+			}
+		}
+
+		schedule
+		{
+			test_schedule as "Test Schedule"
+			{
+				type =  schedule
+				form = test_form
+				time zone = "America/Los_Angeles"
+				on start
+				{
+					actions
+					{
+					on load
+					(
+						allRecs = test_form[status_field == "Open"];
+						info allRecs.count();
+					)
+					}
+				}
+			}
+		}
+		}
+	web
+	{
+		forms
+		{
+			form test_form
+			{
+				label placement = left
+			}
+			form second_form
+			{
+				label placement = left
+			}
+		}
+		reports
+		{
+			report test_form_Report
+			{
+				quickview
+				(
+					layout
+					(
+					 	type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								name_field as "Name Field"
+								status_field as "Status Field"
+							)
+						)
+					)
+					menu
+    				(
+    				 	header
+    				 	(
+    					 	Edit
+    					 	Delete
+    				 	)
+    				)
+				)
+
+				detailview
+				(
+					layout
+					(
+					 	type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								name_field as "Name Field"
+								status_field as "Status Field"
+							)
+						)
+					)
+					menu
+    				(
+    				 	header
+    				 	(
+    					 	Edit
+    					 	Delete
+    				 	)
+    				)
+				)
+				menu
+				(
+					header
+					(
+						Edit
+						Delete
+					)
+				)
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "Dashboard"
+					icon = "ui-1-dashboard-half"
+					page DashBoard
+					{
+						icon = "ui-1-dashboard-half"
+					}
+				}
+				section Section_2
+				{
+					displayname = "Test Forms"
+					icon = "business-money-bag"
+					form  test_form
+					{
+						icon = "ui-1-bold-add"
+					}
+					report test_form_Report
+					{
+						icon = "travel-world"
+					}
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 4
+			font = "lato"
+			color options
+			{
+				color = "5"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+	phone
+	{
+		forms
+		{
+			form test_form
+			{
+				label placement = auto
+			}
+			form second_form
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = red
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	tablet
+	{
+		forms
+		{
+			form test_form
+			{
+				label placement = auto
+			}
+			form second_form
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = red
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+}
