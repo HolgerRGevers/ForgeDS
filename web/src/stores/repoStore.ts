@@ -62,6 +62,7 @@ interface RepoState {
   createPR: (title: string, body: string, base: string, draft?: boolean) => Promise<string>;
   createNewRepo: (name: string, description: string, isPrivate: boolean, autoInit: boolean) => Promise<void>;
   batchUploadFiles: (files: Array<{ path: string; content: string; isBinary: boolean }>, commitMessage: string) => Promise<void>;
+  batchUploadToBranch: (branchName: string, files: Array<{ path: string; content: string; isBinary: boolean }>, commitMessage: string) => Promise<void>;
 }
 
 /** Get token or throw. */
@@ -548,6 +549,71 @@ export const useRepoStore = create<RepoState>((set, get) => ({
       }
     }
 
+    await get().fetchTree();
+    await get().fetchCommits();
+  },
+
+  batchUploadToBranch: async (branchName, files, commitMessage) => {
+    const { selectedRepo, selectedBranch } = get();
+    if (!selectedRepo) throw new Error("No repo selected");
+
+    // Create the feature branch from current HEAD
+    const ref = await gh.getRef(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+      `heads/${selectedBranch}`,
+    );
+    await gh.createBranch(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+      branchName,
+      ref.object.sha,
+    );
+
+    // Upload files to the new branch
+    for (let i = 0; i < files.length; i++) {
+      if (i > 0) await sleep(200);
+      const file = files[i];
+
+      if (file.isBinary) {
+        await gh.createOrUpdateFileBase64(
+          token(),
+          selectedRepo.owner,
+          selectedRepo.name,
+          file.path,
+          file.content,
+          commitMessage,
+          undefined,
+          branchName,
+        );
+      } else {
+        await gh.createOrUpdateFile(
+          token(),
+          selectedRepo.owner,
+          selectedRepo.name,
+          file.path,
+          file.content,
+          commitMessage,
+          undefined,
+          branchName,
+        );
+      }
+    }
+
+    // Switch to the new branch
+    const branchesRaw = await gh.listBranches(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+    );
+    const branches: BranchInfo[] = branchesRaw.map((b) => ({
+      name: b.name,
+      sha: b.commit.sha,
+      protected: b.protected,
+    }));
+    set({ branches, selectedBranch: branchName });
     await get().fetchTree();
     await get().fetchCommits();
   },

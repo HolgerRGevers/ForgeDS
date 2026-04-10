@@ -110,6 +110,30 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
     set({ activeTabId: tabId });
   },
 
+  loadGeneratedFiles: (files) => {
+    const newTabs: EditorTab[] = files.map((f) => {
+      const ext = f.name.split(".").pop() ?? "";
+      const langMap: Record<string, string> = {
+        dg: "deluge", ds: "plaintext", py: "python", json: "json",
+        yaml: "yaml", yml: "yaml", md: "markdown", sql: "sql",
+        csv: "plaintext", txt: "plaintext", js: "javascript",
+        ts: "typescript",
+      };
+      return {
+        id: f.path,
+        name: f.name,
+        path: f.path,
+        content: f.content,
+        language: langMap[ext] ?? f.language ?? "plaintext",
+        isDirty: false,
+      };
+    });
+    set({
+      tabs: newTabs,
+      activeTabId: newTabs[0]?.id ?? null,
+    });
+  },
+
   updateTabContent: (tabId, content) => {
     set({
       tabs: get().tabs.map((t) =>

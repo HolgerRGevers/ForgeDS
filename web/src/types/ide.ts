@@ -138,6 +138,7 @@ export interface IdeStore {
   toggleNode: (nodeId: string) => void;
   setTreeFilter: (filter: string) => void;
 
+  loadGeneratedFiles: (files: Array<{ name: string; path: string; content: string; language: string }>) => void;
   openTab: (tab: EditorTab) => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;

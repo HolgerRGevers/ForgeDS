@@ -8,6 +8,8 @@ import {
   ProjectHistory,
 } from "../components";
 import { useAuthStore } from "../stores/authStore";
+import { useRepoStore } from "../stores/repoStore";
+import { useIdeStore } from "../stores/ideStore";
 import { useToastStore } from "../stores/toastStore";
 import {
   refinePrompt,
@@ -238,6 +240,52 @@ export default function PromptPage() {
         type: "success",
       });
 
+      // Auto-commit to a feature branch if a repo is selected
+      const repo = useRepoStore.getState().selectedRepo;
+      if (repo && files.length > 0) {
+        const now = new Date();
+        const ts = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        const branchName = `forgeds/${ts}`;
+
+        addMessage({
+          timestamp: now.toLocaleTimeString(),
+          text: `Committing to branch ${branchName}...`,
+          type: "info",
+        });
+
+        try {
+          const uploadFiles = files.map((f) => ({
+            path: f.path,
+            content: f.content,
+            isBinary: false,
+          }));
+          await useRepoStore.getState().batchUploadToBranch(
+            branchName,
+            uploadFiles,
+            `ForgeDS: generate ${files.length} file(s) from prompt`,
+          );
+
+          addMessage({
+            timestamp: new Date().toLocaleTimeString(),
+            text: `Committed to ${repo.full_name} on branch ${branchName}`,
+            type: "success",
+          });
+
+          toast.getState().success(
+            "Code committed",
+            `${files.length} file${files.length !== 1 ? "s" : ""} pushed to ${branchName}`,
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Commit failed";
+          addMessage({
+            timestamp: new Date().toLocaleTimeString(),
+            text: `Auto-commit failed: ${msg}`,
+            type: "warning",
+          });
+          toast.getState().error("Auto-commit failed", msg);
+        }
+      }
+
       setStage("complete");
 
       // Save to history
@@ -249,10 +297,12 @@ export default function PromptPage() {
       };
       setHistory((prev) => [entry, ...prev]);
 
-      toast.getState().success(
-        "Build complete",
-        `Generated ${files.length} file${files.length !== 1 ? "s" : ""}`,
-      );
+      if (!repo) {
+        toast.getState().success(
+          "Build complete",
+          `Generated ${files.length} file${files.length !== 1 ? "s" : ""}. Select a repo to auto-commit.`,
+        );
+      }
     } catch (err) {
       handleError(err);
       addMessage({
@@ -274,8 +324,12 @@ export default function PromptPage() {
   }, []);
 
   const handleOpenIDE = useCallback(() => {
+    // Pass generated files to IDE as open tabs
+    if (generatedFiles.length > 0) {
+      useIdeStore.getState().loadGeneratedFiles(generatedFiles);
+    }
     navigate("/ide");
-  }, [navigate]);
+  }, [navigate, generatedFiles]);
 
   const handleHistorySelect = useCallback((id: string) => {
     const item = loadHistory().find((h) => h.id === id);
