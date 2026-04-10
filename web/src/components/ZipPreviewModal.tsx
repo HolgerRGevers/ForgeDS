@@ -105,12 +105,33 @@ function suggestRepoNames(files: ExtractedFile[]): string[] {
 export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploadProgress }: ZipPreviewModalProps) {
   const selectedRepo = useRepoStore((s) => s.selectedRepo);
   const repos = useRepoStore((s) => s.repos);
+  const repoTree = useRepoStore((s) => s.repoTree);
   const selectRepo = useRepoStore((s) => s.selectRepo);
   const fetchRepos = useRepoStore((s) => s.fetchRepos);
   const repoLoading = useRepoStore((s) => s.repoLoading);
   const createNewRepo = useRepoStore((s) => s.createNewRepo);
 
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(files.map((f) => f.targetPath)));
+  // Build a set of existing file paths in the repo for duplicate detection
+  const existingPaths = useMemo(() => {
+    const paths = new Set<string>();
+    function walk(nodes: typeof repoTree) {
+      for (const node of nodes) {
+        if (node.type === "blob") paths.add(node.path);
+        if (node.children) walk(node.children);
+      }
+    }
+    walk(repoTree);
+    return paths;
+  }, [repoTree]);
+
+  // Auto-deselect duplicates on initial render, select only new files
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const nonDuplicates = files
+      .filter((f) => !existingPaths.has(f.targetPath))
+      .map((f) => f.targetPath);
+    // If all are duplicates, select all anyway (user might want to overwrite)
+    return new Set(nonDuplicates.length > 0 ? nonDuplicates : files.map((f) => f.targetPath));
+  });
   const [repoName, setRepoName] = useState("");
   const [repoError, setRepoError] = useState<string | null>(null);
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
@@ -149,6 +170,7 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
 
   const selectedFiles = useMemo(() => files.filter((f) => selected.has(f.targetPath)), [files, selected]);
   const totalSize = useMemo(() => selectedFiles.reduce((sum, f) => sum + f.size, 0), [selectedFiles]);
+  const duplicateCount = useMemo(() => files.filter((f) => existingPaths.has(f.targetPath)).length, [files, existingPaths]);
   const allSelected = selected.size === files.length;
   const noneSelected = selected.size === 0;
 
@@ -373,20 +395,27 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
           </div>
         )}
 
-        {/* Select all */}
-        <div className="flex items-center gap-2 border-b border-gray-800 px-5 py-2">
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-400 hover:text-gray-300">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={toggleAll}
-              className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500/30"
-            />
-            Select all
-          </label>
-          <span className="text-[10px] text-gray-600">
-            ({selected.size} selected)
-          </span>
+        {/* Select all + duplicate warning */}
+        <div className="flex items-center justify-between border-b border-gray-800 px-5 py-2">
+          <div className="flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-400 hover:text-gray-300">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500/30"
+              />
+              Select all
+            </label>
+            <span className="text-[10px] text-gray-600">
+              ({selected.size} selected)
+            </span>
+          </div>
+          {duplicateCount > 0 && repoSelected && (
+            <span className="text-[10px] text-yellow-500">
+              {duplicateCount} already in repo
+            </span>
+          )}
         </div>
 
         {/* File tree with checkboxes */}
@@ -413,6 +442,7 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
                 <div className="ml-5 space-y-0.5">
                   {dirFiles.map((file) => {
                     const isChecked = selected.has(file.targetPath);
+                    const isDuplicate = existingPaths.has(file.targetPath);
                     return (
                       <label
                         key={file.targetPath}
@@ -429,6 +459,11 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
                           />
                           <span>{CATEGORY_ICONS[file.category] ?? "\u{1F4E6}"}</span>
                           <span className="truncate">{file.name}</span>
+                          {isDuplicate && (
+                            <span className="shrink-0 rounded bg-yellow-900/40 px-1.5 py-0.5 text-[9px] font-medium text-yellow-500">
+                              exists
+                            </span>
+                          )}
                         </span>
                         <span className="shrink-0 text-[10px] text-gray-600">{formatFileSize(file.size)}</span>
                       </label>
