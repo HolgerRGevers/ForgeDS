@@ -7,6 +7,7 @@ import { SkillPicker } from "./SkillPicker";
 import { ZipPreviewModal } from "./ZipPreviewModal";
 import { useRepoStore } from "../stores/repoStore";
 import { useSkillStore } from "../stores/skillStore";
+import { useToastStore } from "../stores/toastStore";
 import { extractZip } from "../lib/zip-utils";
 import type { ExtractedFile } from "../lib/zip-utils";
 
@@ -146,27 +147,52 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
   );
 
   const handleZipConfirm = useCallback(async (confirmed: ExtractedFile[]) => {
-    // The modal now handles repo creation internally, so selectedRepo
-    // should be set by the time onConfirm fires
     const repo = useRepoStore.getState().selectedRepo;
     if (!repo) return;
+    const toast = useToastStore.getState();
     setIsZipUploading(true);
     setZipUploadProgress(0);
-    try {
-      for (let i = 0; i < confirmed.length; i++) {
-        const f = confirmed[i];
+
+    const failed: Array<{ name: string; error: string }> = [];
+    let succeeded = 0;
+
+    for (let i = 0; i < confirmed.length; i++) {
+      const f = confirmed[i];
+      try {
         await batchUploadFiles(
           [{ path: f.targetPath, content: f.content, isBinary: f.isBinary }],
           `Add ${f.name}`,
         );
-        setZipUploadProgress(i + 1);
+        succeeded++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        failed.push({ name: f.name, error: msg });
       }
-      setShowZipPreview(false);
-      setExtractedFiles([]);
-    } catch (err) {
-      setZipError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setIsZipUploading(false);
+      setZipUploadProgress(i + 1);
+    }
+
+    // Auto-close modal
+    setShowZipPreview(false);
+    setExtractedFiles([]);
+    setIsZipUploading(false);
+    setZipError(null);
+
+    // Show result toasts
+    if (succeeded > 0) {
+      toast.success(
+        `${succeeded} file${succeeded !== 1 ? "s" : ""} uploaded`,
+        `Added to ${repo.full_name}`,
+      );
+    }
+
+    if (failed.length > 0) {
+      const details = failed
+        .map((f) => `${f.name}: ${f.error}`)
+        .join("\n");
+      toast.error(
+        `${failed.length} file${failed.length !== 1 ? "s" : ""} failed to upload`,
+        details + "\n\nTip: Check file size limits (100 MB per file via GitHub API) and ensure the repository is accessible.",
+      );
     }
   }, [batchUploadFiles]);
 

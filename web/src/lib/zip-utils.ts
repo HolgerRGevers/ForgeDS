@@ -16,6 +16,7 @@ const CATEGORY_MAP: Record<string, FileCategory> = {
   // Documents
   ".pdf": "document", ".doc": "document", ".docx": "document",
   ".txt": "document", ".md": "document", ".rtf": "document",
+  ".ppt": "document", ".pptx": "document",
   // Images
   ".png": "image", ".jpg": "image", ".jpeg": "image",
   ".gif": "image", ".svg": "image", ".webp": "image", ".ico": "image",
@@ -32,12 +33,6 @@ const CATEGORY_MAP: Record<string, FileCategory> = {
   ".toml": "config", ".ini": "config", ".cfg": "config",
 };
 
-const BINARY_EXTENSIONS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg",
-  ".pdf", ".doc", ".docx", ".xlsx", ".xls", ".rtf",
-  ".zip", ".tar", ".gz",
-]);
-
 const DIR_MAP: Record<FileCategory, string> = {
   document: "docs",
   image: "assets/images",
@@ -53,10 +48,19 @@ export function categorizeFile(filename: string): FileCategory {
   return CATEGORY_MAP[ext] ?? "other";
 }
 
+/** Known text extensions — everything else is treated as binary to avoid encoding errors. */
+const TEXT_EXTENSIONS = new Set([
+  ".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".xml", ".html", ".htm",
+  ".css", ".js", ".ts", ".tsx", ".jsx", ".py", ".rb", ".go", ".rs", ".java",
+  ".sql", ".ds", ".dg", ".sh", ".bat", ".ps1", ".toml", ".ini", ".cfg",
+  ".env", ".gitignore", ".editorconfig", ".log", ".php",
+]);
+
 function isBinaryFile(filename: string): boolean {
   const lower = filename.toLowerCase();
   const ext = lower.substring(lower.lastIndexOf("."));
-  return BINARY_EXTENSIONS.has(ext);
+  // Default to binary for unknown extensions — prevents "URI malformed" errors
+  return !TEXT_EXTENSIONS.has(ext);
 }
 
 export function computeTargetPath(filename: string, category: FileCategory): string {

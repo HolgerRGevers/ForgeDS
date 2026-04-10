@@ -9,6 +9,7 @@ import IdePage from "./pages/IdePage";
 import DatabasePage from "./pages/DatabasePage";
 import ApiPage from "./pages/ApiPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import { ToastContainer } from "./components/ToastContainer";
 
 function App() {
   const connect = useBridgeStore((s) => s.connect);
@@ -20,25 +21,28 @@ function App() {
   }, [connect]);
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
-      <Route
-        path="/*"
-        element={
-          <AuthGuard>
-            <AppShell bridgeStatus={status}>
-              <Routes>
-                <Route path="/" element={<PromptPage />} />
-                <Route path="/ide" element={<IdePage />} />
-                <Route path="/database" element={<DatabasePage />} />
-                <Route path="/api" element={<ApiPage />} />
-              </Routes>
-            </AppShell>
-          </AuthGuard>
-        }
-      />
-    </Routes>
+    <>
+      <ToastContainer />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route
+          path="/*"
+          element={
+            <AuthGuard>
+              <AppShell bridgeStatus={status}>
+                <Routes>
+                  <Route path="/" element={<PromptPage />} />
+                  <Route path="/ide" element={<IdePage />} />
+                  <Route path="/database" element={<DatabasePage />} />
+                  <Route path="/api" element={<ApiPage />} />
+                </Routes>
+              </AppShell>
+            </AuthGuard>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 

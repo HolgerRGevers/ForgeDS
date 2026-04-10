@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import type { ExtractedFile } from "../lib/zip-utils";
 import { formatFileSize } from "../lib/zip-utils";
 import { useRepoStore } from "../stores/repoStore";
+import { useToastStore } from "../stores/toastStore";
 
 interface ZipPreviewModalProps {
   files: ExtractedFile[];
@@ -170,8 +171,11 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
     setIsCreatingRepo(true);
     try {
       await createNewRepo(trimmed, "", false, true);
+      useToastStore.getState().success("Repository created", `${trimmed} is ready`);
     } catch (err) {
-      setRepoError(err instanceof Error ? err.message : "Failed to create repository");
+      const msg = err instanceof Error ? err.message : "Failed to create repository";
+      setRepoError(msg);
+      useToastStore.getState().error("Repository creation failed", msg);
     } finally {
       setIsCreatingRepo(false);
     }
