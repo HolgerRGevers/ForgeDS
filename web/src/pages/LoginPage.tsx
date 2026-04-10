@@ -163,8 +163,11 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-gray-600">
-          Your GitHub account provides repo access for cloud storage and
-          collaboration. No data is stored on our servers.
+          By signing in, you agree to our{" "}
+          <a href="/ForgeDS/privacy" className="text-blue-400 underline hover:text-blue-300">
+            Privacy Policy
+          </a>
+          . No data is stored on our servers.
         </p>
       </div>
     </div>

@@ -64,6 +64,16 @@ export function AppShell({ children, bridgeStatus }: AppShellProps) {
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden">{children}</main>
+
+      {/* Footer */}
+      <footer className="flex items-center justify-center border-t border-gray-800 bg-gray-900 px-4 py-1.5">
+        <NavLink
+          to="/privacy"
+          className="text-[10px] text-gray-600 transition-colors hover:text-gray-400"
+        >
+          Privacy Policy
+        </NavLink>
+      </footer>
     </div>
   );
 }

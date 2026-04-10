@@ -8,6 +8,7 @@ import PromptPage from "./pages/PromptPage";
 import IdePage from "./pages/IdePage";
 import DatabasePage from "./pages/DatabasePage";
 import ApiPage from "./pages/ApiPage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 function App() {
   const connect = useBridgeStore((s) => s.connect);
@@ -21,6 +22,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route
         path="/*"
         element={

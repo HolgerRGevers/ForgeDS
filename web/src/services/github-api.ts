@@ -4,9 +4,46 @@
  * All calls use the stored OAuth token. Every function accepts the token
  * explicitly so the module stays stateless — callers (stores) manage the
  * token lifecycle.
+ *
+ * Includes rate limit tracking, exponential backoff on 429/403, and
+ * automatic 401 detection for expired tokens.
  */
 
 const API = "https://api.github.com";
+
+// ── Rate limit state ─────────────────────────────────────────────────────
+
+let rateLimitRemaining = 5000;
+let rateLimitReset = 0; // Unix epoch seconds
+
+export function getRateLimitInfo() {
+  return { remaining: rateLimitRemaining, resetAt: rateLimitReset };
+}
+
+// ── Errors ───────────────────────────────────────────────────────────────
+
+export class TokenExpiredError extends Error {
+  constructor() {
+    super("GitHub token expired or revoked");
+    this.name = "TokenExpiredError";
+  }
+}
+
+export class RateLimitError extends Error {
+  resetAt: number;
+  constructor(resetAt: number) {
+    const waitSec = Math.max(0, resetAt - Math.floor(Date.now() / 1000));
+    super(`GitHub API rate limit reached. Resets in ${waitSec}s.`);
+    this.name = "RateLimitError";
+    this.resetAt = resetAt;
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function headers(token: string): HeadersInit {
   return {
@@ -16,20 +53,80 @@ function headers(token: string): HeadersInit {
   };
 }
 
+function updateRateLimits(res: Response) {
+  const remaining = res.headers.get("x-ratelimit-remaining");
+  const reset = res.headers.get("x-ratelimit-reset");
+  if (remaining !== null) rateLimitRemaining = parseInt(remaining, 10);
+  if (reset !== null) rateLimitReset = parseInt(reset, 10);
+}
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
 async function request<T>(
   token: string,
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: { ...headers(token), ...(init?.headers ?? {}) },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`GitHub API ${res.status}: ${path} — ${body}`);
+  // Pre-flight check: if we know we're near the limit, block early
+  if (rateLimitRemaining < 10) {
+    const now = Math.floor(Date.now() / 1000);
+    if (rateLimitReset > now) {
+      throw new RateLimitError(rateLimitReset);
+    }
   }
-  return res.json();
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await sleep(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+    }
+
+    const res = await fetch(`${API}${path}`, {
+      ...init,
+      headers: { ...headers(token), ...(init?.headers ?? {}) },
+    });
+
+    updateRateLimits(res);
+
+    // Success
+    if (res.ok) {
+      return res.json();
+    }
+
+    // 401 — token expired or revoked
+    if (res.status === 401) {
+      throw new TokenExpiredError();
+    }
+
+    // 429 — primary rate limit
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("retry-after");
+      if (retryAfter && attempt < MAX_RETRIES) {
+        await sleep(parseInt(retryAfter, 10) * 1000);
+        continue;
+      }
+      throw new RateLimitError(rateLimitReset);
+    }
+
+    // 403 — could be secondary rate limit
+    if (res.status === 403) {
+      const body = await res.text().catch(() => "");
+      if (body.includes("rate limit") || body.includes("abuse")) {
+        if (attempt < MAX_RETRIES) continue;
+        throw new RateLimitError(rateLimitReset);
+      }
+      throw new Error(`GitHub API 403: ${path} — ${body}`);
+    }
+
+    // Other errors — don't retry
+    const body = await res.text().catch(() => "");
+    lastError = new Error(`GitHub API ${res.status}: ${path} — ${body}`);
+    break;
+  }
+
+  throw lastError ?? new Error(`GitHub API request failed: ${path}`);
 }
 
 // ── Repositories ──────────────────────────────────────────────────────────
@@ -219,11 +316,11 @@ export async function deleteFile(
   const body: Record<string, string> = { message, sha };
   if (branch) body.branch = branch;
 
-  await fetch(`${API}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, {
-    method: "DELETE",
-    headers: headers(token),
-    body: JSON.stringify(body),
-  });
+  await request<{ commit: { sha: string } }>(
+    token,
+    `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+    { method: "DELETE", body: JSON.stringify(body) },
+  );
 }
 
 // ── Commits ───────────────────────────────────────────────────────────────
@@ -319,10 +416,11 @@ export async function deleteBranch(
   repo: string,
   branchName: string,
 ): Promise<void> {
-  await fetch(`${API}/repos/${owner}/${repo}/git/refs/heads/${branchName}`, {
-    method: "DELETE",
-    headers: headers(token),
-  });
+  await request<void>(
+    token,
+    `/repos/${owner}/${repo}/git/refs/heads/${branchName}`,
+    { method: "DELETE" },
+  );
 }
 
 // ── Pull Requests ─────────────────────────────────────────────────────────

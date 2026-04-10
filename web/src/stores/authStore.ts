@@ -20,6 +20,7 @@ interface AuthState {
   cancelLogin: () => void;
   logout: () => void;
   restoreSession: () => Promise<void>;
+  handleTokenExpired: () => void;
 }
 
 let abortController: AbortController | null = null;
@@ -84,6 +85,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       token: null,
       error: null,
+      deviceCode: null,
+    });
+  },
+
+  handleTokenExpired: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    set({
+      status: "unauthenticated",
+      user: null,
+      token: null,
+      error: "Your session has expired. Please sign in again.",
       deviceCode: null,
     });
   },

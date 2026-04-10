@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as gh from "../services/github-api";
+import { sleep, TokenExpiredError } from "../services/github-api";
 import type {
   RepoInfo,
   BranchInfo,
@@ -68,6 +69,14 @@ function token(): string {
   const t = useAuthStore.getState().token;
   if (!t) throw new Error("Not authenticated");
   return t;
+}
+
+/** Handle TokenExpiredError by logging out. Rethrows other errors. */
+function handleApiError(err: unknown): never {
+  if (err instanceof TokenExpiredError) {
+    useAuthStore.getState().handleTokenExpired();
+  }
+  throw err;
 }
 
 /** Convert flat GitHub tree entries into a nested GitTreeNode[]. */
@@ -145,6 +154,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
         permissions: r.permissions,
       }));
       set({ repos });
+    } catch (err) {
+      handleApiError(err);
     } finally {
       set({ repoLoading: false });
     }
@@ -246,8 +257,10 @@ export const useRepoStore = create<RepoState>((set, get) => ({
     const { selectedRepo, selectedBranch, pendingChanges } = get();
     if (!selectedRepo || pendingChanges.size === 0) return;
 
-    // Commit each file change via the Contents API
+    // Commit each file change via the Contents API (throttled)
+    let i = 0;
     for (const [, change] of pendingChanges) {
+      if (i > 0) await sleep(200);
       if (change.action === "delete") {
         if (change.originalSha) {
           await gh.deleteFile(
@@ -272,6 +285,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
           selectedBranch,
         );
       }
+      i++;
     }
 
     set({ pendingChanges: new Map() });
@@ -491,7 +505,9 @@ export const useRepoStore = create<RepoState>((set, get) => ({
     const { selectedRepo, selectedBranch } = get();
     if (!selectedRepo) throw new Error("No repo selected");
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      if (i > 0) await sleep(200); // Throttle to respect secondary rate limits
+      const file = files[i];
       const path = file.path;
       let sha: string | undefined;
       try {
