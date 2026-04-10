@@ -114,8 +114,7 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
   const [repoName, setRepoName] = useState("");
   const [repoError, setRepoError] = useState<string | null>(null);
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
-  const [repoMode, setRepoMode] = useState<"choose" | "create" | "existing">(selectedRepo ? "choose" : "choose");
-  const [showRepoDropdown, setShowRepoDropdown] = useState(false);
+  const [repoMode, setRepoMode] = useState<"create" | "existing">("create");
 
   const repoSelected = !!selectedRepo;
 
@@ -128,8 +127,7 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
   const handleSelectExistingRepo = useCallback(async (owner: string, name: string) => {
     try {
       await selectRepo(owner, name);
-      setRepoMode("choose");
-      setShowRepoDropdown(false);
+      setRepoMode("create");
     } catch (err) {
       setRepoError(err instanceof Error ? err.message : "Failed to select repository");
     }
@@ -234,56 +232,64 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
             </svg>
             <span className="text-xs text-gray-400">Creating repository...</span>
           </div>
-        ) : repoSelected && repoMode !== "existing" && repoMode !== "create" ? (
-          /* Repo badge with change option */
-          <div className="flex items-center justify-between border-b border-gray-700 px-5 py-2">
-            <div className="flex items-center gap-1.5 text-xs text-green-400">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Uploading to <span className="font-medium">{selectedRepo.full_name}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setRepoMode("choose"); setShowRepoDropdown(true); }}
-              className="text-[10px] text-gray-500 hover:text-gray-300"
-            >
-              Change
-            </button>
-          </div>
         ) : (
-          /* Repo chooser: tabs for Create New / Select Existing */
+          /* Repo chooser section */
           <div className="border-b border-gray-700 px-5 py-3 space-y-2.5">
-            {/* Tabs */}
-            <div className="flex rounded-lg border border-gray-700">
-              <button
-                type="button"
-                onClick={() => { setRepoMode("create"); setShowRepoDropdown(false); }}
-                className={`flex-1 rounded-l-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  repoMode === "create" || (!showRepoDropdown && repoMode === "choose" && !repoSelected)
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-300"
-                }`}
-              >
-                Create new
-              </button>
-              <button
-                type="button"
-                onClick={handleShowExisting}
-                className={`flex-1 rounded-r-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  repoMode === "existing" || showRepoDropdown
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-300"
-                }`}
-              >
-                Select existing
-              </button>
-            </div>
+            {/* Selected repo badge + change button */}
+            {repoSelected && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs text-green-400">
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Uploading to <span className="font-medium">{selectedRepo.full_name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRepoMode(repoMode === "existing" ? "create" : "existing")}
+                  className="text-[10px] text-gray-500 hover:text-gray-300"
+                >
+                  Change
+                </button>
+              </div>
+            )}
+
+            {/* Tabs — always visible when no repo, or when changing */}
+            {(!repoSelected || repoMode === "existing" || repoMode === "create") && (
+              <>
+                {!repoSelected && (
+                  <p className="text-xs font-medium text-gray-400">Choose a repository</p>
+                )}
+                <div className="flex rounded-lg border border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setRepoMode("create")}
+                    className={`flex-1 rounded-l-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      repoMode === "create"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-800 text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    Create new
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShowExisting}
+                    className={`flex-1 rounded-r-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      repoMode === "existing"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-800 text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    Select existing
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Create new repo content */}
-            {(repoMode === "create" || (!showRepoDropdown && repoMode !== "existing")) && (
+            {repoMode === "create" && !repoSelected && (
               <>
-                {/* Suggestions */}
                 <div className="flex flex-wrap gap-1.5">
                   {suggestions.map((name) => (
                     <button
@@ -297,7 +303,6 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
                   ))}
                 </div>
 
-                {/* Custom name input */}
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -323,8 +328,8 @@ export function ZipPreviewModal({ files, onConfirm, onCancel, isUploading, uploa
               </>
             )}
 
-            {/* Select existing repo content */}
-            {(repoMode === "existing" || showRepoDropdown) && (
+            {/* Select existing repo list */}
+            {repoMode === "existing" && (
               <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800">
                 {repoLoading && (
                   <p className="px-3 py-2 text-xs text-gray-500">Loading repos...</p>
