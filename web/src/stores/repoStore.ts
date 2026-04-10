@@ -9,6 +9,24 @@ import type {
 } from "../types/github";
 import { useAuthStore } from "./authStore";
 
+export interface Collaborator {
+  login: string;
+  avatar_url: string;
+  role: "admin" | "write" | "read";
+}
+
+export interface PullRequestInfo {
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  draft: boolean;
+  html_url: string;
+  headBranch: string;
+  baseBranch: string;
+  author: string;
+  avatar_url: string;
+}
+
 interface RepoState {
   repos: RepoInfo[];
   selectedRepo: RepoInfo | null;
@@ -18,6 +36,8 @@ interface RepoState {
   repoLoading: boolean;
   commits: CommitInfo[];
   pendingChanges: Map<string, FileChange>;
+  collaborators: Collaborator[];
+  pullRequests: PullRequestInfo[];
 
   fetchRepos: () => Promise<void>;
   selectRepo: (owner: string, repo: string) => Promise<void>;
@@ -34,6 +54,11 @@ interface RepoState {
   discardChanges: () => void;
   fetchCommits: () => Promise<void>;
   uploadResource: (filename: string, content: string) => Promise<void>;
+  fetchCollaborators: () => Promise<void>;
+  fetchPullRequests: () => Promise<void>;
+  createBranch: (name: string) => Promise<void>;
+  deleteBranch: (name: string) => Promise<void>;
+  createPR: (title: string, body: string, base: string, draft?: boolean) => Promise<string>;
 }
 
 /** Get token or throw. */
@@ -99,6 +124,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   repoLoading: false,
   commits: [],
   pendingChanges: new Map(),
+  collaborators: [],
+  pullRequests: [],
 
   fetchRepos: async () => {
     set({ repoLoading: true });
@@ -308,5 +335,131 @@ export const useRepoStore = create<RepoState>((set, get) => ({
     );
 
     await get().fetchTree();
+  },
+
+  fetchCollaborators: async () => {
+    const { selectedRepo } = get();
+    if (!selectedRepo) return;
+
+    try {
+      const raw = await gh.listCollaborators(
+        token(),
+        selectedRepo.owner,
+        selectedRepo.name,
+      );
+      const collaborators: Collaborator[] = raw.map((c) => ({
+        login: c.login,
+        avatar_url: c.avatar_url,
+        role: c.permissions.admin
+          ? "admin"
+          : c.permissions.push
+            ? "write"
+            : "read",
+      }));
+      set({ collaborators });
+    } catch {
+      // May fail on repos where user doesn't have admin access
+      set({ collaborators: [] });
+    }
+  },
+
+  fetchPullRequests: async () => {
+    const { selectedRepo } = get();
+    if (!selectedRepo) return;
+
+    const raw = await gh.listPullRequests(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+    );
+    const pullRequests: PullRequestInfo[] = raw.map((pr) => ({
+      number: pr.number,
+      title: pr.title,
+      state: pr.state,
+      draft: pr.draft,
+      html_url: pr.html_url,
+      headBranch: pr.head.ref,
+      baseBranch: pr.base.ref,
+      author: pr.user.login,
+      avatar_url: pr.user.avatar_url,
+    }));
+    set({ pullRequests });
+  },
+
+  createBranch: async (name) => {
+    const { selectedRepo, selectedBranch } = get();
+    if (!selectedRepo) throw new Error("No repo selected");
+
+    const ref = await gh.getRef(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+      `heads/${selectedBranch}`,
+    );
+    await gh.createBranch(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+      name,
+      ref.object.sha,
+    );
+
+    // Refresh branches and switch to the new one
+    const branchesRaw = await gh.listBranches(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+    );
+    const branches: BranchInfo[] = branchesRaw.map((b) => ({
+      name: b.name,
+      sha: b.commit.sha,
+      protected: b.protected,
+    }));
+    set({ branches, selectedBranch: name });
+    await get().fetchTree();
+  },
+
+  deleteBranch: async (name) => {
+    const { selectedRepo } = get();
+    if (!selectedRepo) throw new Error("No repo selected");
+
+    await gh.deleteBranch(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+      name,
+    );
+
+    // Refresh branches
+    const branchesRaw = await gh.listBranches(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+    );
+    const branches: BranchInfo[] = branchesRaw.map((b) => ({
+      name: b.name,
+      sha: b.commit.sha,
+      protected: b.protected,
+    }));
+    set({ branches });
+  },
+
+  createPR: async (title, body, base, draft = false) => {
+    const { selectedRepo, selectedBranch } = get();
+    if (!selectedRepo) throw new Error("No repo selected");
+
+    const pr = await gh.createPullRequest(
+      token(),
+      selectedRepo.owner,
+      selectedRepo.name,
+      title,
+      body,
+      selectedBranch,
+      base,
+      draft,
+    );
+
+    await get().fetchPullRequests();
+    return pr.html_url;
   },
 }));

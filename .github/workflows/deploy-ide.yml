@@ -33,7 +33,7 @@ jobs:
       - run: npm run build
         working-directory: web
         env:
-          VITE_GITHUB_CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          VITE_GITHUB_AUTH_PROXY: ${{ vars.AUTH_PROXY_URL }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web/dist

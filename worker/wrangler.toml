@@ -1,0 +1,11 @@
+name = "forgeds-auth"
+main = "github-auth-proxy.js"
+compatibility_date = "2024-01-01"
+
+# Secrets (set via `npx wrangler secret put <NAME>`):
+#   CLIENT_ID     — GitHub OAuth App client ID
+#   CLIENT_SECRET — GitHub OAuth App client secret
+#
+# Do NOT put secrets in this file. Use:
+#   npx wrangler secret put CLIENT_ID
+#   npx wrangler secret put CLIENT_SECRET

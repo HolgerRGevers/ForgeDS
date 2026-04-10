@@ -250,3 +250,76 @@ export async function listCollaborators(
     `/repos/${owner}/${repo}/collaborators`,
   );
 }
+
+// ── Branches (create / delete) ────────────────────────────────────────────
+
+export async function createBranch(
+  token: string,
+  owner: string,
+  repo: string,
+  branchName: string,
+  fromSha: string,
+): Promise<{ ref: string; object: { sha: string } }> {
+  return request(token, `/repos/${owner}/${repo}/git/refs`, {
+    method: "POST",
+    body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: fromSha }),
+  });
+}
+
+export async function deleteBranch(
+  token: string,
+  owner: string,
+  repo: string,
+  branchName: string,
+): Promise<void> {
+  await fetch(`${API}/repos/${owner}/${repo}/git/refs/heads/${branchName}`, {
+    method: "DELETE",
+    headers: headers(token),
+  });
+}
+
+// ── Pull Requests ─────────────────────────────────────────────────────────
+
+export interface PullRequestRaw {
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  draft: boolean;
+  html_url: string;
+  head: { ref: string; sha: string };
+  base: { ref: string };
+  user: { login: string; avatar_url: string };
+  created_at: string;
+  updated_at: string;
+  body: string | null;
+  mergeable: boolean | null;
+  changed_files?: number;
+}
+
+export async function listPullRequests(
+  token: string,
+  owner: string,
+  repo: string,
+  state: "open" | "closed" | "all" = "open",
+): Promise<PullRequestRaw[]> {
+  return request<PullRequestRaw[]>(
+    token,
+    `/repos/${owner}/${repo}/pulls?state=${state}&per_page=20`,
+  );
+}
+
+export async function createPullRequest(
+  token: string,
+  owner: string,
+  repo: string,
+  title: string,
+  body: string,
+  head: string,
+  base: string,
+  draft = false,
+): Promise<PullRequestRaw> {
+  return request<PullRequestRaw>(token, `/repos/${owner}/${repo}/pulls`, {
+    method: "POST",
+    body: JSON.stringify({ title, body, head, base, draft }),
+  });
+}

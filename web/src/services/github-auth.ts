@@ -6,13 +6,14 @@
  * 2. User visits github.com/login/device and enters user_code
  * 3. App polls POST /login/oauth/access_token until authorized
  *
- * GitHub's OAuth endpoints don't support CORS, so we route through a
- * lightweight proxy.  Set VITE_GITHUB_AUTH_PROXY to override the default.
+ * All requests go through a Cloudflare Worker proxy that:
+ *  - Adds CORS headers (GitHub's endpoints have none)
+ *  - Injects client_id and client_secret server-side (never exposed in JS)
+ *
+ * Set VITE_GITHUB_AUTH_PROXY to the Worker URL.
  */
 
-const CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID ?? "";
-const AUTH_PROXY =
-  import.meta.env.VITE_GITHUB_AUTH_PROXY ?? "https://github.com";
+const AUTH_PROXY = import.meta.env.VITE_GITHUB_AUTH_PROXY ?? "";
 
 const SCOPES = "repo read:user";
 
@@ -32,13 +33,20 @@ export interface TokenResult {
 
 /** Step 1 — request a device + user code. */
 export async function requestDeviceCode(): Promise<DeviceCodeResult> {
+  if (!AUTH_PROXY) {
+    throw new Error(
+      "VITE_GITHUB_AUTH_PROXY is not configured. Set it to the Cloudflare Worker URL.",
+    );
+  }
+
   const res = await fetch(`${AUTH_PROXY}/login/device/code`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ client_id: CLIENT_ID, scope: SCOPES }),
+    // client_id is injected by the proxy — only send scope
+    body: JSON.stringify({ scope: SCOPES }),
   });
 
   if (!res.ok) {
@@ -65,6 +73,7 @@ export async function pollForAccessToken(
 
     await sleep(wait);
 
+    // client_id + client_secret injected by the proxy
     const res = await fetch(`${AUTH_PROXY}/login/oauth/access_token`, {
       method: "POST",
       headers: {
@@ -72,7 +81,6 @@ export async function pollForAccessToken(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        client_id: CLIENT_ID,
         device_code: deviceCode,
         grant_type: "urn:ietf:params:oauth:grant-type:device_code",
       }),

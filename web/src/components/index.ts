@@ -10,5 +10,6 @@ export { PromptInput } from "./PromptInput";
 export { RefinedPrompt } from "./RefinedPrompt";
 export { RepoFilePicker } from "./RepoFilePicker";
 export { RepoSelector } from "./RepoSelector";
+export { SkillMarketplace } from "./SkillMarketplace";
 export { SkillPicker } from "./SkillPicker";
 export { UserMenu } from "./UserMenu";

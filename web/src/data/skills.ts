@@ -13,8 +13,10 @@ export interface Skill {
   systemPrompt: string;
   examplePrompts: string[];
   tags: string[];
-  source: "built-in" | "community" | "marketplace";
+  source: SkillSource;
 }
+
+export type SkillSource = "built-in" | "community" | "marketplace" | "github";
 
 export type SkillCategory =
   | "strategic-thinking"
@@ -24,7 +26,8 @@ export type SkillCategory =
   | "sql"
   | "databases"
   | "apis"
-  | "data-integration";
+  | "data-integration"
+  | "general";
 
 export interface SkillCategoryInfo {
   id: SkillCategory;

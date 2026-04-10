@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useSkillStore } from "../stores/skillStore";
 import { SKILL_CATEGORIES, type SkillCategory } from "../data/skills";
+import { SkillMarketplace } from "./SkillMarketplace";
 
 interface SkillPickerProps {
   onClose: () => void;
@@ -11,16 +12,23 @@ interface SkillPickerProps {
  * Users toggle skills on/off to shape the AI's behavior.
  */
 export function SkillPicker({ onClose }: SkillPickerProps) {
-  const { availableSkills, activeSkillIds, toggleSkill, clearAllSkills } =
+  const { availableSkills, githubSkills, activeSkillIds, toggleSkill, clearAllSkills } =
     useSkillStore();
 
   const [activeCategory, setActiveCategory] = useState<SkillCategory | "all">(
     "all",
   );
   const [search, setSearch] = useState("");
+  const [showMarketplace, setShowMarketplace] = useState(false);
+
+  // Combine built-in and imported skills
+  const allSkills = useMemo(
+    () => [...availableSkills, ...githubSkills],
+    [availableSkills, githubSkills],
+  );
 
   const filtered = useMemo(() => {
-    let skills = availableSkills;
+    let skills = allSkills;
     if (activeCategory !== "all") {
       skills = skills.filter((s) => s.category === activeCategory);
     }
@@ -44,11 +52,19 @@ export function SkillPicker({ onClose }: SkillPickerProps) {
           <div>
             <h2 className="text-sm font-semibold text-white">Skills Library</h2>
             <p className="text-xs text-gray-500">
-              {activeSkillIds.length} skill{activeSkillIds.length !== 1 ? "s" : ""}{" "}
-              active
+              {activeSkillIds.length} active &middot;{" "}
+              {availableSkills.length} built-in &middot;{" "}
+              {githubSkills.length} imported
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMarketplace(true)}
+              className="rounded border border-blue-700 bg-blue-600/10 px-2.5 py-1 text-[11px] font-medium text-blue-400 transition-colors hover:bg-blue-600/20"
+            >
+              Marketplace
+            </button>
             {activeSkillIds.length > 0 && (
               <button
                 type="button"
@@ -181,6 +197,10 @@ export function SkillPicker({ onClose }: SkillPickerProps) {
             Done
           </button>
         </div>
+      {/* Marketplace modal */}
+      {showMarketplace && (
+        <SkillMarketplace onClose={() => setShowMarketplace(false)} />
+      )}
       </div>
     </div>
   );
