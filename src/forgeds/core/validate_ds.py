@@ -14,10 +14,22 @@ Rules:
     DS105  Missing required field attribute (type)
     DS106  Unknown field type
     DS107  Unexpected section keyword
+    DS108  blueprint section at application level (must be inside workflow)
+    DS109  translation not last section
+    DS110  workflow after web (wrong order)
+    DS111  Form missing success message
+    DS112  blueprint components before actions block
+    DS113  Section block missing or after first field
     DS201  Report references undefined form
     DS202  Workflow/schedule references undefined form
     DS203  Web reports references undefined report
     DS204  Web/device forms references undefined form
+    DS205  Kanban report missing options/display field
+    DS206  Report column references undefined field
+    DS207  Form missing from web > forms
+    DS208  Report missing from web > reports
+    DS209  Form missing from phone > forms
+    DS210  Form missing from tablet > forms
     DS301  input.field not in workflow target form
     DS302  form[field] uses field not in that form
     DS303  insert into form [field] uses field not in that form
@@ -123,6 +135,14 @@ class DsSchema:
     form_names: set[str] = field(default_factory=set)
     report_names: set[str] = field(default_factory=set)
     deluge_blocks: list[tuple[str, str, int, str]] = field(default_factory=list)
+    web_forms: set[str] = field(default_factory=set)
+    web_reports: set[str] = field(default_factory=set)
+    phone_forms: set[str] = field(default_factory=set)
+    tablet_forms: set[str] = field(default_factory=set)
+    report_source_forms: dict[str, str] = field(default_factory=dict)  # report_name -> source_form
+    report_columns: dict[str, list[str]] = field(default_factory=dict)  # report_name -> [col1, col2]
+    kanban_reports: set[str] = field(default_factory=set)  # which reports are kanban type
+    kanban_has_options: set[str] = field(default_factory=set)  # which kanbans have options block
 
 
 def skip_block(reader: DsReader) -> None:
@@ -162,6 +182,10 @@ def validate_form(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -
     fields: set[str] = set()
     has_displayname = False
     has_actions = False
+    has_success_message = False
+    has_section = False
+    has_any_field = False
+    actions_seen = False  # separate from has_actions for ordering check
     depth = 1
 
     while not reader.at_end() and depth > 0:
@@ -181,10 +205,16 @@ def validate_form(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -
             continue
 
         if line.startswith("success message"):
+            has_success_message = True
             reader.advance()
             continue
 
         if line == "Section":
+            if has_any_field:
+                diags.append(Diagnostic(reader.filename, reader.line_no(), "DS113",
+                                        Severity.WARNING,
+                                        f"Form '{form_name}': Section block appears after field(s)"))
+            has_section = True
             reader.advance()
             reader.skip_blank()
             if reader.peek() == "(":
@@ -193,6 +223,7 @@ def validate_form(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -
 
         if line == "actions":
             has_actions = True
+            actions_seen = True
             reader.advance()
             reader.skip_blank()
             if reader.peek() == "{":
@@ -200,6 +231,10 @@ def validate_form(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -
             continue
 
         if line.startswith("blueprint"):
+            if not actions_seen:
+                diags.append(Diagnostic(reader.filename, reader.line_no(), "DS112",
+                                        Severity.WARNING,
+                                        f"Form '{form_name}': blueprint components before actions block"))
             reader.advance()
             reader.skip_blank()
             if reader.peek() == "{":
@@ -217,6 +252,11 @@ def validate_form(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -
             reader.skip_blank()
 
             if reader.peek() == "(":
+                if not has_section and not has_any_field:
+                    diags.append(Diagnostic(reader.filename, field_line, "DS113",
+                                            Severity.WARNING,
+                                            f"Form '{form_name}': field '{field_name}' appears before Section block"))
+                has_any_field = True
                 fields.add(field_name)
                 has_type = False
                 field_type = ""
@@ -249,6 +289,9 @@ def validate_form(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -
     if not has_actions:
         diags.append(Diagnostic(reader.filename, form_line, "DS104",
                                 Severity.WARNING, f"Form '{form_name}' missing 'actions' block"))
+    if not has_success_message:
+        diags.append(Diagnostic(reader.filename, form_line, "DS111",
+                                Severity.WARNING, f"Form '{form_name}' missing 'success message' attribute"))
 
     schema.form_fields[form_name] = fields
 
@@ -292,26 +335,44 @@ def validate_reports(reader: DsReader, diags: list[Diagnostic], schema: DsSchema
 
         rm = re.match(r"(list|kanban)\s+(\w+)", line)
         if rm:
+            report_type = rm.group(1)
             report_name = rm.group(2)
             schema.report_names.add(report_name)
+            if report_type == "kanban":
+                schema.kanban_reports.add(report_name)
             reader.advance()
             reader.skip_blank()
             if reader.peek() == "{":
                 depth = 0
+                columns: list[str] = []
                 while not reader.at_end():
                     rline = reader.advance()
                     depth += rline.count("{") - rline.count("}")
                     fm = re.search(r"show all rows from\s+(\w+)", rline)
                     if fm:
                         ref_form = fm.group(1)
+                        schema.report_source_forms[report_name] = ref_form
                         if ref_form not in schema.form_names:
                             diags.append(Diagnostic(reader.filename, reader.line_no() - 1,
                                                     "DS201", Severity.ERROR,
                                                     f"Report '{report_name}' references undefined form '{ref_form}'"))
+                    col_m = re.match(r'\s*(\w+)\s+as\s+"', rline)
+                    if col_m:
+                        columns.append(col_m.group(1))
+                    if re.search(r"display\s+field\s*=", rline):
+                        schema.kanban_has_options.add(report_name)
                     if depth <= 0:
                         break
+                schema.report_columns[report_name] = columns
             continue
         reader.advance()
+
+    # DS205: Kanban report missing options/display field
+    for rpt in schema.kanban_reports:
+        if rpt not in schema.kanban_has_options:
+            diags.append(Diagnostic(reader.filename, reader.line_no(), "DS205",
+                                    Severity.WARNING,
+                                    f"Kanban report '{rpt}' missing 'options' block with 'display field'"))
 
 
 def validate_workflow(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) -> None:
@@ -461,6 +522,7 @@ def validate_web(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) ->
         fm = re.match(r"form\s+(\w+)", line)
         if fm:
             ref = fm.group(1)
+            schema.web_forms.add(ref)
             if ref not in schema.form_names:
                 diags.append(Diagnostic(reader.filename, reader.line_no(), "DS204",
                                         Severity.WARNING,
@@ -469,6 +531,7 @@ def validate_web(reader: DsReader, diags: list[Diagnostic], schema: DsSchema) ->
         rm = re.match(r"report\s+(\w+)", line)
         if rm:
             ref = rm.group(1)
+            schema.web_reports.add(ref)
             if ref not in schema.report_names:
                 diags.append(Diagnostic(reader.filename, reader.line_no(), "DS203",
                                         Severity.WARNING,
@@ -496,6 +559,10 @@ def validate_device(reader: DsReader, diags: list[Diagnostic], schema: DsSchema,
         fm = re.match(r"form\s+(\w+)", line)
         if fm:
             ref = fm.group(1)
+            if device == "phone":
+                schema.phone_forms.add(ref)
+            elif device == "tablet":
+                schema.tablet_forms.add(ref)
             if ref not in schema.form_names:
                 diags.append(Diagnostic(reader.filename, reader.line_no(), "DS204",
                                         Severity.WARNING,
@@ -551,6 +618,7 @@ def validate_application(reader: DsReader, diags: list[Diagnostic], schema: DsSc
         break
 
     seen_sections: set[str] = set()
+    section_order: list[str] = []
 
     while not reader.at_end():
         reader.skip_blank()
@@ -585,24 +653,40 @@ def validate_application(reader: DsReader, diags: list[Diagnostic], schema: DsSc
 
         if keyword == "forms":
             seen_sections.add("forms")
+            section_order.append("forms")
             validate_forms(reader, diags, schema)
         elif keyword == "reports":
             seen_sections.add("reports")
+            section_order.append("reports")
             validate_reports(reader, diags, schema)
         elif keyword == "workflow":
             seen_sections.add("workflow")
+            section_order.append("workflow")
             validate_workflow(reader, diags, schema)
         elif keyword == "pages":
             seen_sections.add("pages")
+            section_order.append("pages")
             validate_pages(reader, diags)
         elif keyword == "web":
             seen_sections.add("web")
+            section_order.append("web")
             validate_web(reader, diags, schema)
         elif keyword in ("phone", "tablet"):
             seen_sections.add(keyword)
+            section_order.append(keyword)
             validate_device(reader, diags, schema, keyword)
+        elif keyword == "blueprint":
+            # DS108: blueprint at application level
+            diags.append(Diagnostic(reader.filename, reader.line_no(), "DS108",
+                                    Severity.ERROR,
+                                    "'blueprint' found at application level — must be inside 'workflow { }' block"))
+            reader.advance()
+            reader.skip_blank()
+            if reader.peek() == "{":
+                skip_block(reader)
         elif keyword in ("share_settings", "translation"):
             seen_sections.add(keyword)
+            section_order.append(keyword)
             reader.advance()
             reader.skip_blank()
             if reader.peek() == "{":
@@ -617,6 +701,55 @@ def validate_application(reader: DsReader, diags: list[Diagnostic], schema: DsSc
         if required not in seen_sections:
             diags.append(Diagnostic(reader.filename, reader.line_no(), "DS102",
                                     Severity.ERROR, f"Missing required section: '{required}'"))
+
+    # DS109: translation not last section
+    if "translation" in section_order and section_order[-1] != "translation":
+        diags.append(Diagnostic(reader.filename, reader.line_no(), "DS109",
+                                Severity.WARNING,
+                                "'translation' section should be the last section"))
+
+    # DS110: workflow after web (wrong order)
+    if "workflow" in section_order and "web" in section_order:
+        if section_order.index("workflow") > section_order.index("web"):
+            diags.append(Diagnostic(reader.filename, reader.line_no(), "DS110",
+                                    Severity.WARNING,
+                                    "'workflow' section appears after 'web' — expected before 'web'"))
+
+    # DS206: Report column references undefined field
+    for rpt_name, columns in schema.report_columns.items():
+        src_form = schema.report_source_forms.get(rpt_name, "")
+        if src_form and src_form in schema.form_fields:
+            form_fields = schema.form_fields[src_form]
+            for col in columns:
+                if col not in form_fields:
+                    diags.append(Diagnostic(reader.filename, reader.line_no(), "DS206",
+                                            Severity.WARNING,
+                                            f"Report '{rpt_name}' column '{col}' not found in form '{src_form}'"))
+
+    # DS207-DS210: Forms/reports missing from web/device sections
+    if "web" in seen_sections:
+        for form_name in schema.form_names:
+            if form_name not in schema.web_forms:
+                diags.append(Diagnostic(reader.filename, reader.line_no(), "DS207",
+                                        Severity.WARNING,
+                                        f"Form '{form_name}' not referenced in web > forms"))
+        for rpt_name in schema.report_names:
+            if rpt_name not in schema.web_reports:
+                diags.append(Diagnostic(reader.filename, reader.line_no(), "DS208",
+                                        Severity.WARNING,
+                                        f"Report '{rpt_name}' not referenced in web > reports"))
+    if "phone" in seen_sections:
+        for form_name in schema.form_names:
+            if form_name not in schema.phone_forms:
+                diags.append(Diagnostic(reader.filename, reader.line_no(), "DS209",
+                                        Severity.INFO,
+                                        f"Form '{form_name}' not referenced in phone > forms"))
+    if "tablet" in seen_sections:
+        for form_name in schema.form_names:
+            if form_name not in schema.tablet_forms:
+                diags.append(Diagnostic(reader.filename, reader.line_no(), "DS210",
+                                        Severity.INFO,
+                                        f"Form '{form_name}' not referenced in tablet > forms"))
 
 
 # ============================================================
