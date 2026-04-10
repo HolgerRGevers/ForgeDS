@@ -34,6 +34,7 @@ jobs:
         working-directory: web
         env:
           VITE_GITHUB_AUTH_PROXY: ${{ vars.AUTH_PROXY_URL }}
+          VITE_CLAUDE_API_PROXY: ${{ vars.CLAUDE_API_PROXY_URL }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web/dist

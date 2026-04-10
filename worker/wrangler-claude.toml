@@ -1,0 +1,8 @@
+name = "forgeds-claude"
+main = "claude-api-proxy.js"
+compatibility_date = "2024-01-01"
+
+# Secret (set via `npx wrangler secret put ANTHROPIC_API_KEY --config wrangler-claude.toml`):
+#   ANTHROPIC_API_KEY — Anthropic API key for Claude
+#
+# Do NOT put secrets in this file.

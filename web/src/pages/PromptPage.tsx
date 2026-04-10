@@ -7,7 +7,15 @@ import {
   CodePreview,
   ProjectHistory,
 } from "../components";
-import { useBridgeStore } from "../stores/bridgeStore";
+import { useAuthStore } from "../stores/authStore";
+import { useToastStore } from "../stores/toastStore";
+import {
+  refinePrompt,
+  buildProject,
+  isConfigured,
+  ClaudeApiNotConfiguredError,
+} from "../services/claude-api";
+import { TokenExpiredError } from "../services/github-api";
 import type {
   RefinedSection,
   BuildMessage,
@@ -36,8 +44,9 @@ function saveHistory(items: ProjectHistoryItem[]) {
 
 export default function PromptPage() {
   const navigate = useNavigate();
-  const send = useBridgeStore((s) => s.send);
-  const sendStream = useBridgeStore((s) => s.sendStream);
+  const token = useAuthStore((s) => s.token);
+  const handleTokenExpired = useAuthStore((s) => s.handleTokenExpired);
+  const toast = useToastStore;
 
   // Workflow state
   const [stage, setStage] = useState<WorkflowStage>("input");
@@ -60,10 +69,39 @@ export default function PromptPage() {
     saveHistory(history);
   }, [history]);
 
+  // --- Error handler ---
+  const handleError = useCallback(
+    (err: unknown) => {
+      if (err instanceof TokenExpiredError) {
+        handleTokenExpired();
+        return;
+      }
+      if (err instanceof ClaudeApiNotConfiguredError) {
+        toast.getState().error(
+          "AI not configured",
+          "The Claude API proxy is not set up. Set the VITE_CLAUDE_API_PROXY environment variable and redeploy.",
+        );
+        return;
+      }
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("429")) {
+        toast.getState().error("Rate limited", "Too many requests. Please wait a moment and try again.");
+      } else {
+        toast.getState().error("Error", message);
+      }
+    },
+    [handleTokenExpired, toast],
+  );
+
   // --- Handlers ---
 
   const handlePromptSubmit = useCallback(
     async (prompt: string, files: File[], repoFiles: RepoFile[] = []) => {
+      if (!token) {
+        handleTokenExpired();
+        return;
+      }
+
       setPromptText(prompt);
       setIsLoading(true);
 
@@ -75,8 +113,12 @@ export default function PromptPage() {
       }));
 
       try {
+        if (!isConfigured()) {
+          throw new ClaudeApiNotConfiguredError();
+        }
+
         const fileNames = files.map((f) => f.name);
-        const response = await send("refine_prompt", {
+        const response = await refinePrompt(token, {
           prompt,
           files: fileNames,
           repoContext,
@@ -84,19 +126,18 @@ export default function PromptPage() {
         });
 
         if (mode === "plan") {
-          // In plan mode, show planning output first
-          const steps = (response.planSteps as string[] | undefined) ?? [
+          const steps = response.planSteps ?? [
             "Analyze requirements",
             "Identify forms and fields",
             "Design workflows",
             "Generate code",
           ];
           setPlanSteps(steps);
-          const refined = (response.sections as RefinedSection[] | undefined) ?? [
+          const refined = response.sections ?? [
             {
               id: "1",
               title: "Project Overview",
-              icon: "📋",
+              icon: "\u{1F4CB}",
               content: prompt,
               items: steps,
               isEditable: true,
@@ -105,12 +146,11 @@ export default function PromptPage() {
           setSections(refined);
           setStage("planning");
         } else {
-          // Code mode — go straight to refined
-          const refined = (response.sections as RefinedSection[] | undefined) ?? [
+          const refined = response.sections ?? [
             {
               id: "1",
               title: "Project Overview",
-              icon: "📋",
+              icon: "\u{1F4CB}",
               content: prompt,
               items: [],
               isEditable: true,
@@ -119,12 +159,14 @@ export default function PromptPage() {
           setSections(refined);
           setStage("refined");
         }
-      } catch {
+      } catch (err) {
+        handleError(err);
+        // Still show the prompt as a fallback section so user can retry
         setSections([
           {
             id: "fallback",
             title: "Your Prompt",
-            icon: "📋",
+            icon: "\u{1F4CB}",
             content: prompt,
             items: [],
             isEditable: true,
@@ -135,7 +177,7 @@ export default function PromptPage() {
         setIsLoading(false);
       }
     },
-    [send, mode],
+    [token, handleTokenExpired, handleError, mode],
   );
 
   const handleSectionUpdate = useCallback(
@@ -148,6 +190,11 @@ export default function PromptPage() {
   );
 
   const handleBuild = useCallback(async () => {
+    if (!token) {
+      handleTokenExpired();
+      return;
+    }
+
     setStage("building");
     setBuildMessages([]);
     setGeneratedFiles([]);
@@ -164,22 +211,25 @@ export default function PromptPage() {
     });
 
     try {
-      const result = await sendStream(
-        "build_project",
-        { sections },
+      if (!isConfigured()) {
+        throw new ClaudeApiNotConfiguredError();
+      }
+
+      const result = await buildProject(
+        token,
+        { sections, prompt: promptText },
         (chunk) => {
           if (chunk.message) {
             addMessage({
               timestamp: new Date().toLocaleTimeString(),
-              text: chunk.message as string,
-              type: (chunk.type as BuildMessage["type"]) ?? "info",
+              text: chunk.message,
+              type: chunk.type ?? "info",
             });
           }
         },
       );
 
-      // Parse generated files from result
-      const files = (result.files as CodeFile[] | undefined) ?? [];
+      const files = result.files ?? [];
       setGeneratedFiles(files);
 
       addMessage({
@@ -198,14 +248,20 @@ export default function PromptPage() {
         fileCount: files.length,
       };
       setHistory((prev) => [entry, ...prev]);
-    } catch {
+
+      toast.getState().success(
+        "Build complete",
+        `Generated ${files.length} file${files.length !== 1 ? "s" : ""}`,
+      );
+    } catch (err) {
+      handleError(err);
       addMessage({
         timestamp: new Date().toLocaleTimeString(),
-        text: "Build failed. Check connection and try again.",
+        text: err instanceof Error ? err.message : "Build failed. Please try again.",
         type: "error",
       });
     }
-  }, [sendStream, sections, promptText]);
+  }, [token, handleTokenExpired, handleError, sections, promptText, toast]);
 
   const handleStartOver = useCallback(() => {
     setStage("input");
