@@ -40,6 +40,25 @@ forgeds-build-db
 forgeds-build-access-db
 ```
 
+## .ds file format gotchas
+1. **Forms must be inside `forms { }`**: When programmatically inserting new forms
+   into an existing .ds file, they MUST go inside the `forms { }` block — before
+   its closing `}`. The closing `}` of `forms` sits on the line before the
+   `reports` keyword. Inserting between that `}` and `reports` places forms at
+   the application level, which Zoho Creator silently rejects with a generic
+   "A problem encountered while creating the application" error.
+2. **Report filter syntax uses brackets**: Filtered reports use
+   `show all rows from form_name  [filter_expr]`, NOT `where (filter)`.
+   Example: `show all rows from incidents  [status == "Open"]`
+3. **Deluge field references must match .ds field link names exactly**:
+   Zoho Creator is case-sensitive. If the .ds defines `merchant_account`
+   (lowercase), Deluge scripts must use `input.merchant_account`, NOT
+   `input.Merchant_Account`. The audit_trail form's action field is
+   `action_1` (not `Action`). Always check actual field link names in the
+   .ds before writing Deluge scripts.
+4. **New reports must be inside `reports { }`**: Same pattern as gotcha #1.
+   Insert before the closing `}` of `reports`, not between `}` and `pages`.
+
 ## Rules for contributions
 - Every tool must have `def main()` and `if __name__ == "__main__": main()`
 - Import shared types: `from forgeds._shared.diagnostics import Severity, Diagnostic`

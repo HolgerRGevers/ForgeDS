@@ -28,6 +28,7 @@ Creator apps as code, not click-ops.
 | **Scaffold scripts** | `forgeds-scaffold` | Generate `.dg` from manifest |
 | **Parse .ds exports** | `forgeds-parse-ds` | Extract forms, scripts, field docs |
 | **Edit .ds files** | `forgeds-ds-editor` | Descriptions, reports, menus, dashboards |
+| **Validate .ds files** | `forgeds-validate-ds` | 17 rules (DS101-DS304): structure, references, Deluge fields |
 | **Validate imports** | `forgeds-validate` | Pre-flight CSV data validation |
 | **Upload to Creator** | `forgeds-upload` | REST API v2.1 (mock mode default) |
 
