@@ -218,6 +218,7 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
   }, [prompt, files, repoFiles, isLoading, saveToResources, selectedRepo, uploadResource, onSubmit]);
 
   const isEmpty = prompt.trim().length === 0;
+  const noRepo = !selectedRepo;
   const hasAttachments = files.length > 0 || repoFiles.length > 0;
 
   return (
@@ -251,13 +252,15 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          disabled={isLoading || noRepo}
           placeholder={
-            mode === "plan"
+            noRepo
+              ? "Select a repository first to start building..."
+              : mode === "plan"
               ? "Describe what you want to build. I'll analyze and create a plan first..."
               : "Describe the Zoho Creator app you want to build..."
           }
           rows={5}
-          disabled={isLoading}
           className="w-full resize-y rounded-lg bg-transparent px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none disabled:opacity-50"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -341,9 +344,9 @@ export function PromptInput({ onSubmit, isLoading, mode, onModeChange }: PromptI
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isEmpty || isLoading}
+            disabled={isEmpty || isLoading || noRepo}
             className="flex items-center justify-center rounded-full bg-blue-600 p-2 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-            title={mode === "plan" ? "Start planning" : "Generate code"}
+            title={noRepo ? "Select a repository first" : mode === "plan" ? "Start planning" : "Generate code"}
           >
             {isLoading ? (
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
