@@ -889,9 +889,102 @@ def emit_application(
         lines.append(f"\t\t\t\t}}")
 
     lines.append(f"\t\t\t}}")
+    # menu > preference
+    lines.append(f"\t\t\tpreference")
+    lines.append(f"\t\t\t{{")
+    lines.append(f"\t\t\t\ticon")
+    lines.append(f"\t\t\t\t{{")
+    lines.append(f"\t\t\t\t\tstyle = solid")
+    lines.append(f"\t\t\t\t\tshow = {{space,section,component}}")
+    lines.append(f"\t\t\t\t}}")
+    lines.append(f"\t\t\t}}")
     lines.append(f"\t\t}}")
+    # web > customize
+    lines.append(f"\t\tcustomize")
+    lines.append(f"\t\t{{")
+    lines.append(f"\t\t\tnew theme = 11")
+    lines.append(f'\t\t\tfont = "poppins"')
+    lines.append(f"\t\t\tcolor options")
+    lines.append(f"\t\t\t{{")
+    lines.append(f'\t\t\t\tcolor = "5"')
+    lines.append(f"\t\t\t}}")
+    lines.append(f"\t\t\tlogo")
+    lines.append(f"\t\t\t{{")
+    lines.append(f'\t\t\t\tpreference = "none"')
+    lines.append(f'\t\t\t\tplacement = "left"')
+    lines.append(f"\t\t\t}}")
+    lines.append(f"\t\t}}")
+    lines.append(f"\t}}")  # close web
 
+    # share_settings — default profiles
+    lines.append(f"\tshare_settings")
+    lines.append(f"\t{{")
+    for profile_name, profile_type, desc in [
+        ("Read", "Users_Permissions", "This profile will have read permission for all components\\n"),
+        ("Write", "Users_Permissions", "This profile will have write permission for all components\\n"),
+        ("Administrator", "Users_Permissions", "This profile will have all the permissions.\\n"),
+        ("Developer", "Developer", "Developer Profile\\n"),
+        ("Customer", "Customer_Portal", "This is the default profile having only add and view permission.\\n"),
+    ]:
+        lines.append(f'\t\t\t"{profile_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f'\t\t\t\tname = "{profile_name}"')
+        lines.append(f'\t\t\t\ttype = {profile_type}')
+        lines.append(f'\t\t\t\tpermissions = {{Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}}')
+        lines.append(f'\t\t\t\tdescription = "{desc}"')
+        lines.append(f"\t\t\t}}")
+    # roles
+    lines.append(f"\t\t\troles")
+    lines.append(f"\t\t\t{{")
+    lines.append(f'\t\t\t\t"CEO"')
+    lines.append(f"\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\tdescription = "User belonging to this role can access data of all other users."')
+    lines.append(f"\t\t\t\t}}")
+    lines.append(f"\t\t\t}}")
     lines.append(f"\t}}")
+
+    # phone section
+    def _emit_device_section(device_name: str) -> list[str]:
+        dl = []
+        dl.append(f"\t{device_name}")
+        dl.append(f"\t{{")
+        dl.append(f"\t\tforms")
+        dl.append(f"\t\t{{")
+        for form in forms:
+            dl.append(f"\t\t\tform {form.link_name}")
+            dl.append(f"\t\t\t{{")
+            dl.append(f"\t\t\t\tlabel placement = auto")
+            dl.append(f"\t\t\t}}")
+        dl.append(f"\t\t}}")
+        dl.append(f"\t\tcustomize")
+        dl.append(f"\t\t{{")
+        dl.append(f"\t\t\tlayout = slidingpane")
+        dl.append(f'\t\t\tfont = "default"')
+        dl.append(f'\t\t\tstyle = "3"')
+        dl.append(f"\t\t\tcolor options")
+        dl.append(f"\t\t\t{{")
+        dl.append(f"\t\t\t\tcolor = green")
+        dl.append(f"\t\t\t}}")
+        dl.append(f"\t\t\tlogo")
+        dl.append(f"\t\t\t{{")
+        dl.append(f'\t\t\t\tpreference = "none"')
+        dl.append(f"\t\t\t}}")
+        dl.append(f"\t\t}}")
+        dl.append(f"\t}}")
+        return dl
+
+    lines.extend(_emit_device_section("phone"))
+    lines.extend(_emit_device_section("tablet"))
+
+    # translation
+    lines.append(f"\ttranslation")
+    lines.append("{")
+    lines.append('{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}')
+    lines.append("}")
+
+    # Note: reports configuration block omitted — it contains an
+    # app-specific Version/Key that Zoho generates internally.
+    # Including fake values crashes the app on open.
 
     lines.append("}")
     return "\n".join(lines) + "\n"
