@@ -194,36 +194,75 @@ class DSParser:
         )
 
     def _parse_workflows(self) -> None:
-        """Extract workflow scripts from the workflow { form { ... } } block."""
+        """Extract workflow scripts from the workflow { form { ... } } block.
+
+        Only searches inside {} brace-scoped blocks — never inside ()
+        paren blocks (report columns, quickview fields, etc.).  This
+        follows the design rule: action attributes [] live inside {}
+        control flow; bare [] / () blocks are not workflow containers.
+        """
+        # Step 1: locate the workflow { form { ... } } section
+        wf_start = None
         i = 0
         while i < len(self.lines):
             stripped = self.lines[i].strip()
+            if stripped == "workflow" and i + 1 < len(self.lines):
+                if self.lines[i + 1].strip() == "{":
+                    wf_start = i + 2
+                    break
+            i += 1
+
+        if wf_start is None:
+            return
+
+        # Step 2: find the brace-scope boundary of the workflow block
+        brace_depth = 1  # already inside the opening {
+        wf_end = wf_start
+        while wf_end < len(self.lines):
+            line = self.lines[wf_end].strip()
+            brace_depth += line.count("{") - line.count("}")
+            if brace_depth <= 0:
+                break
+            wf_end += 1
+
+        # Step 3: scan only within the workflow block for named entries,
+        #         skipping anything inside () paren blocks
+        i = wf_start
+        paren_depth = 0
+        while i < wf_end:
+            stripped = self.lines[i].strip()
+
+            # Track paren depth — skip content inside () blocks
+            paren_depth += stripped.count("(") - stripped.count(")")
+            if paren_depth > 0:
+                i += 1
+                continue
+
             # Match workflow names like: Name_Here as "Display Name"
             wm = re.match(
                 r'\s*(\w+)\s+as\s+"([^"]*)"', stripped
             )
             if wm:
-                # Check if we're inside a workflow > form section
                 name = wm.group(1)
                 display = wm.group(2)
 
-                # Look for form = X and record event
+                # Look for form = X, record event, and script code
                 form_name = ""
                 record_event = ""
                 event_type = ""
                 code = ""
 
                 j = i + 1
-                brace_depth = 0
+                inner_brace = 0
                 in_block = False
-                while j < len(self.lines):
+                while j < wf_end:
                     line = self.lines[j].strip()
                     if "{" in line:
-                        brace_depth += line.count("{")
+                        inner_brace += line.count("{")
                         in_block = True
                     if "}" in line:
-                        brace_depth -= line.count("}")
-                        if in_block and brace_depth <= 0:
+                        inner_brace -= line.count("}")
+                        if in_block and inner_brace <= 0:
                             break
 
                     fm = re.match(r"form\s*=\s*(\w+)", line)

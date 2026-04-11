@@ -568,87 +568,6 @@ def emit_reports(reports: list[ReportSpec]) -> list[str]:
     return lines
 
 
-def emit_workflows(workflows: list[WorkflowSpec]) -> list[str]:
-    """Generate workflow block matching real Zoho .ds export format."""
-    if not workflows:
-        return []
-
-    lines = []
-    lines.append(f"\t\tworkflow")
-    lines.append(f"\t\t{{")
-    lines.append(f"\t\tform")
-    lines.append(f"\t\t{{")
-
-    for wf in workflows:
-        lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
-        lines.append(f"\t\t\t{{")
-        lines.append(f"\t\t\t\ttype =  form")
-        lines.append(f"\t\t\t\tform = {wf.form}")
-        lines.append(f"")
-        lines.append(f"\t\t\t\trecord event = {wf.record_event}")
-        lines.append(f"")
-        lines.append(f"\t\t\t\t{wf.event_type}")
-        lines.append(f"\t\t\t\t{{")
-        lines.append(f"\t\t\t\t\tactions ")
-        lines.append(f"\t\t\t\t\t{{")
-        lines.append(f"\t\t\t\t\t\tcustom deluge script")
-        lines.append(f"\t\t\t\t\t\t(")
-        lines.append(_indent_code(wf.code, 7))
-        lines.append(f"\t\t\t\t\t\t)")
-        lines.append(f"\t\t\t\t\t}}")
-        lines.append(f"\t\t\t\t}}")
-        lines.append(f"")
-        lines.append(f"\t\t\t}}")
-
-    lines.append(f"\t\t}}")
-
-    # Schedules go inside the same workflow block
-    lines.append(f"")
-    lines.append(f"\t\tschedule")
-    lines.append(f"\t\t{{")
-
-    lines.append(f"\t\t}}")
-
-    lines.append(f"\t\t}}")
-    return lines
-
-
-def emit_schedules(schedules: list[ScheduleSpec]) -> list[str]:
-    """Generate schedule block matching real Zoho .ds export format.
-
-    In the real format, schedules live inside the workflow { } block,
-    but for simplicity we emit them as a top-level schedule section
-    which Zoho also accepts.
-    """
-    if not schedules:
-        return []
-
-    lines = []
-    lines.append(f"\t\tschedule")
-    lines.append(f"\t\t{{")
-
-    for sched in schedules:
-        lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
-        lines.append(f"\t\t\t{{")
-        lines.append(f"\t\t\t\ttype =  schedule")
-        lines.append(f"\t\t\t\tform = {sched.form}")
-        lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
-        lines.append(f"\t\t\t\ton start")
-        lines.append(f"\t\t\t\t{{")
-        lines.append(f"\t\t\t\t\tactions ")
-        lines.append(f"\t\t\t\t\t{{")
-        lines.append(f"\t\t\t\t\ton load")
-        lines.append(f"\t\t\t\t\t(")
-        lines.append(_indent_code(sched.code, 6))
-        lines.append(f"\t\t\t\t\t)")
-        lines.append(f"\t\t\t\t\t}}")
-        lines.append(f"\t\t\t\t}}")
-        lines.append(f"\t\t\t}}")
-
-    lines.append(f"\t\t}}")
-    return lines
-
-
 def emit_application(
     app_name: str,
     display_name: str,
@@ -716,31 +635,32 @@ def emit_application(
             lines.append(f"\t\t\t}}")
 
         lines.append(f"\t\t}}")
-        lines.append(f"")
 
-        # Schedules nested inside workflow block
-        lines.append(f"\t\tschedule")
-        lines.append(f"\t\t{{")
+        # Schedules nested inside workflow block (only emit if present)
+        if schedules:
+            lines.append(f"")
+            lines.append(f"\t\tschedule")
+            lines.append(f"\t\t{{")
 
-        for sched in schedules:
-            lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
-            lines.append(f"\t\t\t{{")
-            lines.append(f"\t\t\t\ttype =  schedule")
-            lines.append(f"\t\t\t\tform = {sched.form}")
-            lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
-            lines.append(f"\t\t\t\ton start")
-            lines.append(f"\t\t\t\t{{")
-            lines.append(f"\t\t\t\t\tactions ")
-            lines.append(f"\t\t\t\t\t{{")
-            lines.append(f"\t\t\t\t\ton load")
-            lines.append(f"\t\t\t\t\t(")
-            lines.append(_indent_code(sched.code, 6))
-            lines.append(f"\t\t\t\t\t)")
-            lines.append(f"\t\t\t\t\t}}")
-            lines.append(f"\t\t\t\t}}")
-            lines.append(f"\t\t\t}}")
+            for sched in schedules:
+                lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
+                lines.append(f"\t\t\t{{")
+                lines.append(f"\t\t\t\ttype =  schedule")
+                lines.append(f"\t\t\t\tform = {sched.form}")
+                lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
+                lines.append(f"\t\t\t\ton start")
+                lines.append(f"\t\t\t\t{{")
+                lines.append(f"\t\t\t\t\tactions ")
+                lines.append(f"\t\t\t\t\t{{")
+                lines.append(f"\t\t\t\t\ton load")
+                lines.append(f"\t\t\t\t\t(")
+                lines.append(_indent_code(sched.code, 6))
+                lines.append(f"\t\t\t\t\t)")
+                lines.append(f"\t\t\t\t\t}}")
+                lines.append(f"\t\t\t\t}}")
+                lines.append(f"\t\t\t}}")
 
-        lines.append(f"\t\t}}")
+            lines.append(f"\t\t}}")
 
         lines.append(f"")
         lines.append(f"")
