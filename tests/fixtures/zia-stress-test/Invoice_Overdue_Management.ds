@@ -1,0 +1,2974 @@
+/*
+ * Author       : holger.gevers360
+ * Generated on : 10-Apr-2026 14:35:40
+ * Version      : 1.0
+ */
+ application "Invoice Overdue Management"
+ {
+ 	date format = "dd-MMM-yyyy"
+ 	time zone = "America/Los_Angeles"
+ 	time format = "24-hr"
+
+ 	forms
+	{
+		form escalation_logs
+		{
+			displayname = "Escalation Logs"
+			success message = "Escalation Log Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			invoice
+			(
+				type = picklist	
+				displayname = "Invoice"
+				values  = invoices.ID
+    			displayformat = [adjustment]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			action_1
+			(
+    			type = text
+				displayname = "Action"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			action_date
+			(
+    			type = datetime
+				displayname = "Action Date"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			user
+			(
+    			type = text
+				displayname = "User"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			details
+			(
+    			type = textarea
+				displayname = "Details"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			external_api_response
+			(
+    			type = textarea
+				displayname = "External API Response"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form invoices
+		{
+			displayname = "Invoices"
+			success message = "Invoice Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			adjustment
+			(
+    			type = percentage
+				displayname = "Adjustment"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			adjustment_description
+			(
+    			type = text
+				displayname = "Adjustment Description"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			avatax_exemption_number
+			(
+    			type = text
+				displayname = "Avatax Exemption Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			avatax_tax_code
+			(
+    			type = text
+				displayname = "Avatax Tax Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			avatax_use_code
+			(
+    			type = text
+				displayname = "Avatax Use Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			balance
+			(
+				type = decimal
+				displayname = "Balance"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			cfdi_reference_type
+			(
+    			type = text
+				displayname = "CFDI Reference Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			cfdi_usage
+			(
+    			type = text
+				displayname = "CFDI Usage"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			client_viewed_time
+			(
+    			type = text
+				displayname = "Client Viewed Time"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			created_time
+			(
+    			type = datetime
+				displayname = "Created Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			credits_applied
+			(
+				type = decimal
+				displayname = "Credits Applied"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			custom_body
+			(
+    			type = text
+				displayname = "Custom Body"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			custom_subject
+			(
+    			type = textarea
+				displayname = "Custom Subject"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			customer_notes
+			(
+    			type = textarea
+				displayname = "Customer Notes"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			discount
+			(
+				type = decimal
+				displayname = "Discount"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			due_date
+			(
+    			type = date
+				displayname = "Due Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			exchange_rate
+			(
+				type = decimal
+				displayname = "Exchange Rate"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			gst_number
+			(
+    			type = text
+				displayname = "GST Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			invoice_date
+			(
+    			type = date
+				displayname = "Invoice Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			invoice_description
+			(
+    			type = textarea
+				displayname = "Invoice Description"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			invoice_number
+			(
+    			type = text
+				displayname = "Invoice Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_modified_time
+			(
+    			type = datetime
+				displayname = "Last Modified Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_payment_date
+			(
+    			type = date
+				displayname = "Last Payment Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_reminder_sent_date
+			(
+    			type = date
+				displayname = "Last Reminder Sent Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			order_number
+			(
+    			type = text
+				displayname = "Order Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			payment_expected_date
+			(
+    			type = date
+				displayname = "Payment Expected Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			payment_made
+			(
+				type = decimal
+				displayname = "Payment Made"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			price_precision
+			(
+				type = number
+				displayname = "Price Precision"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			reason
+			(
+    			type = text
+				displayname = "Reason"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			reminders_sent
+			(
+				type = number
+				displayname = "Reminders Sent"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			shipping_charge
+			(
+    			type = text
+				displayname = "Shipping Charge"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			subject_field
+			(
+    			type = text
+				displayname = "Subject"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			subtotal
+			(
+				type = decimal
+				displayname = "Subtotal"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			tax_amount_withheld
+			(
+				type = decimal
+				displayname = "Tax Amount Withheld"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			tax_total
+			(
+				type = decimal
+				displayname = "Tax Total"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			terms_and_conditions
+			(
+    			type = textarea
+				displayname = "Terms and Conditions"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			total_amount
+			(
+				type = decimal
+				displayname = "Total Amount"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			vat_registration_number
+			(
+    			type = text
+				displayname = "VAT Registration Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			vat_treatment
+			(
+    			type = text
+				displayname = "VAT Treatment"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			write_off_amount
+			(
+				type = decimal
+				displayname = "Write Off Amount"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form notification_queue
+		{
+			displayname = "Notification Queue"
+			success message = "Notification Queue Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			invoice
+			(
+				type = picklist	
+				displayname = "Invoice"
+				values  = invoices.ID
+    			displayformat = [adjustment]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			notification_type
+			(
+				type = radiobuttons
+				displayname = "Notification Type"
+				values = {"Escalation","Overdue"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			url
+			(
+    			type = url
+				displayname = "URL"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			method
+			(
+				type = radiobuttons
+				displayname = "Method"
+				values = {"POST"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			payload
+			(
+    			type = textarea
+				displayname = "Payload"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			status
+			(
+				type = picklist
+				displayname = "Status"
+				values = {"Failed","Pending","Sent"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			attempt_count
+			(
+				type = number
+				displayname = "Attempt Count"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_attempt
+			(
+    			type = datetime
+				displayname = "Last Attempt"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Notification Queued","Notification Sent","Notification Failed","Notification Retried","Notification Delivered","Notification Escalated","Notification Suppressed","Notification Acknowledged","Notification Closed"}
+			}
+		}
+		form overdue_invoices
+		{
+			displayname = "Overdue Invoices"
+			success message = "Overdue Invoice Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			invoice_id
+			(
+				type = picklist	
+				displayname = "Invoice ID"
+				values  = invoices.ID
+    			displayformat = [adjustment]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			customer
+			(
+				type = picklist	
+				displayname = "Customer"
+				values  = payments_received.ID
+    			displayformat = [amount_received]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			due_date
+			(
+    			type = date
+				displayname = "Due Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			days_overdue
+			(
+				type = number
+				displayname = "Days Overdue"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			status
+			(
+				type = radiobuttons
+				displayname = "Status"
+				values = {"Escalated","Pending"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			escalation_date
+			(
+    			type = date
+				displayname = "Escalation Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_notification_sent
+			(
+    			type = datetime
+				displayname = "Last Notification Sent"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			notification_attempts
+			(
+				type = number
+				displayname = "Notification Attempts"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			triggered_by
+			(
+    			type = text
+				displayname = "Triggered By"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Invoice Created","Notification Sent","Escalation Pending","Notification Failed","Awaiting Response","Payment Received","Manual Intervention Required","Escalated to Supervisor","Escalation Sent","Escalation Failed","Invoice Closed","Legal Action Initiated"}
+			}
+		}
+		form payments_received
+		{
+			displayname = "Payments Received"
+			success message = "Data Added Successfully!"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			amount_applied
+			(
+				type = decimal
+				displayname = "Amount Applied"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have amount_received
+			(
+				type = decimal
+				displayname = "Amount Received"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			amount_refunded
+			(
+				type = decimal
+				displayname = "Amount Refunded"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			bank_charges
+			(
+				type = decimal
+				displayname = "Bank Charges"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			exchange_rate
+			(
+				type = decimal
+				displayname = "Exchange Rate"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			notes
+			(
+    			type = textarea
+				displayname = "Notes"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have payment_date
+			(
+    			type = date
+				displayname = "Payment Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			payment_form
+			(
+    			type = text
+				displayname = "Payment Form"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			payment_number
+			(
+    			type = text
+				displayname = "Payment Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			reference_number
+			(
+    			type = text
+				displayname = "Reference Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			tax_amount_withheld
+			(
+				type = decimal
+				displayname = "Tax Amount Withheld"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+	}
+	reports
+	{
+		list overdue_invoices_Report
+		{
+			displayName = "All Overdue Invoices"
+			show all rows from overdue_invoices    
+			(
+				invoice_id as "Invoice ID"
+				customer as "Customer"
+				due_date as "Due Date"
+				days_overdue as "Days Overdue"
+				status as "Status"
+				escalation_date as "Escalation Date"
+				last_notification_sent as "Last Notification Sent"
+				notification_attempts as "Notification Attempts"
+				triggered_by as "Triggered By"
+			)
+		}
+		list escalation_logs_Report
+		{
+			displayName = "All Escalation Logs"
+			show all rows from escalation_logs    
+			(
+				invoice as "Invoice"
+				action_1 as "Action"
+				action_date as "Action Date"
+				user as "User"
+				details as "Details"
+				external_api_response as "External API Response"
+			)
+		}
+		list notification_queue_Report
+		{
+			displayName = "All Notification Queues"
+			show all rows from notification_queue    
+			(
+				invoice as "Invoice"
+				notification_type as "Notification Type"
+				url as "URL"
+				method as "Method"
+				payload as "Payload"
+				status as "Status"
+				attempt_count as "Attempt Count"
+				last_attempt as "Last Attempt"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (status == "Failed")
+				fields = [status]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (status == "Pending")
+				fields = [status]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (status == "Sent")
+				fields = [status]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+			)
+		}
+		kanban notification_queue_by_status
+		{
+			displayName = "Statuses"
+			show all rows from notification_queue    
+			(
+				invoice as "Invoice"
+				notification_type as "Notification Type"
+				url as "URL"
+				method as "Method"
+				payload as "Payload"
+				status as "Status"
+				attempt_count as "Attempt Count"
+				last_attempt as "Last Attempt"
+			)
+			options
+			(
+	 			display field = status
+	 		)
+		}
+		list payments_received_Report
+		{
+			displayName = "Payments Received Report"
+			show all rows from payments_received    
+			(
+				amount_applied as "Amount Applied"
+				amount_received as "Amount Received"
+				amount_refunded as "Amount Refunded"
+				bank_charges as "Bank Charges"
+				exchange_rate as "Exchange Rate"
+				notes as "Notes"
+				payment_date as "Payment Date"
+				payment_form as "Payment Form"
+				payment_number as "Payment Number"
+				reference_number as "Reference Number"
+				tax_amount_withheld as "Tax Amount Withheld"
+			)
+		}
+		list invoices_Report
+		{
+			displayName = "All Invoices"
+			show all rows from invoices    
+			(
+				adjustment as "Adjustment"
+				(
+					display = total,average,min,max	
+				)
+				adjustment_description as "Adjustment Description"
+				avatax_exemption_number as "Avatax Exemption Number"
+				avatax_tax_code as "Avatax Tax Code"
+				avatax_use_code as "Avatax Use Code"
+				balance as "Balance"
+				cfdi_reference_type as "CFDI Reference Type"
+				cfdi_usage as "CFDI Usage"
+				client_viewed_time as "Client Viewed Time"
+				created_time as "Created Time"
+				credits_applied as "Credits Applied"
+				custom_body as "Custom Body"
+				custom_subject as "Custom Subject"
+				customer_notes as "Customer Notes"
+				discount as "Discount"
+				due_date as "Due Date"
+				exchange_rate as "Exchange Rate"
+				gst_number as "GST Number"
+				invoice_date as "Invoice Date"
+				invoice_description as "Invoice Description"
+				invoice_number as "Invoice Number"
+				last_modified_time as "Last Modified Time"
+				last_payment_date as "Last Payment Date"
+				last_reminder_sent_date as "Last Reminder Sent Date"
+				order_number as "Order Number"
+				payment_expected_date as "Payment Expected Date"
+				payment_made as "Payment Made"
+				price_precision as "Price Precision"
+				reason as "Reason"
+				reminders_sent as "Reminders Sent"
+				shipping_charge as "Shipping Charge"
+				subject_field as "Subject"
+				subtotal as "Subtotal"
+				tax_amount_withheld as "Tax Amount Withheld"
+				tax_total as "Tax Total"
+				terms_and_conditions as "Terms and Conditions"
+				total_amount as "Total Amount"
+				vat_registration_number as "VAT Registration Number"
+				vat_treatment as "VAT Treatment"
+				write_off_amount as "Write Off Amount"
+			)
+		}
+	}
+	pages
+	{
+		page DashBoard
+		{
+			displayname = "Dashboard"
+			Content="<zml    \t\t\n\t\t\n\t\t\n\t\t\n\t\t\n>\n\t<layout>\n\t<row>\n\t<column\n   \t\t width='28%'\n   \t>\n\t<panel elementName='Panel 1'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = 'theme'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'media-1-volume-up'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'thisapp.payments_received.amount_applied.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Average of Amount Applied'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = 'theme'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'media-1-volume-up'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'thisapp.payments_received.amount_received.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Average of Amount Received'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = 'theme'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'shopping-cash-register'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'thisapp.invoices.adjustment.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Average of Amount Refunded'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='23%'\n   \t>\n\t<panel elementName='Panel 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = 'theme'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'business-percentage-39'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'thisapp.invoices.balance.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Average Adjustments'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='40%'\n   \t>\n\t<chart \n\telementName='Chart 1'\n\n\t\n\ttitle = 'Tax Total by Tax Amount Withheld'\n\t\n\ttype = 'Scatter'\n\txtitle = 'Tax Total'\n\tytitle = 'Tax Amount Withheld'\n\tbgColor = '#FFFFFF'\n\ttheme = 'theme'\n\tlegendPos = 'none'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'invoices'\n\txfield = 'tax_total'\n\tyfields = 'value:tax_amount_withheld'\n\tgroupBy = 'adjustment'\n\t\tDelugeCriteria = 'tax_total is not null'\n/>\n\n</column><column\n   \t\t width='35%'\n   \t>\n\t<panel elementName='Grouped_Panel 1'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='50px'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tmarginRight = '20px' \n\tcolor = '#000000'\n\tsize = '16px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Status'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr><pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '17px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n    borderColor = '#444444'\n    borderWidth = '0px'\n\t\twidth = '50%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n    \tcornerRadius = '2px'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'design-2-cursor-not-allowed'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Failed&quot;'\n\t  value = 'thisapp.notification_queue.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Failed'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '17px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '17px'\n\tpaddingBottom = '17px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\twidth = '50%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'ui-2-hourglass'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Pending&quot;'\n\t  value = 'thisapp.notification_queue.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Pending'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr><pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '17px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n    borderColor = '#444444'\n    borderWidth = '0px'\n\t\twidth = '50%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n    \tcornerRadius = '2px'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'shopping-delivery'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Sent&quot;'\n\t  value = 'thisapp.notification_queue.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Sent'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '17px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '17px'\n\tpaddingBottom = '17px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\twidth = '50%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n\t\tvAlign = 'middle'\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '7px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '50px'\n\theight = '50px'\n\ttype = 'icon'\n\tvalue = 'travel-world'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmargin = '0px'\n\tcolor = 'theme'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.notification_queue.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '3px'\n\tcolor = '#44404C'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Total'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel_Button 1'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='50px'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tmarginRight = '20px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\tcolor = '#2D2D2D'\n\tsize = '16px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\n\n\n\n\n\n\t  value = 'Quick Links'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr><pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '0px'\n\tpaddingLeft = '10px'\n\tpaddingRight = '10px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '5px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'overdue_invoices'\n\t\ttarget = 'new-window'\n\n\tmarginLeft = '12px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'Add New Overdue Invoices'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\tpadding = '8px'\n\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '5px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'escalation_logs'\n\t\ttarget = 'new-window'\n\n\tmarginLeft = '12px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'Add New Escalation Logs'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\tpadding = '8px'\n\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '5px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'notification_queue'\n\t\ttarget = 'new-window'\n\n\tmarginLeft = '12px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'Add New Notification Queue'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\tpadding = '8px'\n\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '5px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = 'theme'\n\tbgColor = '#F1F2F4'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'payments_received'\n\t\ttarget = 'new-window'\n\n\tmarginLeft = '12px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\tpadding = '0px'\n\tcolor = 'theme'\n\tsize = '15px'\n\ttype = 'Text'\n\n\tbgColor = 'transparent'\n        bgColorType = 'noFill'\n\tcornerRadius = '2px'\n\n\n\n\n\n    borderColor = '#5051F9'\n    borderWidth = '0px'\n\n\t  value = 'Add New Payments Received'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<chart \n\telementName='Chart 2'\n\n\t\n\ttitle = 'Amount Received by Amount Applied'\n\t\n\ttype = 'Scatter'\n\txtitle = 'Amount Received'\n\tytitle = 'Amount Applied'\n\tbgColor = '#FFFFFF'\n\ttheme = 'theme'\n\tlegendPos = 'none'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'payments_received'\n\txfield = 'amount_received'\n\tyfields = 'value:amount_applied'\n\tgroupBy = 'amount_applied'\n\t\tDelugeCriteria = 'amount_received is not null'\n/>\n\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<report \n\telementName='Report'\n\n\t\tappLinkName = 'thisapp'\n\t\tlinkName = 'overdue_invoices_Report'\n\t\n\t\tiszreport = 'false'\n\theightType = 'auto'\n\theightValue = '700'\n\n/>\n</column>\n</row>\n</layout>\n</zml>"
+		}
+	}
+
+
+
+
+		workflow
+		{
+
+
+
+
+		blueprint
+		{
+    			invoice_notification_workflow as "Invoice Notification Workflow"
+    			{
+        			type = Blueprint
+        			form = notification_queue
+        			start
+        			{
+            			start stage = "Notification Queued"
+        			}
+        			stages
+        			{
+           			"Notification Queued"
+           			{
+           			}
+           			"Notification Sent"
+           			{
+           			}
+           			"Notification Failed"
+           			{
+           			}
+           			"Notification Retried"
+           			{
+           			}
+           			"Notification Delivered"
+           			{
+           			}
+           			"Notification Escalated"
+           			{
+           			}
+           			"Notification Suppressed"
+           			{
+           			}
+           			"Notification Acknowledged"
+           			{
+           			}
+           			"Notification Closed"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				send_notification as "Send Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Queued"
+         				to stage = "Notification Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				mark_failed as "Mark as Failed"
+    				{
+         				type = normal
+         				from stage = "Notification Queued"
+         				to stage = "Notification Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				retry_notification as "Retry Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Queued"
+         				to stage = "Notification Retried"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_delivery as "Confirm Delivery"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Notification Delivered"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_notification as "Escalate to Admin"
+    				{
+         				type = normal
+         				from stage = "Notification Failed"
+         				to stage = "Notification Escalated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				suppress_notification as "Suppress Further Attempts"
+    				{
+         				type = normal
+         				from stage = "Notification Failed"
+         				to stage = "Notification Suppressed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				acknowledge_notification as "Confirm Receipt"
+    				{
+         				type = normal
+         				from stage = "Notification Delivered"
+         				to stage = "Notification Acknowledged"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_notification as "Close Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Delivered"
+         				to stage = "Notification Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_escalated as "Close Escalated Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Escalated"
+         				to stage = "Notification Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_suppressed as "Close Suppressed Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Suppressed"
+         				to stage = "Notification Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+    			overdue_invoice_escalation_process as "Overdue Invoice Escalation Process"
+    			{
+        			type = Blueprint
+        			form = overdue_invoices
+        			start
+        			{
+            			start stage = "Invoice Created"
+        			}
+        			stages
+        			{
+           			"Invoice Created"
+           			{
+           			}
+           			"Notification Sent"
+           			{
+           			}
+           			"Escalation Pending"
+           			{
+           			}
+           			"Notification Failed"
+           			{
+           			}
+           			"Awaiting Response"
+           			{
+           			}
+           			"Payment Received"
+           			{
+           			}
+           			"Manual Intervention Required"
+           			{
+           			}
+           			"Escalated to Supervisor"
+           			{
+           			}
+           			"Escalation Sent"
+           			{
+           			}
+           			"Escalation Failed"
+           			{
+           			}
+           			"Invoice Closed"
+           			{
+           			}
+           			"Legal Action Initiated"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				send_first_notification as "Send First Notification"
+    				{
+         				type = normal
+         				from stage = "Invoice Created"
+         				to stage = "Notification Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				mark_for_escalation as "Mark for Escalation"
+    				{
+         				type = normal
+         				from stage = "Invoice Created"
+         				to stage = "Escalation Pending"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				handle_failed_notification as "Handle Failed Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Notification Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				await_response as "Wait for Customer Response"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Awaiting Response"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				proceed_to_escalation as "Proceed to Escalation"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Escalation Pending"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_payment_received as "Confirm Payment Receipt"
+    				{
+         				type = normal
+         				from stage = "Awaiting Response"
+         				to stage = "Payment Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				mark_notification_failed as "Mark as Failed"
+    				{
+         				type = normal
+         				from stage = "Awaiting Response"
+         				to stage = "Notification Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_after_timeout as "Escalate After Timeout"
+    				{
+         				type = normal
+         				from stage = "Awaiting Response"
+         				to stage = "Escalation Pending"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_due_to_failure as "Escalate Due to Failed Communication"
+    				{
+         				type = normal
+         				from stage = "Notification Failed"
+         				to stage = "Escalation Pending"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				flag_manual_review as "Flag for Manual Review"
+    				{
+         				type = normal
+         				from stage = "Notification Failed"
+         				to stage = "Manual Intervention Required"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_to_supervisor as "Escalate to Senior Collection Agent"
+    				{
+         				type = normal
+         				from stage = "Escalation Pending"
+         				to stage = "Escalated to Supervisor"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				send_escalation_notice as "Send Escalation Notice"
+    				{
+         				type = normal
+         				from stage = "Escalation Pending"
+         				to stage = "Escalation Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				forward_escalation as "Forward Escalation to Higher Authority"
+    				{
+         				type = normal
+         				from stage = "Escalated to Supervisor"
+         				to stage = "Escalation Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				initiate_manual_collection as "Initiate Manual Collection Process"
+    				{
+         				type = normal
+         				from stage = "Escalated to Supervisor"
+         				to stage = "Manual Intervention Required"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_payment_after_escalation as "Confirm Payment After Escalation"
+    				{
+         				type = normal
+         				from stage = "Escalation Sent"
+         				to stage = "Payment Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				handle_escalation_failure as "Handle Escalation Failure"
+    				{
+         				type = normal
+         				from stage = "Escalation Sent"
+         				to stage = "Escalation Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_to_legal as "Escalate to Legal or Collections Department"
+    				{
+         				type = normal
+         				from stage = "Escalation Sent"
+         				to stage = "Manual Intervention Required"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_payment_despite_failure as "Confirm Payment Despite Escalation Failure"
+    				{
+         				type = normal
+         				from stage = "Escalation Failed"
+         				to stage = "Payment Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_manual_payment as "Confirm Manual Payment Receipt"
+    				{
+         				type = normal
+         				from stage = "Manual Intervention Required"
+         				to stage = "Payment Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_invoice_manual as "Close Invoice After Manual Resolution"
+    				{
+         				type = normal
+         				from stage = "Manual Intervention Required"
+         				to stage = "Invoice Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				initiate_legal_action as "Begin Legal Proceedings"
+    				{
+         				type = normal
+         				from stage = "Manual Intervention Required"
+         				to stage = "Legal Action Initiated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_invoice as "Close Invoice"
+    				{
+         				type = normal
+         				from stage = "Payment Received"
+         				to stage = "Invoice Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_payment_after_legal as "Confirm Payment After Legal Action"
+    				{
+         				type = normal
+         				from stage = "Legal Action Initiated"
+         				to stage = "Payment Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_invoice_after_legal as "Close Invoice After Legal Resolution"
+    				{
+         				type = normal
+         				from stage = "Legal Action Initiated"
+         				to stage = "Invoice Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+		}
+
+
+	}
+	share_settings
+	{
+			"Finance Operations Manager"
+			{
+				name = "Finance Operations Manager"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Oversee the end-to-end invoice lifecycle and ensure accurate status tracking \n"
+				ModulePermissions
+				{
+					escalation_logs
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							escalation_logs_Report={"View","Edit","Delete"}
+						}
+					}
+					overdue_invoices
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							overdue_invoices_Report={"View","Edit","Delete"}
+						}
+					}
+					payments_received
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							payments_received_Report={"View","Edit","Delete"}
+						}
+					}
+					invoices
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							invoices_Report={"View","Edit","Delete"}
+						}
+					}
+					notification_queue
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							notification_queue_by_status={"View"}
+							notification_queue_Report={"View"}
+						}
+					}
+				}
+			}
+			"Read"
+			{
+				name = "Read"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have read permission for all components\n"
+			}
+			"Write"
+			{
+				name = "Write"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have write permission for all components\n"
+			}
+			"Administrator"
+			{
+				name = "Administrator"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have all the permissions.\n"
+			}
+			"Compliance Auditor"
+			{
+				name = "Compliance Auditor"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Verify that all escalations and notifications follow defined policies and timelines \n"
+				ModulePermissions
+				{
+					escalation_logs
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							escalation_logs_Report={"View"}
+						}
+					}
+					overdue_invoices
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							overdue_invoices_Report={"View"}
+						}
+					}
+					payments_received
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							payments_received_Report={"View"}
+						}
+					}
+					invoices
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							invoices_Report={"View"}
+						}
+					}
+					notification_queue
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							notification_queue_by_status={"View"}
+							notification_queue_Report={"View"}
+						}
+					}
+				}
+			}
+			"Developer"
+			{
+				name = "Developer"
+				type = Developer
+				permissions = {Chat:false, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Developer Profile\n"
+			}
+			"Accounts Receivable Specialist"
+			{
+				name = "Accounts Receivable Specialist"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Monitor and manage overdue invoices using the system's tracking and escalation features \n"
+				ModulePermissions
+				{
+					escalation_logs
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							escalation_logs_Report={"View"}
+						}
+					}
+					overdue_invoices
+					{
+						enabled= Export 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							overdue_invoices_Report={"View","Edit"}
+						}
+					}
+					invoices
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							invoices_Report={"View"}
+						}
+					}
+					notification_queue
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							notification_queue_by_status={"View","Edit"}
+							notification_queue_Report={"View","Edit"}
+						}
+					}
+				}
+			}
+			"System Administrator"
+			{
+				name = "System Administrator"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Manage user access and permissions within the invoicing system \n"
+				ModulePermissions
+				{
+					escalation_logs
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							escalation_logs_Report={"View","Edit","Delete"}
+						}
+					}
+					overdue_invoices
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							overdue_invoices_Report={"View","Edit","Delete"}
+						}
+					}
+					payments_received
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							payments_received_Report={"View","Edit","Delete"}
+						}
+					}
+					invoices
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							invoices_Report={"View","Edit","Delete"}
+						}
+					}
+					notification_queue
+					{
+						enabled= Viewall,Modifyall,Import,Export 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							notification_queue_by_status={"View","Edit","Delete"}
+							notification_queue_Report={"View","Edit","Delete"}
+						}
+					}
+				}
+			}
+			"Customer"
+			{
+				name = "Customer"
+				type = Customer_Portal
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This is the default profile having only add and view permission.\n"
+			}
+			"Vendor Payment Coordinator"
+			{
+				name = "Vendor Payment Coordinator"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Acknowledge and act on escalation notifications related to overdue payments \n"
+				ModulePermissions
+				{
+					escalation_logs
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							escalation_logs_Report={"View","Edit"}
+						}
+					}
+					overdue_invoices
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							overdue_invoices_Report={"View","Edit"}
+						}
+					}
+					payments_received
+					{
+						enabled= Create,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							payments_received_Report={"View","Edit"}
+						}
+					}
+				}
+			}
+			"Customer Account Manager"
+			{
+				name = "Customer Account Manager"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Receive and respond to overdue invoice notifications from the system \n"
+				ModulePermissions
+				{
+					escalation_logs
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							escalation_logs_Report={"View"}
+						}
+					}
+					overdue_invoices
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							overdue_invoices_Report={"View"}
+						}
+					}
+					notification_queue
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							notification_queue_by_status={"View"}
+							notification_queue_Report={"View"}
+						}
+					}
+				}
+			}
+			roles
+			{
+				"CEO"
+				{
+					description = "User belonging to this role can access data of all other users."
+				}
+			}
+	}
+
+
+	web
+	{
+		forms
+		{
+			form escalation_logs
+			{
+				label placement = left
+			}
+			form invoices
+			{
+				label placement = left
+			}
+			form notification_queue
+			{
+				label placement = left
+			}
+			form overdue_invoices
+			{
+				label placement = left
+			}
+			form payments_received
+			{
+				label placement = left
+			}
+		}
+		reports
+		{
+			report overdue_invoices_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								invoice_id as "Invoice ID"
+								customer as "Customer"
+								due_date as "Due Date"
+								days_overdue as "Days Overdue"
+								status as "Status"
+								escalation_date as "Escalation Date"
+								last_notification_sent as "Last Notification Sent"
+								notification_attempts as "Notification Attempts"
+								triggered_by as "Triggered By"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								invoice_id as "Invoice ID"
+								customer as "Customer"
+								due_date as "Due Date"
+								days_overdue as "Days Overdue"
+								status as "Status"
+								escalation_date as "Escalation Date"
+								last_notification_sent as "Last Notification Sent"
+								notification_attempts as "Notification Attempts"
+								triggered_by as "Triggered By"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Customer"
+		     				related field = customer
+							fields
+							(
+								amount_applied as "Amount Applied"
+								amount_received as "Amount Received"
+								amount_refunded as "Amount Refunded"
+								bank_charges as "Bank Charges"
+								exchange_rate as "Exchange Rate"
+								notes as "Notes"
+								payment_date as "Payment Date"
+								payment_form as "Payment Form"
+								payment_number as "Payment Number"
+								reference_number as "Reference Number"
+								tax_amount_withheld as "Tax Amount Withheld"
+							)
+						)
+						datablock3
+						(
+							layout type = -2
+		     				title = "Invoice ID"
+		     				related field = invoice_id
+							fields
+							(
+								adjustment as "Adjustment"
+								adjustment_description as "Adjustment Description"
+								avatax_exemption_number as "Avatax Exemption Number"
+								avatax_tax_code as "Avatax Tax Code"
+								avatax_use_code as "Avatax Use Code"
+								balance as "Balance"
+								cfdi_reference_type as "CFDI Reference Type"
+								cfdi_usage as "CFDI Usage"
+								client_viewed_time as "Client Viewed Time"
+								created_time as "Created Time"
+								credits_applied as "Credits Applied"
+								custom_body as "Custom Body"
+								custom_subject as "Custom Subject"
+								customer_notes as "Customer Notes"
+								discount as "Discount"
+								due_date as "Due Date"
+								exchange_rate as "Exchange Rate"
+								gst_number as "GST Number"
+								invoice_date as "Invoice Date"
+								invoice_description as "Invoice Description"
+								invoice_number as "Invoice Number"
+								last_modified_time as "Last Modified Time"
+								last_payment_date as "Last Payment Date"
+								last_reminder_sent_date as "Last Reminder Sent Date"
+								order_number as "Order Number"
+								payment_expected_date as "Payment Expected Date"
+								payment_made as "Payment Made"
+								price_precision as "Price Precision"
+								reason as "Reason"
+								reminders_sent as "Reminders Sent"
+								shipping_charge as "Shipping Charge"
+								subject_field as "Subject"
+								subtotal as "Subtotal"
+								tax_amount_withheld as "Tax Amount Withheld"
+								tax_total as "Tax Total"
+								terms_and_conditions as "Terms and Conditions"
+								total_amount as "Total Amount"
+								vat_registration_number as "VAT Registration Number"
+								vat_treatment as "VAT Treatment"
+								write_off_amount as "Write Off Amount"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report escalation_logs_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								invoice as "Invoice"
+								action_1 as "Action"
+								action_date as "Action Date"
+								user as "User"
+								details as "Details"
+								external_api_response as "External API Response"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								invoice as "Invoice"
+								action_1 as "Action"
+								action_date as "Action Date"
+								user as "User"
+								details as "Details"
+								external_api_response as "External API Response"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Invoice"
+		     				related field = invoice
+							fields
+							(
+								adjustment as "Adjustment"
+								adjustment_description as "Adjustment Description"
+								avatax_exemption_number as "Avatax Exemption Number"
+								avatax_tax_code as "Avatax Tax Code"
+								avatax_use_code as "Avatax Use Code"
+								balance as "Balance"
+								cfdi_reference_type as "CFDI Reference Type"
+								cfdi_usage as "CFDI Usage"
+								client_viewed_time as "Client Viewed Time"
+								created_time as "Created Time"
+								credits_applied as "Credits Applied"
+								custom_body as "Custom Body"
+								custom_subject as "Custom Subject"
+								customer_notes as "Customer Notes"
+								discount as "Discount"
+								due_date as "Due Date"
+								exchange_rate as "Exchange Rate"
+								gst_number as "GST Number"
+								invoice_date as "Invoice Date"
+								invoice_description as "Invoice Description"
+								invoice_number as "Invoice Number"
+								last_modified_time as "Last Modified Time"
+								last_payment_date as "Last Payment Date"
+								last_reminder_sent_date as "Last Reminder Sent Date"
+								order_number as "Order Number"
+								payment_expected_date as "Payment Expected Date"
+								payment_made as "Payment Made"
+								price_precision as "Price Precision"
+								reason as "Reason"
+								reminders_sent as "Reminders Sent"
+								shipping_charge as "Shipping Charge"
+								subject_field as "Subject"
+								subtotal as "Subtotal"
+								tax_amount_withheld as "Tax Amount Withheld"
+								tax_total as "Tax Total"
+								terms_and_conditions as "Terms and Conditions"
+								total_amount as "Total Amount"
+								vat_registration_number as "VAT Registration Number"
+								vat_treatment as "VAT Treatment"
+								write_off_amount as "Write Off Amount"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report notification_queue_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								invoice as "Invoice"
+								notification_type as "Notification Type"
+								url as "URL"
+								method as "Method"
+								payload as "Payload"
+								status as "Status"
+								attempt_count as "Attempt Count"
+								last_attempt as "Last Attempt"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								invoice as "Invoice"
+								notification_type as "Notification Type"
+								url as "URL"
+								method as "Method"
+								payload as "Payload"
+								status as "Status"
+								attempt_count as "Attempt Count"
+								last_attempt as "Last Attempt"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Invoice"
+		     				related field = invoice
+							fields
+							(
+								adjustment as "Adjustment"
+								adjustment_description as "Adjustment Description"
+								avatax_exemption_number as "Avatax Exemption Number"
+								avatax_tax_code as "Avatax Tax Code"
+								avatax_use_code as "Avatax Use Code"
+								balance as "Balance"
+								cfdi_reference_type as "CFDI Reference Type"
+								cfdi_usage as "CFDI Usage"
+								client_viewed_time as "Client Viewed Time"
+								created_time as "Created Time"
+								credits_applied as "Credits Applied"
+								custom_body as "Custom Body"
+								custom_subject as "Custom Subject"
+								customer_notes as "Customer Notes"
+								discount as "Discount"
+								due_date as "Due Date"
+								exchange_rate as "Exchange Rate"
+								gst_number as "GST Number"
+								invoice_date as "Invoice Date"
+								invoice_description as "Invoice Description"
+								invoice_number as "Invoice Number"
+								last_modified_time as "Last Modified Time"
+								last_payment_date as "Last Payment Date"
+								last_reminder_sent_date as "Last Reminder Sent Date"
+								order_number as "Order Number"
+								payment_expected_date as "Payment Expected Date"
+								payment_made as "Payment Made"
+								price_precision as "Price Precision"
+								reason as "Reason"
+								reminders_sent as "Reminders Sent"
+								shipping_charge as "Shipping Charge"
+								subject_field as "Subject"
+								subtotal as "Subtotal"
+								tax_amount_withheld as "Tax Amount Withheld"
+								tax_total as "Tax Total"
+								terms_and_conditions as "Terms and Conditions"
+								total_amount as "Total Amount"
+								vat_registration_number as "VAT Registration Number"
+								vat_treatment as "VAT Treatment"
+								write_off_amount as "Write Off Amount"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report notification_queue_by_status
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								invoice as "Invoice"
+								notification_type as "Notification Type"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								invoice as "Invoice"
+								notification_type as "Notification Type"
+								url as "URL"
+								method as "Method"
+								payload as "Payload"
+								status as "Status"
+								attempt_count as "Attempt Count"
+								last_attempt as "Last Attempt"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report payments_received_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								amount_applied as "Amount Applied"
+								amount_received as "Amount Received"
+								amount_refunded as "Amount Refunded"
+								bank_charges as "Bank Charges"
+								exchange_rate as "Exchange Rate"
+								notes as "Notes"
+								payment_date as "Payment Date"
+								payment_form as "Payment Form"
+								payment_number as "Payment Number"
+								reference_number as "Reference Number"
+								tax_amount_withheld as "Tax Amount Withheld"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								amount_applied as "Amount Applied"
+								amount_received as "Amount Received"
+								amount_refunded as "Amount Refunded"
+								bank_charges as "Bank Charges"
+								exchange_rate as "Exchange Rate"
+								notes as "Notes"
+								payment_date as "Payment Date"
+								payment_form as "Payment Form"
+								payment_number as "Payment Number"
+								reference_number as "Reference Number"
+								tax_amount_withheld as "Tax Amount Withheld"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report invoices_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								adjustment as "Adjustment"
+								adjustment_description as "Adjustment Description"
+								avatax_exemption_number as "Avatax Exemption Number"
+								avatax_tax_code as "Avatax Tax Code"
+								avatax_use_code as "Avatax Use Code"
+								balance as "Balance"
+								cfdi_reference_type as "CFDI Reference Type"
+								cfdi_usage as "CFDI Usage"
+								client_viewed_time as "Client Viewed Time"
+								created_time as "Created Time"
+								credits_applied as "Credits Applied"
+								custom_body as "Custom Body"
+								custom_subject as "Custom Subject"
+								customer_notes as "Customer Notes"
+								discount as "Discount"
+								due_date as "Due Date"
+								exchange_rate as "Exchange Rate"
+								gst_number as "GST Number"
+								invoice_date as "Invoice Date"
+								invoice_description as "Invoice Description"
+								invoice_number as "Invoice Number"
+								last_modified_time as "Last Modified Time"
+								last_payment_date as "Last Payment Date"
+								last_reminder_sent_date as "Last Reminder Sent Date"
+								order_number as "Order Number"
+								payment_expected_date as "Payment Expected Date"
+								payment_made as "Payment Made"
+								price_precision as "Price Precision"
+								reason as "Reason"
+								reminders_sent as "Reminders Sent"
+								shipping_charge as "Shipping Charge"
+								subject_field as "Subject"
+								subtotal as "Subtotal"
+								tax_amount_withheld as "Tax Amount Withheld"
+								tax_total as "Tax Total"
+								terms_and_conditions as "Terms and Conditions"
+								total_amount as "Total Amount"
+								vat_registration_number as "VAT Registration Number"
+								vat_treatment as "VAT Treatment"
+								write_off_amount as "Write Off Amount"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								adjustment as "Adjustment"
+								adjustment_description as "Adjustment Description"
+								avatax_exemption_number as "Avatax Exemption Number"
+								avatax_tax_code as "Avatax Tax Code"
+								avatax_use_code as "Avatax Use Code"
+								balance as "Balance"
+								cfdi_reference_type as "CFDI Reference Type"
+								cfdi_usage as "CFDI Usage"
+								client_viewed_time as "Client Viewed Time"
+								created_time as "Created Time"
+								credits_applied as "Credits Applied"
+								custom_body as "Custom Body"
+								custom_subject as "Custom Subject"
+								customer_notes as "Customer Notes"
+								discount as "Discount"
+								due_date as "Due Date"
+								exchange_rate as "Exchange Rate"
+								gst_number as "GST Number"
+								invoice_date as "Invoice Date"
+								invoice_description as "Invoice Description"
+								invoice_number as "Invoice Number"
+								last_modified_time as "Last Modified Time"
+								last_payment_date as "Last Payment Date"
+								last_reminder_sent_date as "Last Reminder Sent Date"
+								order_number as "Order Number"
+								payment_expected_date as "Payment Expected Date"
+								payment_made as "Payment Made"
+								price_precision as "Price Precision"
+								reason as "Reason"
+								reminders_sent as "Reminders Sent"
+								shipping_charge as "Shipping Charge"
+								subject_field as "Subject"
+								subtotal as "Subtotal"
+								tax_amount_withheld as "Tax Amount Withheld"
+								tax_total as "Tax Total"
+								terms_and_conditions as "Terms and Conditions"
+								total_amount as "Total Amount"
+								vat_registration_number as "VAT Registration Number"
+								vat_treatment as "VAT Treatment"
+								write_off_amount as "Write Off Amount"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "Dashboard"
+					icon = "ui-1-dashboard-half"
+					page DashBoard
+					{
+						icon = "ui-1-dashboard-half"
+					}
+				}
+				section Section_2
+				{
+					displayname = "Overdue Invoices"
+					icon = "shopping-receipt"
+					form  overdue_invoices
+					{
+						icon = "ui-1-bold-add"
+					}
+					report overdue_invoices_Report
+					{
+						icon = "business-money-bag"
+					}
+				}
+				section Section_3
+				{
+					displayname = "Escalation Logs"
+					icon = "design-2-scale-down"
+					form  escalation_logs
+					{
+						icon = "ui-1-bold-add"
+					}
+					report escalation_logs_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section Section_4
+				{
+					displayname = "Notification Queues"
+					icon = "design-window-paragraph"
+					form  notification_queue
+					{
+						icon = "ui-1-bold-add"
+					}
+					report notification_queue_Report
+					{
+						icon = "travel-world"
+					}
+					report notification_queue_by_status
+					{
+						icon = "design-2-selection"
+					}
+				}
+				section Section_5
+				{
+					displayname = "Payments Received"
+					icon = "business-money-bag"
+					form  payments_received
+					{
+						icon = "ui-1-bold-add"
+					}
+					report payments_received_Report
+					{
+						icon = "shopping-cash-register"
+					}
+				}
+				section Section_6
+				{
+					displayname = "Invoices"
+					icon = "shopping-receipt"
+					form  invoices
+					{
+						icon = "ui-1-bold-add"
+					}
+					report invoices_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section ZC_App_Preferences
+				{
+					displayname = "App Preferences"
+					icon = "design-app"
+					systemcomponent
+					{
+						type = localization
+						displayname = "Language Selection"
+						icon = "education-language"
+					}
+					systemcomponent
+					{
+						type = connection
+						displayname = "Integrations"
+						icon = "tech-2-connection"
+					}
+				}
+				section ZC_Approvals
+				{
+					displayname = "Approvals"
+					icon = "ui-2-hourglass"
+					systemcomponent
+					{
+						type = approval
+						approval status = pending
+						displayname = "Pending Tasks"
+						icon = "ui-2-hourglass"
+					}
+					systemcomponent
+					{
+						type = approval
+						approval status = completed
+						displayname = "Completed Tasks"
+						icon = "design-todo"
+					}
+				}
+				section SharedAnalytics_Section
+				{
+					type = shared_user_report_section
+					displayname = "Reports"
+					icon = "business-chart-bar-33"
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 11
+			font = "poppins"
+			color options
+			{
+				color = "6"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+	phone
+	{
+		forms
+		{
+			form escalation_logs
+			{
+				label placement = auto
+			}
+			form invoices
+			{
+				label placement = auto
+			}
+			form notification_queue
+			{
+				label placement = auto
+			}
+			form overdue_invoices
+			{
+				label placement = auto
+			}
+			form payments_received
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = yellow
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	tablet
+	{
+		forms
+		{
+			form escalation_logs
+			{
+				label placement = auto
+			}
+			form invoices
+			{
+				label placement = auto
+			}
+			form notification_queue
+			{
+				label placement = auto
+			}
+			form overdue_invoices
+			{
+				label placement = auto
+			}
+			form payments_received
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = yellow
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	translation
+{
+{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}
+}
+}
