@@ -1,0 +1,163 @@
+# ============================================================
+# Zia Script Prompts — Workflow Stress Test Suite
+# ============================================================
+#
+# 5 prompts (500-char limit each) designed to generate Deluge
+# scripts via Zoho Creator's Zia AI. Each targets a different
+# workflow type to stress-test the full ForgeDS round-trip:
+#
+#   Zia prompt -> desktop app -> export .ds -> parse -> lint
+#   -> enhance with forgeds-build-ds -> re-import -> verify
+#
+# Design rule: All [] action blocks (sendmail, insert into,
+# invokeUrl) MUST be wrapped inside {} control flow containers
+# (if, on success, workflow blocks). Bare [] blocks are unsafe
+# because the compiler traverses them on sight — they are
+# action primitives, not deterministic control flow.
+#
+# Usage:
+#   1. Paste each prompt into Zia in the Zoho Creator desktop app
+#   2. Let Zia generate the workflow + script
+#   3. Export the .ds file (Settings > Export DS)
+#   4. Run: forgeds-parse-ds exports/App.ds --extract-scripts tests/fixtures/zia-stress-test/
+#   5. Run: forgeds-lint <extracted .dg files>
+#   6. Use forgeds-build-ds to add more workflows, then re-import
+# ============================================================
+
+prompts:
+
+  # --- Prompt 1: Form Workflow — On Add + On Success ---
+  # Targets: _parse_workflows(), emit_workflows()
+  # Linter:  DG004, DG005, DG006, DG007, DG009, DG010, DG012, DG019
+  # Edge:    Nested parens (ifnull + subform insert), HTML in sendmail strings
+  - name: "purchase_order_on_add"
+    workflow_type: "form-workflow"
+    trigger: "on add"
+    event: "on success"
+    form: "Purchase_Orders"
+    expected_patterns:
+      - "input.FieldName"
+      - "Vendors[Vendor_ID == input.Vendor_ID]"
+      - "ifnull()"
+      - "subform row insertion"
+      - "insert into approval_history"
+      - "sendmail with HTML"
+      - "zoho.loginuser"
+      - "zoho.adminuserid"
+    linter_rules: ["DG004", "DG005", "DG006", "DG007", "DG009", "DG010", "DG012", "DG019"]
+    prompt: >
+      Workflow "Process_PO" on Purchase_Orders, on add on success. Validate
+      input.Total > 0. Look up vendor = Vendors[Vendor_ID == input.Vendor_ID],
+      null check. If found: insert subform row into Line_Items with item and
+      amount. Insert into Approval_History [claim=input.ID action_1="Submitted"
+      actor=zoho.loginuser timestamp=zoho.currenttime Added_User=zoho.loginuser].
+      Sendmail HTML to zoho.adminuserid with order table. All [] inside {}.
+
+  # --- Prompt 2: Scheduled Task — Record Iteration + invokeUrl ---
+  # Targets: _parse_schedules(), _parse_schedule_block(), emit_schedules()
+  # Linter:  DG003 (negative — daysBetween correct), DG010, DG011, DG018
+  # Edge:    for-each nested braces, URL strings, on start > on load nesting
+  - name: "daily_overdue_checker"
+    workflow_type: "scheduled"
+    trigger: "scheduled"
+    event: "on load"
+    form: "Invoices"
+    expected_patterns:
+      - "daysBetween()"
+      - "for each rec in records"
+      - "invokeUrl with POST"
+      - "map parameters"
+      - "insert into Audit_Log"
+      - "zoho.currentdate"
+      - "zoho.adminuser"
+    linter_rules: ["DG010", "DG011", "DG018"]
+    prompt: >
+      Scheduled task "Daily_Overdue_Check" runs daily. Query records =
+      Invoices[Status=="Pending" && Due_Date < zoho.currentdate]. For each rec:
+      days = daysBetween(rec.Due_Date, zoho.currentdate). If days > 30 { update
+      Status="Escalated". invokeUrl [url:"https://api.example.com/notify"
+      type:POST parameters:{"invoice_id":rec.ID,"days":days}]. Insert into
+      Audit_Log [action="Overdue Escalation" timestamp=zoho.currenttime
+      Added_User=zoho.adminuser]. } All [] inside {}.
+
+  # --- Prompt 3: Form Workflow — On Edit + On Validate (Threshold + Role) ---
+  # Targets: _parse_workflows() with on validate event, emit_workflows() validate path
+  # Linter:  DG005, DG011, DG013 (deliberate mixed &&/||), DG014
+  # Edge:    && inside query brackets, ifnull() nested parens, cancel submit
+  - name: "expense_claim_validate"
+    workflow_type: "form-workflow"
+    trigger: "on edit"
+    event: "on validate"
+    form: "Expense_Claims"
+    expected_patterns:
+      - "thisapp.permissions.isUserInRole()"
+      - "approval_thresholds[tier_name == ...]"
+      - "ifnull(thresholdRec.max_amount_zar, 999.99)"
+      - "mixed && and ||"
+      - "cancel submit"
+      - "alert"
+    linter_rules: ["DG005", "DG011", "DG013", "DG014"]
+    prompt: >
+      Workflow on Expense_Claims, on edit on validate. Check
+      thisapp.permissions.isUserInRole("Finance Manager"). Query thresholdRec =
+      approval_thresholds[tier_name=="Tier 1" && Active==true]. If not null {
+      thresholdAmount=ifnull(thresholdRec.max_amount_zar,999.99); } else {
+      thresholdAmount=999.99; } If input.amount_zar > thresholdAmount &&
+      input.status=="Pending" || input.Requires_Dual_Approval==true { cancel
+      submit; alert "Requires additional approval"; } All [] in {}.
+
+  # --- Prompt 4: Approval Process — On Approve + On Reject ---
+  # Targets: _parse_approvals(), _parse_approval_block()
+  # Linter:  DG005, DG006, DG007, DG009, DG010, DG011, DG012, DG015/16
+  # Edge:    Triple nesting: approval > on approve > on load > code
+  - name: "expense_claim_approval"
+    workflow_type: "approval"
+    trigger: "approval"
+    event: "on approve"
+    form: "Expense_Claims"
+    expected_patterns:
+      - "gl_accounts[expense_category == input.category]"
+      - "null check on glRec"
+      - "input.gl_code = glRec.gl_code"
+      - "input.status = Approved"
+      - "insert into approval_history"
+      - "sendmail with HTML"
+      - "on reject handler"
+    linter_rules: ["DG005", "DG006", "DG007", "DG009", "DG010", "DG011", "DG012"]
+    prompt: >
+      Approval process for Expense_Claims. On approve: glRec =
+      gl_accounts[expense_category==input.category && Active==true]. If glRec
+      != null { input.gl_code=glRec.gl_code; } input.status="Approved". Insert
+      into approval_history [action_1="Approved" claim=input.ID
+      actor=zoho.loginuser timestamp=zoho.currenttime Added_User=zoho.loginuser].
+      Sendmail [from:zoho.adminuserid to:input.Email subject:"Claim Approved"
+      message:"<h2>Approved</h2>"]. On reject: status "Rejected" with audit
+      trail. All [] in {}.
+
+  # --- Prompt 5: Multi-Trigger Workflow — Try-Catch + invokeUrl + Error Log ---
+  # Targets: _parse_workflows() with "on add or edit", emit_workflows() combined trigger
+  # Linter:  DG004, DG010, DG011, DG018
+  # Edge:    Try-catch 4+ brace depth, Map() parens, multiple insert targets
+  - name: "incident_sync_workflow"
+    workflow_type: "form-workflow"
+    trigger: "on add or edit"
+    event: "on success"
+    form: "Incident_Reports"
+    expected_patterns:
+      - "try-catch block"
+      - "Map() construction"
+      - "invokeUrl POST with headers"
+      - "JSON response parsing"
+      - "multiple insert into targets"
+      - "zoho.currenttime"
+      - "Error_Log table"
+    linter_rules: ["DG004", "DG010", "DG011", "DG018"]
+    prompt: >
+      Workflow on Incident_Reports, on add or edit on success. Try-catch. try
+      { params=Map(); params.put("id",input.ID); params.put("type",
+      input.Category); resp=invokeUrl [url:"https://api.example.com/incidents"
+      type:POST parameters:params]; rMap=resp.toMap(); if
+      (rMap.get("status")=="ok") { input.status="Synced"; insert into
+      Audit_Log [action="Synced" timestamp=zoho.currenttime
+      Added_User=zoho.loginuser]; } } catch(e) { insert into Error_Log
+      [message=e timestamp=zoho.currenttime]; } All [] in {}.

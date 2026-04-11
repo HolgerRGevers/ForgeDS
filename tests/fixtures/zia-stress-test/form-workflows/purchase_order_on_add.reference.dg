@@ -1,0 +1,54 @@
+// ============================================================
+// Script:   purchase_order_on_add.reference.dg
+// Location: Purchase_Orders > On Add > On Success
+// Trigger:  on add
+// Purpose:  Zia stress test — subform, audit trail, HTML sendmail
+// Context:  form-workflow
+// Design:   All [] action blocks wrapped inside {} control flow
+// Version:  v2.1 (Zia Stress Test)
+// ============================================================
+
+// Validate total is positive
+if (input.Total == null || input.Total <= 0)
+{
+    cancel submit;
+    alert "Total must be greater than zero";
+}
+
+// Look up vendor with null guard (DG005 target)
+vendor = Vendors[Vendor_ID == input.Vendor_ID];
+if (vendor != null)
+{
+    // Subform row insertion — nested parens stress parser
+    lineRow = Purchase_Orders.Line_Items();
+    lineRow.Item_Name = input.Item_Description;
+    lineRow.Amount = input.Total;
+    lineRow.Vendor_Name = ifnull(vendor.Vendor_Name, "Unknown");
+    input.Line_Items.insert(lineRow);
+
+    // Audit trail insert — [] inside {} (DG006, DG007, DG009, DG012)
+    row = insert into Approval_History
+    [
+        claim = input.ID
+        action_1 = "Submitted"
+        actor = zoho.loginuser
+        timestamp = zoho.currenttime
+        comments = "Purchase Order submitted for " + ifnull(vendor.Vendor_Name, "unknown vendor")
+        Added_User = zoho.loginuser
+    ];
+
+    // HTML sendmail — [] inside {} (DG010, DG015/DG016)
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : input.Requester_Email
+        subject : "Purchase Order " + input.PO_Number + " Submitted"
+        message : "<h2>Purchase Order Submitted</h2><table border='1'><tr><td>PO Number</td><td>" + input.PO_Number + "</td></tr><tr><td>Vendor</td><td>" + ifnull(vendor.Vendor_Name, "N/A") + "</td></tr><tr><td>Total</td><td>R " + input.Total + "</td></tr></table><p>This order is now pending approval.</p>"
+        content_type : Html
+    ];
+}
+else
+{
+    cancel submit;
+    alert "Vendor not found. Please select a valid vendor.";
+}
