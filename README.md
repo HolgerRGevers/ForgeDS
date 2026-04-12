@@ -10,7 +10,18 @@ ForgeDS treats Zoho Creator applications as code. It provides the toolchain that
 
 ForgeDS is a pip-installable Python package (3.10+, stdlib only) that reverse-engineers Zoho Creator's Deluge language into a proper compiler toolchain. Where Zoho gives you a browser editor and an opaque `.ds` export, ForgeDS gives you a lexer, parser, typed AST, 21-rule linter, code generation, and a local development workflow.
 
-The architecture follows a machine-code model: `.ds` files are the deployment artifact (machine code), `.dg` scripts are the source (assembly), and the typed AST is the intermediate representation. There is no bytecode stage.
+The architecture follows a machine-code model. There is no bytecode stage — the AST is the IR.
+
+```mermaid
+flowchart LR
+    A[".dg source\nassembly"] --> B["Typed AST\nintermediate representation"] --> C[".ds export\nmachine code"]
+    B --> D["Local Interpreter\noffline execution"]
+
+    style A fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
+    style B fill:#1f3a5f,stroke:#58a6ff,color:#c9d1d9
+    style C fill:#3b1f2b,stroke:#f47067,color:#c9d1d9
+    style D fill:#2d333b,stroke:#768390,color:#adbac7
+```
 
 ---
 
@@ -69,44 +80,50 @@ ForgeDS includes a formal language core for Deluge, built from scratch with no e
 
 ### Architecture
 
+```mermaid
+flowchart TD
+    DG[".dg source"] --> DL["Deluge Lexer"]
+    DS[".ds export"] --> DSL["DS Lexer"]
+
+    DL --> DP["Deluge Parser"]
+    DSL --> DSP["DS Parser"]
+
+    DP --> AST
+    DSP --> AST
+
+    AST["Unified AST\n~35 node types"]
+
+    AST --> Lint["Lint Engine\n21 rules · DG001–DG021"]
+    AST --> Codegen["Code Generator\npretty-printer"]
+    AST --> Interp["Local Interpreter\nstubbed side effects"]
+
+    Lint --> Diag
+    Interp --> Diag
+
+    Diag["Three-Layer Diagnostics\nmessage · ai_prompt · technical"]
+
+    style DG fill:#2d333b,stroke:#768390,color:#adbac7
+    style DS fill:#2d333b,stroke:#768390,color:#adbac7
+    style AST fill:#1f3a5f,stroke:#58a6ff,color:#c9d1d9
+    style Diag fill:#3b1f2b,stroke:#f47067,color:#c9d1d9
+    style Lint fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
+    style Codegen fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
+    style Interp fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
 ```
-  .dg source                .ds export
-      │                         │
-      ▼                         ▼
-  ┌────────┐             ┌──────────┐
-  │ Deluge │             │    DS    │     src/forgeds/lang/
-  │ Lexer  │             │  Lexer   │     tokens.py, lexer.py
-  └───┬────┘             └────┬─────┘
-      │                       │
-      ▼                       ▼
-  ┌────────┐             ┌──────────┐
-  │ Deluge │             │    DS    │     parser.py, ast_nodes.py
-  │ Parser │             │  Parser  │     (~35 node types)
-  └───┬────┘             └────┬─────┘
-      │                       │
-      ▼                       ▼
-  ┌───┴───────────────────────┴───┐
-  │         Unified AST           │
-  │  Program                      │
-  │   ├─ IfStmt, ForEachStmt      │
-  │   ├─ InsertStmt [params]      │
-  │   ├─ SendmailStmt [params]    │
-  │   └─ FunctionCall, etc.       │
-  └───────────────┬───────────────┘
-                  │
-     ┌────────────┼────────────┐
-     ▼            ▼            ▼
-  ┌───────┐  ┌────────┐  ┌─────────┐
-  │ Lint  │  │Codegen │  │  Local  │   src/forgeds/compiler/
-  │Engine │  │(.dg)   │  │Interp.  │   lint_rules.py, codegen_deluge.py
-  └───┬───┘  └────────┘  └────┬────┘   src/forgeds/runtime/
-      │                       │
-      ▼                       ▼
-  ┌───────────────────────────────┐
-  │    Three-Layer Diagnostics    │   src/forgeds/_shared/
-  │  message │ ai_prompt │ tech  │   diagnostics.py
-  └───────────────────────────────┘
-```
+
+<details>
+<summary>Module mapping</summary>
+
+| Block | Source |
+|-------|--------|
+| Deluge Lexer / Parser | `src/forgeds/lang/` — `tokens.py`, `lexer.py`, `parser.py`, `ast_nodes.py` |
+| DS Lexer / Parser | `src/forgeds/lang/` — `ds_lexer.py`, `ds_parser.py` |
+| Lint Engine | `src/forgeds/compiler/lint_rules.py` |
+| Code Generator | `src/forgeds/compiler/codegen_deluge.py` |
+| Local Interpreter | `src/forgeds/runtime/interpreter.py`, `stubs.py`, `environment.py` |
+| Diagnostics | `src/forgeds/_shared/diagnostics.py` |
+
+</details>
 
 ### Design Decisions
 
@@ -119,6 +136,28 @@ ForgeDS includes a formal language core for Deluge, built from scratch with no e
 ### Error Model
 
 Every diagnostic serves two audiences: the user and the user's AI assistant.
+
+```mermaid
+flowchart LR
+    Source["Error Source\nlinter · parser · interpreter"]
+
+    Source --> L1
+    Source --> L2
+    Source --> L3
+
+    L1["**message**\nPlain explanation\nno jargon required"]
+    L2["**ai_prompt**\nStructured context\ncopy into your AI"]
+    L3["**technical**\nToken positions\nAST nodes · stack traces"]
+
+    L1 --> User["User"]
+    L2 --> AI["User's AI"]
+    L3 --> Debug["--verbose"]
+
+    style L1 fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
+    style L2 fill:#1f3a5f,stroke:#58a6ff,color:#c9d1d9
+    style L3 fill:#2d333b,stroke:#768390,color:#adbac7
+    style Source fill:#3b1f2b,stroke:#f47067,color:#c9d1d9
+```
 
 Each error carries three layers of information. The first is a plain explanation — what happened and what to do about it, written for someone who may not know Deluge syntax. The second is a structured AI prompt the user can copy directly into their assistant; it includes the file, line, rule, source code, and enough context for the AI to diagnose and fix without follow-up questions. The third is technical detail — token positions, AST node types, stack traces — hidden by default and available via `--verbose`.
 
