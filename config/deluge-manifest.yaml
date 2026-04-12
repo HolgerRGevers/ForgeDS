@@ -1,0 +1,31 @@
+# Deluge script manifest for Zia stress test
+# Maps .dg scripts to forms, events, and contexts
+
+scripts:
+  - name: purchase_order_on_add
+    context: form-workflow
+    form: purchase_orders
+    event: on_success
+    record_event: on add
+
+  - name: expense_claim_validate
+    context: form-workflow
+    form: expense_claims
+    event: on_validate
+    record_event: on edit
+
+  - name: expense_claim_approval
+    context: form-workflow
+    form: expense_claims
+    event: on_success
+    record_event: on add
+
+  - name: incident_sync_workflow
+    context: form-workflow
+    form: incident_reports
+    event: on_success
+    record_event: "on add or edit"
+
+  - name: daily_overdue_checker
+    context: scheduled
+    form: invoices

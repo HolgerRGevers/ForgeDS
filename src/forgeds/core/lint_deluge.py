@@ -869,8 +869,19 @@ def apply_fixes(db: DelugeDB, files: list[str]) -> int:
 # Main pipeline
 # ============================================================
 
-def lint_file(db: DelugeDB, filepath: str) -> list[Diagnostic]:
-    """Run all lint passes on a single .dg file."""
+def lint_file(db: DelugeDB, filepath: str, *, legacy: bool = False) -> list[Diagnostic]:
+    """Run all lint passes on a single .dg file.
+
+    By default uses the AST-based engine (compiler.lint_rules).
+    Pass legacy=True to use the original regex-based engine.
+    """
+    if not legacy:
+        try:
+            from forgeds.compiler.lint_rules import lint_file as ast_lint_file
+            return ast_lint_file(db, filepath)
+        except Exception:
+            pass  # fall through to regex engine
+
     try:
         with open(filepath, encoding="utf-8") as f:
             raw_lines = f.readlines()
@@ -927,6 +938,10 @@ def main() -> None:
         "--fix", action="store_true",
         help=f"Auto-fix fixable rules ({', '.join(sorted(FIXABLE_RULES))}), then re-lint",
     )
+    parser.add_argument(
+        "--legacy", action="store_true",
+        help="Use regex-based linter instead of AST-based engine",
+    )
     args = parser.parse_args()
 
     files = resolve_files(args.paths)
@@ -948,7 +963,7 @@ def main() -> None:
     all_diags: list[Diagnostic] = []
     try:
         for filepath in files:
-            all_diags.extend(lint_file(db, filepath))
+            all_diags.extend(lint_file(db, filepath, legacy=args.legacy))
     finally:
         db.close()
 
