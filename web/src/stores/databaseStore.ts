@@ -1,7 +1,9 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { DatabaseStore } from "../types/database";
 
-export const useDatabaseStore = create<DatabaseStore>((set, get) => ({
+export const useDatabaseStore = create<DatabaseStore>()(persist(
+  (set, get) => ({
   // --- State ---
   accessTables: [],
   zohoForms: [],
@@ -73,4 +75,14 @@ export const useDatabaseStore = create<DatabaseStore>((set, get) => ({
   removeCsvFile: (name) => {
     set({ csvFiles: get().csvFiles.filter((f) => f.name !== name) });
   },
-}));
+}),
+  {
+    name: "forgeds-database-mappings",
+    partialize: (state) => ({
+      accessTables: state.accessTables,
+      zohoForms: state.zohoForms,
+      tableMappings: state.tableMappings,
+      selectedMappingId: state.selectedMappingId,
+    }),
+  },
+));

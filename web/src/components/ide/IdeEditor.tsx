@@ -4,6 +4,7 @@ import type { editor as monacoEditor } from "monaco-editor";
 import { useDelugeLanguage } from "../../hooks/useMonaco";
 import { useMonaco } from "@monaco-editor/react";
 import { useIdeStore } from "../../stores/ideStore";
+import { useToastStore } from "../../stores/toastStore";
 import { DELUGE_THEME } from "../../lib/deluge-language";
 import type { LintDiagnostic, InspectorData } from "../../types/ide";
 
@@ -83,6 +84,22 @@ export function IdeEditor() {
   const closeTab = useIdeStore((s) => s.closeTab);
   const updateTabContent = useIdeStore((s) => s.updateTabContent);
   const setInspectorData = useIdeStore((s) => s.setInspectorData);
+  const saveFile = useIdeStore((s) => s.saveFile);
+
+  /** Close a tab, prompting to save if dirty. */
+  const handleCloseTab = useCallback(
+    (tabId: string) => {
+      const tab = tabs.find((t) => t.id === tabId);
+      if (tab?.isDirty) {
+        const choice = window.confirm(
+          `"${tab.name}" has unsaved changes.\n\nPress OK to discard, or Cancel to go back.`,
+        );
+        if (!choice) return;
+      }
+      closeTab(tabId);
+    },
+    [tabs, closeTab],
+  );
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) ?? null,
@@ -118,6 +135,28 @@ export function IdeEditor() {
   const handleEditorMount: OnMount = useCallback(
     (editor) => {
       editorRef.current = editor;
+
+      // Ctrl+S / Cmd+S: save the active file
+      editor.addAction({
+        id: "forgeds-save-file",
+        label: "Save File",
+        keybindings: [
+          // Monaco KeyMod/KeyCode values: CtrlCmd = 2048, KeyS = 49
+          2048 | 49,
+        ],
+        run: () => {
+          const { activeTabId: tabId, tabs: currentTabs } = useIdeStore.getState();
+          if (!tabId) return;
+          const tab = currentTabs.find((t) => t.id === tabId);
+          if (!tab?.isDirty) return;
+
+          useIdeStore.getState().saveFile(tabId).then((ok) => {
+            if (ok) {
+              useToastStore.getState().success("Saved", tab.name);
+            }
+          });
+        },
+      });
 
       // Click-to-inspect: on cursor position change, look up the word
       editor.onDidChangeCursorPosition((e) => {
@@ -251,7 +290,7 @@ export function IdeEditor() {
               <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  closeTab(tab.id);
+                  handleCloseTab(tab.id);
                 }}
                 style={{
                   marginLeft: 4,

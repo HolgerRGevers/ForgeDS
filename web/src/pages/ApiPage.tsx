@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ApiAiPrompt,
   ApiCodePreview,
@@ -7,6 +8,7 @@ import {
 } from "../components/api";
 import { useApiStore } from "../stores/apiStore";
 import { useBridgeStore } from "../stores/bridgeStore";
+import { useIdeStore } from "../stores/ideStore";
 
 /* ------------------------------------------------------------------ */
 /*  Export modal                                                       */
@@ -15,9 +17,11 @@ import { useBridgeStore } from "../stores/bridgeStore";
 function ExportModal({
   instructions,
   onClose,
+  onOpenInIde,
 }: {
   instructions: string;
   onClose: () => void;
+  onOpenInIde?: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -39,7 +43,16 @@ function ExportModal({
             {instructions}
           </pre>
         </div>
-        <div className="flex justify-end border-t border-gray-700 px-6 py-3">
+        <div className="flex justify-end gap-2 border-t border-gray-700 px-6 py-3">
+          {onOpenInIde && (
+            <button
+              type="button"
+              onClick={onOpenInIde}
+              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+            >
+              Open in IDE
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -98,10 +111,17 @@ export default function ApiPage() {
   const connect = useBridgeStore((s) => s.connect);
   const send = useBridgeStore((s) => s.send);
 
+  const navigate = useNavigate();
+
   const [exportInstructions, setExportInstructions] = useState<string | null>(
     null,
   );
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportedFile, setExportedFile] = useState<{
+    name: string;
+    path: string;
+    content: string;
+  } | null>(null);
 
   // On mount: connect to bridge and load API list
   useEffect(() => {
@@ -135,11 +155,21 @@ export default function ApiPage() {
     if (!draftApi) return;
 
     setExportError(null);
+    setExportedFile(null);
     try {
       const response = await send("export_api", {
         apiId: draftApi.id,
         api: draftApi as unknown as Record<string, unknown>,
       });
+
+      // Capture exported file for "Open in IDE"
+      const file = response.file as
+        | { name: string; path: string; content: string }
+        | undefined;
+      if (file) {
+        setExportedFile(file);
+      }
+
       if (response.instructions && typeof response.instructions === "string") {
         setExportInstructions(response.instructions);
       } else {
@@ -153,6 +183,20 @@ export default function ApiPage() {
       setExportError(message);
     }
   }, [draftApi, send]);
+
+  // Open exported file in the IDE editor
+  const handleOpenInIde = useCallback(() => {
+    if (!exportedFile) return;
+    useIdeStore.getState().openTab({
+      id: exportedFile.path,
+      name: exportedFile.name,
+      path: exportedFile.path,
+      content: exportedFile.content,
+      language: "deluge",
+      isDirty: false,
+    });
+    navigate("/ide");
+  }, [exportedFile, navigate]);
 
   // Whether we're in edit/create mode (draft exists)
   const hasDraft = draftApi !== null && isCreating;
@@ -217,6 +261,7 @@ export default function ApiPage() {
         <ExportModal
           instructions={exportInstructions}
           onClose={() => setExportInstructions(null)}
+          onOpenInIde={exportedFile ? handleOpenInIde : undefined}
         />
       )}
     </div>

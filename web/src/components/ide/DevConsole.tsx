@@ -71,8 +71,11 @@ function LintTab({ diagnostics, onFileClick }: LintTabProps) {
       {/* Diagnostics list */}
       <div className="flex-1 overflow-y-auto">
         {sorted.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-gray-500">
-            No diagnostics
+          <div className="flex h-full items-center justify-center text-center text-sm text-gray-500">
+            <div>
+              <p>No diagnostics</p>
+              <p className="mt-1 text-xs text-gray-600">Click "Lint" in the toolbar to run a check</p>
+            </div>
           </div>
         ) : (
           sorted.map((d, i) => (
@@ -280,8 +283,11 @@ function AiChatTab({ bridgeStatus, onSend }: AiChatTabProps) {
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 space-y-2">
         {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center text-sm text-gray-500">
-            Start a conversation
+          <div className="flex h-full items-center justify-center text-center text-sm text-gray-500">
+            <div>
+              <p>Ask a question about your Deluge code</p>
+              <p className="mt-1 text-xs text-gray-600">e.g. "How do I add a null guard for Amount_ZAR?"</p>
+            </div>
           </div>
         )}
         {messages.map((msg) => (

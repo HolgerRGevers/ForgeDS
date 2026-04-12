@@ -106,9 +106,15 @@ export function InspectorPanel() {
           </span>
         </div>
         <div className="flex flex-1 items-center justify-center px-4">
-          <p className="text-center text-sm text-gray-500">
-            Select an element to inspect
-          </p>
+          <div className="text-center">
+            <p className="text-sm text-gray-500">
+              Select an element to inspect
+            </p>
+            <p className="mt-2 text-xs text-gray-600">
+              Click a node in the .ds Tree explorer or place your cursor on a
+              symbol in the editor.
+            </p>
+          </div>
         </div>
       </div>
     );
