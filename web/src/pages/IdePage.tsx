@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useBlocker } from "react-router-dom";
 import {
   AppTreeExplorer,
   DevConsole,
@@ -7,7 +8,7 @@ import {
   RepoExplorer,
   SourceControlPanel,
 } from "../components/ide";
-import { useIdeStore } from "../stores/ideStore";
+import { useIdeStore, consumeTabsRestored } from "../stores/ideStore";
 import { useBridgeStore } from "../stores/bridgeStore";
 import type { AppStructure, InspectorData, TreeNode } from "../types/ide";
 
@@ -47,6 +48,26 @@ export default function IdePage() {
   const addConsoleEntry = useIdeStore((s) => s.addConsoleEntry);
   const setDiagnostics = useIdeStore((s) => s.setDiagnostics);
   const setInspectorData = useIdeStore((s) => s.setInspectorData);
+
+  const hasDirtyTabs = useIdeStore((s) => s.hasDirtyTabs);
+  const dirty = hasDirtyTabs();
+
+  // Block in-app navigation when there are unsaved changes
+  useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && currentLocation.pathname !== nextLocation.pathname &&
+      !window.confirm("You have unsaved changes. Leave this page?"),
+  );
+
+  // Block browser close / external navigation
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
 
   // Track which tabs have had their content loaded
   const loadedTabsRef = useRef<Set<string>>(new Set());
@@ -116,6 +137,43 @@ export default function IdePage() {
     // Only run when status transitions to connected
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  // Staleness check: when bridge connects after a page refresh, re-fetch
+  // content for restored (non-dirty) tabs and silently update if changed.
+  const hasDoneStaleCheck = useRef(false);
+  useEffect(() => {
+    if (status !== "connected" || hasDoneStaleCheck.current) return;
+    if (!consumeTabsRestored()) return;
+    hasDoneStaleCheck.current = true;
+
+    const currentTabs = useIdeStore.getState().tabs;
+    for (const tab of currentTabs) {
+      if (tab.isDirty || !tab.content) continue;
+      loadedTabsRef.current.add(tab.id); // mark as loaded so the next effect skips it
+      send("read_file", { file_path: tab.path })
+        .then((response) => {
+          const data = response as unknown as { content: string };
+          if (data.content && data.content !== tab.content) {
+            updateTabContent(tab.id, data.content);
+            // Clear the dirty flag the content update just set — this is a
+            // silent refresh, not a user edit.
+            const { tabs: latest } = useIdeStore.getState();
+            useIdeStore.setState({
+              tabs: latest.map((t) =>
+                t.id === tab.id ? { ...t, isDirty: false } : t,
+              ),
+            });
+            addConsoleEntry({
+              type: "info",
+              message: `Refreshed ${tab.name} — file changed on disk`,
+            });
+          }
+        })
+        .catch(() => {
+          // File may have been deleted; leave tab as-is
+        });
+    }
+  }, [status, send, updateTabContent, addConsoleEntry]);
 
   // Critical #1: Load file content into new tabs via read_file bridge call
   useEffect(() => {

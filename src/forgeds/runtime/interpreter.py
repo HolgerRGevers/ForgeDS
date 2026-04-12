@@ -22,6 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from forgeds._shared.diagnostics import Severity, Diagnostic, build_ai_prompt
 from forgeds.lang import ast_nodes as ast
 from forgeds.lang.parser import parse_source
 from forgeds.runtime.environment import Environment
@@ -70,7 +71,7 @@ class ExecutionResult:
     info_log: list[str] = field(default_factory=list)
     alert_log: list[str] = field(default_factory=list)
     cancelled: bool = False
-    errors: list[str] = field(default_factory=list)
+    errors: list[Diagnostic] = field(default_factory=list)
 
 
 # ============================================================
@@ -84,6 +85,7 @@ class Interpreter(ast.Visitor):
         self,
         input_data: dict[str, Any] | None = None,
         zoho_overrides: dict[str, Any] | None = None,
+        filename: str = "<script>",
     ) -> None:
         self.env = Environment(input_data)
         self.side_effects = SideEffectLog()
@@ -91,7 +93,9 @@ class Interpreter(ast.Visitor):
         self.alert_log: list[str] = []
         self._return_value: Any = None
         self._cancelled = False
-        self._errors: list[str] = []
+        self._errors: list[Diagnostic] = []
+        self._filename = filename
+        self._source_lines: list[str] = []
 
         # Apply zoho overrides
         if zoho_overrides:
@@ -101,16 +105,51 @@ class Interpreter(ast.Visitor):
         # Pre-define input as an accessible object
         self.env.define("input", _InputProxy(self.env))
 
+    def _runtime_diag(self, line: int, message: str, technical: str = "") -> Diagnostic:
+        """Build a Diagnostic for a runtime error."""
+        src_line = ""
+        if self._source_lines and 0 < line <= len(self._source_lines):
+            src_line = self._source_lines[line - 1]
+        return Diagnostic(
+            file=self._filename, line=line, rule="RT001",
+            severity=Severity.ERROR, message=message,
+            ai_prompt=build_ai_prompt(
+                file=self._filename, line=line, rule="RT001",
+                message=message, source_line=src_line,
+                context="This is a runtime error from the local Deluge interpreter.",
+            ),
+            technical=technical or f"InterpreterError at line {line}: {message}",
+            source_line=src_line,
+        )
+
     # ----------------------------------------------------------
     # Public API
     # ----------------------------------------------------------
 
     def execute(self, source: str) -> ExecutionResult:
         """Parse and execute a Deluge script."""
+        self._source_lines = source.splitlines()
+
         try:
             tree = parse_source(source)
         except Exception as e:
-            return ExecutionResult(errors=[f"Parse error: {e}"])
+            from forgeds.lang.lexer import LexError
+            line = getattr(e, "line", 1)
+            if isinstance(e, LexError):
+                line = e.line
+            elif hasattr(e, "token"):
+                line = e.token.line
+            return ExecutionResult(errors=[Diagnostic(
+                file=self._filename, line=line, rule="RT000",
+                severity=Severity.ERROR,
+                message=f"Script could not be parsed: {e}",
+                ai_prompt=build_ai_prompt(
+                    file=self._filename, line=line, rule="RT000",
+                    message=str(e),
+                    context="This is a parse error — the script cannot be executed.",
+                ),
+                technical=f"{type(e).__name__}: {e}",
+            )])
 
         try:
             self.visit(tree)
@@ -119,9 +158,10 @@ class Interpreter(ast.Visitor):
         except CancelSubmitSignal:
             self._cancelled = True
         except InterpreterError as e:
-            self._errors.append(str(e))
+            self._errors.append(self._runtime_diag(e.line, str(e)))
         except Exception as e:
-            self._errors.append(f"Runtime error: {e}")
+            self._errors.append(self._runtime_diag(0, f"Unexpected runtime error: {e}",
+                                                   technical=f"{type(e).__name__}: {e}"))
 
         return ExecutionResult(
             return_value=self._return_value,
@@ -138,9 +178,11 @@ class Interpreter(ast.Visitor):
         source: str,
         input_data: dict[str, Any] | None = None,
         zoho_overrides: dict[str, Any] | None = None,
+        filename: str = "<script>",
     ) -> ExecutionResult:
         """Convenience: create interpreter, execute, return result."""
-        interp = Interpreter(input_data=input_data, zoho_overrides=zoho_overrides)
+        interp = Interpreter(input_data=input_data, zoho_overrides=zoho_overrides,
+                             filename=filename)
         return interp.execute(source)
 
     # ----------------------------------------------------------
@@ -378,7 +420,7 @@ class Interpreter(ast.Visitor):
             return left if _truthy(left) else self.visit(node.right)
 
         right = self.visit(node.right)
-        return _binary_op(left, node.op, right)
+        return _binary_op(left, node.op, right, node.span.start_line)
 
     def visit_UnaryExpr(self, node: ast.UnaryExpr) -> Any:
         operand = self.visit(node.operand)
@@ -513,7 +555,7 @@ def _truthy(value: Any) -> bool:
     return True
 
 
-def _binary_op(left: Any, op: str, right: Any) -> Any:
+def _binary_op(left: Any, op: str, right: Any, line: int = 0) -> Any:
     """Evaluate a binary operation."""
     # String concatenation
     if op == "+" and (isinstance(left, str) or isinstance(right, str)):
@@ -529,12 +571,12 @@ def _binary_op(left: Any, op: str, right: Any) -> Any:
     if op == "/":
         r = _num(right)
         if r == 0:
-            raise InterpreterError("Division by zero")
+            raise InterpreterError("Division by zero", line)
         return _num(left) / r
     if op == "%":
         r = _num(right)
         if r == 0:
-            raise InterpreterError("Modulo by zero")
+            raise InterpreterError("Modulo by zero", line)
         return _num(left) % r
 
     # Comparison

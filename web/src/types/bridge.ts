@@ -4,7 +4,9 @@ export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 /** Outbound message sent to the bridge server. */
 export interface BridgeMessage {
   id: string;
-  type: "refine_prompt" | "build_project" | "lint_check" | "get_status";
+  type: "lint_check" | "get_status" | "parse_ds" | "read_file" | "write_file"
+    | "inspect_element" | "ai_chat" | "get_schema" | "run_validation"
+    | "mock_upload" | "generate_api_code" | "get_api_list" | "export_api";
   data: Record<string, unknown>;
 }
 

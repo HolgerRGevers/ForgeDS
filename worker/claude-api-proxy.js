@@ -17,7 +17,32 @@ const MODEL = "claude-sonnet-4-20250514";
 const MAX_TOKENS_REFINE = 4096;
 const MAX_TOKENS_BUILD = 16384;
 
-const CORS_HEADERS = {
+/**
+ * Build CORS headers. When ALLOWED_ORIGIN is set in the worker env, restrict
+ * the Access-Control-Allow-Origin to that single origin; otherwise fall back
+ * to the wildcard (development).
+ */
+let _corsHeaders = null;
+function getCorsHeaders(env, origin) {
+  // Cache for the lifetime of one request (workers are single-request).
+  if (_corsHeaders) return _corsHeaders;
+  const allowed = (env && env.ALLOWED_ORIGIN) || "*";
+  const acao =
+    allowed === "*"
+      ? "*"
+      : (origin || "") === allowed
+        ? allowed
+        : "null";
+  _corsHeaders = {
+    "Access-Control-Allow-Origin": acao,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    ...(allowed !== "*" && { Vary: "Origin" }),
+  };
+  return _corsHeaders;
+}
+// Fallback for module-level usage before fetch() runs — overwritten per request.
+let CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -311,6 +336,11 @@ async function handleBuild(body, apiKey) {
 
 export default {
   async fetch(request, env) {
+    // Compute CORS headers for this request (respects ALLOWED_ORIGIN env var).
+    _corsHeaders = null; // reset cache from prior invocation
+    const origin = request.headers.get("Origin") || "";
+    CORS_HEADERS = getCorsHeaders(env, origin);
+
     // CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });

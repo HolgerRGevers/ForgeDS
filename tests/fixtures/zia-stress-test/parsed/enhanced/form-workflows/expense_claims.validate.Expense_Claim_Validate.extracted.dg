@@ -1,0 +1,42 @@
+// ============================================================
+// Script:   expense_claims.validate.Expense_Claim_Validate.extracted.dg
+// Name:     Expense Claim Validate
+// Location: expense_claims > on edit > on validate
+// Trigger:  on edit
+// Purpose:  Extracted from .ds export
+// Version:  v2.1 (extracted)
+// ============================================================
+
+if (thisapp.permissions.isUserInRole("Finance Manager"))
+{
+	// Threshold lookup with null guard (DG005 target)
+	thresholdRec = approval_thresholds[tier_name == "Tier 1" && Active == true];
+
+	if (thresholdRec != null)
+	{
+		// ifnull with 999.99 fallback — DG014 validates this value
+		thresholdAmount = ifnull(thresholdRec.max_amount_zar, 999.99);
+	}
+	else
+	{
+		thresholdAmount = 999.99;
+	}
+
+	// DELIBERATE DG013 TRAP: mixed && and || without full parentheses
+	// Creator evaluates || before && — this is ambiguous
+	// Linter should flag: "Mixed && and || — add parentheses"
+	if (input.amount_zar > thresholdAmount && input.status == "Pending" || input.Requires_Dual_Approval == true)
+	{
+		cancel submit;
+		alert "This claim exceeds your approval threshold. Requires dual approval.";
+	}
+
+	// Correct version would be:
+	// if ((input.amount_zar > thresholdAmount && input.status == "Pending") || input.Requires_Dual_Approval == true)
+
+	// Status update — inside {} (DG011 target)
+	if (input.amount_zar <= thresholdAmount)
+	{
+		input.status = "Pending Line Manager";
+	}
+}

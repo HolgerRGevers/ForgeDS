@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuthStore } from "../stores/authStore";
+import { exportProjectState, importProjectState } from "../services/project-state";
+import { useToastStore } from "../stores/toastStore";
 
 export function UserMenu() {
   const { user, logout } = useAuthStore();
@@ -66,6 +68,39 @@ export function UserMenu() {
             </svg>
             GitHub Profile
           </a>
+          <div className="border-b border-gray-700" />
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              exportProjectState();
+              useToastStore.getState().success("Exported", "Project state downloaded as JSON");
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export Project State
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              importProjectState()
+                .then((msg) => useToastStore.getState().success("Imported", msg))
+                .catch((err) =>
+                  useToastStore.getState().error("Import failed", err instanceof Error ? err.message : String(err)),
+                );
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import Project State
+          </button>
+          <div className="border-b border-gray-700" />
           <button
             type="button"
             onClick={() => {

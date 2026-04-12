@@ -20,7 +20,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from forgeds._shared.diagnostics import Severity, Diagnostic
+from forgeds._shared.diagnostics import Severity, Diagnostic, build_ai_prompt
 from forgeds.lang import ast_nodes as ast
 from forgeds.lang.tokens import SourceSpan
 
@@ -72,8 +72,19 @@ def detect_file_type(filepath: str) -> str:
 # Helper
 # ============================================================
 
-def _diag(filename: str, line: int, severity: Severity, code: str, message: str) -> Diagnostic:
-    return Diagnostic(file=filename, line=line, rule=code, severity=severity, message=message)
+def _diag(
+    filename: str, line: int, severity: Severity, code: str, message: str,
+    source_line: str = "", col: int = 0,
+) -> Diagnostic:
+    ai_prompt = build_ai_prompt(
+        file=filename, line=line, rule=code,
+        message=message, source_line=source_line,
+    )
+    return Diagnostic(
+        file=filename, line=line, rule=code, severity=severity,
+        message=message, ai_prompt=ai_prompt,
+        source_line=source_line, col=col,
+    )
 
 
 def _expr_to_dotted(expr: ast.Expr) -> str:
@@ -106,11 +117,12 @@ def _collect_string_values(expr: ast.Expr) -> list[str]:
 class ASTLinter(ast.Visitor):
     """Walk the AST and collect lint diagnostics for DG001–DG021."""
 
-    def __init__(self, db: Any, filename: str, file_type: str) -> None:
+    def __init__(self, db: Any, filename: str, file_type: str, source: str = "") -> None:
         self.db = db
         self.filename = filename
         self.file_type = file_type
         self.diagnostics: list[Diagnostic] = []
+        self._source_lines = source.splitlines() if source else []
 
         # DG005 tracking: query vars and their null-guard status
         self._query_vars: dict[str, int] = {}  # var_name -> assignment line
@@ -134,7 +146,8 @@ class ASTLinter(ast.Visitor):
         ))
 
     def _emit(self, line: int, severity: Severity, code: str, message: str) -> None:
-        self.diagnostics.append(_diag(self.filename, line, severity, code, message))
+        src = self._source_lines[line - 1] if 0 < line <= len(self._source_lines) else ""
+        self.diagnostics.append(_diag(self.filename, line, severity, code, message, source_line=src))
 
     # ----------------------------------------------------------
     # Program (root) — file-scoped rules
@@ -161,14 +174,15 @@ class ASTLinter(ast.Visitor):
             self.visit(stmt)
 
     def visit_IfStmt(self, node: ast.IfStmt) -> None:
-        self.visit(node.condition)
-
-        # DG005: detect null guard pattern: if (var != null)
+        # DG005: detect null guard BEFORE visiting condition,
+        # so that glRec.count() inside if(glRec != null && glRec.count() > 0)
+        # doesn't trigger a false positive.
         guarded = self._detect_null_guard(node.condition)
         if guarded:
             self._guarded_vars.add(guarded)
             self._guard_stack.append(guarded)
 
+        self.visit(node.condition)
         self.visit(node.body)
 
         if guarded:
@@ -231,10 +245,18 @@ class ASTLinter(ast.Visitor):
                                "Added_User only accepts zoho.loginuser or zoho.adminuser. "
                                "zoho.adminuserid (email) is rejected by Creator. See discovery-log.md DL-001.")
 
-        # DG005: Track query assignments (var = FormName[criteria] or var = name[criteria])
+        # DG005: Track query assignments (var = FormName[criteria] or var = table[criteria])
         if isinstance(node.target, ast.Identifier) and node.op == "=":
-            if isinstance(node.value, (ast.FormQuery, ast.IndexAccess)):
+            if isinstance(node.value, ast.FormQuery):
                 self._query_vars[node.target.name] = line
+            elif isinstance(node.value, ast.IndexAccess):
+                # IndexAccess with an identifier object that looks like a table name
+                # (regex linter matches any_name[criteria], so we do too)
+                if isinstance(node.value.object, ast.Identifier):
+                    obj_name = node.value.object.name
+                    # Skip common non-table names
+                    if obj_name not in ("insert", "into", "if", "for", "while"):
+                        self._query_vars[node.target.name] = line
 
         # DG014: threshold assignment
         if isinstance(node.target, ast.Identifier):
@@ -247,6 +269,9 @@ class ASTLinter(ast.Visitor):
                                f"expected {self._threshold_fallback} (tier 1) or "
                                f"{self._dual_threshold_fallback} (dual).")
 
+        # Visit target (for DG004 on input.Field assignments, DG002/DG018 etc.)
+        if isinstance(node.target, ast.FieldAccess):
+            self.visit(node.target)
         self.visit(node.value)
 
     # ----------------------------------------------------------
@@ -605,15 +630,58 @@ def lint_source(db: Any, filename: str, source: str, file_type: str | None = Non
         file_type = detect_file_type(filename)
 
     try:
-        from forgeds.lang.parser import parse_source, Parser
-        from forgeds.lang.lexer import Lexer
+        from forgeds.lang.parser import Parser
+        from forgeds.lang.lexer import Lexer, LexError
         tokens = Lexer(source).tokenize()
         parser = Parser(tokens)
         tree = parser.parse()
+    except LexError as e:
+        src_lines = source.splitlines()
+        src_line = src_lines[e.line - 1] if 0 < e.line <= len(src_lines) else ""
+        return [Diagnostic(
+            file=filename, line=e.line, rule="DG000", severity=Severity.ERROR,
+            message=f"Cannot read script: {e}",
+            ai_prompt=build_ai_prompt(
+                file=filename, line=e.line, rule="DG000",
+                message=str(e), source_line=src_line,
+                context="This is a lexer error — the tokenizer could not process this character or literal.",
+            ),
+            technical=f"LexError at line {e.line}, col {e.col}: {e}",
+            source_line=src_line, col=e.col,
+        )]
     except Exception as e:
-        return [_diag(filename, 1, Severity.ERROR, "DG000", f"Parse error: {e}")]
+        return [Diagnostic(
+            file=filename, line=1, rule="DG000", severity=Severity.ERROR,
+            message=f"Script could not be parsed: {e}",
+            ai_prompt=build_ai_prompt(
+                file=filename, line=1, rule="DG000",
+                message=str(e),
+                context="This is a parse error — the script structure is not valid Deluge.",
+            ),
+            technical=f"{type(e).__name__}: {e}",
+        )]
 
-    linter = ASTLinter(db, filename, file_type)
+    # Convert any parser errors (recovered via panic mode) into diagnostics
+    parse_diags: list[Diagnostic] = []
+    if parser.errors:
+        src_lines = source.splitlines()
+        for pe in parser.errors:
+            tok = pe.token
+            src_line = src_lines[tok.line - 1] if 0 < tok.line <= len(src_lines) else ""
+            parse_diags.append(Diagnostic(
+                file=filename, line=tok.line, rule="DG000", severity=Severity.ERROR,
+                message=f"Syntax error: {pe}",
+                ai_prompt=build_ai_prompt(
+                    file=filename, line=tok.line, rule="DG000",
+                    message=str(pe), source_line=src_line,
+                    context=f"Token: {tok.type.name} ({tok.value!r}). The parser recovered and continued, but this section may be misinterpreted.",
+                ),
+                technical=f"ParseError at token {tok.type.name} ({tok.value!r}), line {tok.line} col {tok.col}",
+                source_line=src_line, col=tok.col,
+            ))
+        # Still run linter on recovered AST, append parse errors at the end
+
+    linter = ASTLinter(db, filename, file_type, source=source)
     linter.visit(tree)
 
     # DG017: Also check for reserved words used as variables via raw source,
@@ -621,9 +689,17 @@ def lint_source(db: Any, filename: str, source: str, file_type: str | None = Non
     # reaching Assignment nodes (e.g. `return = 42;` is a parse error).
     _check_dg017_raw(db, filename, source, linter.diagnostics)
 
+    # Merge parse errors (if any) with lint diagnostics, but suppress
+    # DG000 on lines that already have a more specific rule (e.g. DG017
+    # for `return = 42;` which the parser can't represent as Assignment).
+    all_diags = linter.diagnostics
+    if parse_diags:
+        covered_lines = {d.line for d in all_diags}
+        all_diags.extend(d for d in parse_diags if d.line not in covered_lines)
+
     # Sort by line number
-    linter.diagnostics.sort(key=lambda d: d.line)
-    return linter.diagnostics
+    all_diags.sort(key=lambda d: d.line)
+    return all_diags
 
 
 def _check_dg017_raw(db: Any, filename: str, source: str, diags: list[Diagnostic]) -> None:

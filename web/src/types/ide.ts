@@ -145,6 +145,9 @@ export interface IdeStore {
   updateTabContent: (tabId: string, content: string) => void;
   setDiagnostics: (diagnostics: LintDiagnostic[]) => void;
 
+  saveFile: (tabId: string) => Promise<boolean>;
+  hasDirtyTabs: () => boolean;
+
   setInspectorData: (data: InspectorData | null) => void;
 
   addConsoleEntry: (entry: Omit<ConsoleEntry, "id" | "timestamp">) => void;

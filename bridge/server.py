@@ -12,7 +12,6 @@ from websockets.asyncio.server import ServerConnection
 
 from bridge.handlers import (
     handle_ai_chat,
-    handle_build_project,
     handle_export_api,
     handle_generate_api_code,
     handle_get_api_list,
@@ -23,12 +22,21 @@ from bridge.handlers import (
     handle_mock_upload,
     handle_parse_ds,
     handle_read_file,
-    handle_refine_prompt,
     handle_run_validation,
+    handle_write_file,
 )
 
 HOST = "localhost"
 PORT = 9876
+
+# Origins allowed to connect via WebSocket.  Restricting this prevents
+# cross-site WebSocket hijacking (CSWSH) from arbitrary websites.
+_ALLOWED_WS_ORIGINS = [
+    "http://localhost:5173",    # Vite dev server
+    "http://localhost:4173",    # Vite preview
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:4173",
+]
 
 logger = logging.getLogger("bridge")
 
@@ -55,19 +63,7 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
     data = msg.get("data", {})
 
     try:
-        if msg_type == "refine_prompt":
-            result = await handle_refine_prompt(data)
-            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
-
-        elif msg_type == "build_project":
-            # Streaming: send chunks, then a final stream_end
-            async def send_stream(chunk_data: dict) -> None:
-                await _send_json(ws, {"id": msg_id, "type": "stream", "data": chunk_data})
-
-            result = await handle_build_project(data, send_stream)
-            await _send_json(ws, {"id": msg_id, "type": "stream_end", "data": {"result": result}})
-
-        elif msg_type == "lint_check":
+        if msg_type == "lint_check":
             result = await handle_lint_check(data)
             await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
 
@@ -81,6 +77,10 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
 
         elif msg_type == "read_file":
             result = await handle_read_file(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "write_file":
+            result = await handle_write_file(data)
             await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
 
         elif msg_type == "inspect_element":
@@ -156,7 +156,7 @@ async def run_server() -> None:
         _handler,
         HOST,
         PORT,
-        origins=None,  # Allow connections from any origin (localhost only)
+        origins=_ALLOWED_WS_ORIGINS,
     ):
         await asyncio.Future()  # run forever
 
