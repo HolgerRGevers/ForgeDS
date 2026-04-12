@@ -24,7 +24,7 @@ pip install git+https://github.com/HolgerRGevers/ForgeDS.git
 
 | Tool | What it does |
 |------|-------------|
-| `forgeds-lint` | 21 rules (DG001–DG021), AST-based with regex fallback |
+| `forgeds-lint` | 21 rules (DG001–DG021), AST-based with three-layer diagnostics |
 | `forgeds-lint-access` | 8 rules (AV001–AV008) for Access SQL migration scripts |
 | `forgeds-lint-hybrid` | 16 rules (HY001–HY016) for cross-environment validation |
 | `forgeds-build-db` | Build `deluge_lang.db` — SQLite reference data (200+ functions, types, operators) |
@@ -51,6 +51,10 @@ forgeds-build-access-db
 # Lint your Deluge scripts
 forgeds-lint src/deluge/
 forgeds-lint --fix src/deluge/        # auto-fix DG006, DG007, DG008
+forgeds-lint --json src/deluge/       # JSON output for tooling
+
+# Run a script locally (no Zoho needed)
+python -m forgeds.runtime script.dg --input '{"Name": "Test"}'
 
 # Parse and manipulate .ds exports
 forgeds-parse-ds exports/MyApp.ds --extract-scripts src/deluge/
@@ -94,8 +98,14 @@ ForgeDS includes a formal language core for Deluge, built from scratch with no e
      ▼            ▼            ▼
   ┌───────┐  ┌────────┐  ┌─────────┐
   │ Lint  │  │Codegen │  │  Local  │   src/forgeds/compiler/
-  │Engine │  │(.ds)   │  │Interp.  │   lint_rules.py
-  └───────┘  └────────┘  └─────────┘   src/forgeds/runtime/
+  │Engine │  │(.dg)   │  │Interp.  │   lint_rules.py, codegen_deluge.py
+  └───┬───┘  └────────┘  └────┬────┘   src/forgeds/runtime/
+      │                       │
+      ▼                       ▼
+  ┌───────────────────────────────┐
+  │    Three-Layer Diagnostics    │   src/forgeds/_shared/
+  │  message │ ai_prompt │ tech  │   diagnostics.py
+  └───────────────────────────────┘
 ```
 
 ### Design Decisions
@@ -106,18 +116,49 @@ ForgeDS includes a formal language core for Deluge, built from scratch with no e
 
 **Two lexer/parser pairs**. Deluge (`.dg` script files) and DS (`.ds` packaging format) are different languages. Both produce AST nodes, unified at the Program level.
 
+### Error Model
+
+Every diagnostic serves two audiences: the user and the user's AI assistant.
+
+Each error carries three layers of information. The first is a plain explanation — what happened and what to do about it, written for someone who may not know Deluge syntax. The second is a structured AI prompt the user can copy directly into their assistant; it includes the file, line, rule, source code, and enough context for the AI to diagnose and fix without follow-up questions. The third is technical detail — token positions, AST node types, stack traces — hidden by default and available via `--verbose`.
+
+```
+  [1] ERROR  script.dg:10  DG005
+      Query result 'glRec' accessed without null guard.
+      10 | glCode = glRec.gl_code;
+      > Prompt for your AI:
+        I have a Deluge script issue in `script.dg` at line 10.
+        The tool reports [DG005]: Query result 'glRec' accessed without
+        null guard. Add: if (glRec != null && glRec.count() > 0)
+        The line of code is: `glCode = glRec.gl_code;`
+        What is the correct fix? Show me the corrected code.
+```
+
+The same structure applies to lexer errors, parser errors (with panic-mode recovery), and runtime interpreter errors. JSON output (`--json`) includes the `ai_prompt` field for web IDE integration.
+
+### Local Interpreter
+
+Deluge has no local runtime — it only executes on Zoho's servers. ForgeDS provides a tree-walking interpreter that evaluates the AST directly. Side effects (`sendmail`, `insert into`, `invokeUrl`) are logged stubs. `input.*` fields come from a provided JSON dict. This enables offline testing without a Zoho account.
+
+```bash
+python -m forgeds.runtime script.dg --input '{"Amount": 100, "Status": "Draft"}'
+```
+
+The interpreter reports runtime errors (division by zero, infinite loops) using the same three-layer diagnostic model.
+
 ---
 
 ## Package Structure
 
 ```
 src/forgeds/
-  lang/             Deluge language core (lexer, parser, AST)
-  compiler/         AST-based analysis and code generation
+  lang/             Deluge language core (lexer, parser, AST, ~35 node types)
+  compiler/         AST-based linter (21 rules) and code generation
+  runtime/          Local tree-walking interpreter with stubbed side effects
   core/             Zoho/Deluge tools (lint, build, scaffold, parse, edit)
   access/           Access/VBA migration tools
   hybrid/           Cross-environment tools (validate, upload)
-  _shared/          Shared internals (diagnostics, config)
+  _shared/          Shared internals (three-layer diagnostics, config)
 ```
 
 ## Project Configuration
