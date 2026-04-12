@@ -22,6 +22,43 @@ from bridge.enrichment import classify_pattern, log_error
 SendFn = Callable[[dict], Coroutine[Any, Any, None]]
 
 
+# ---------------------------------------------------------------------------
+# Secure path resolution — confine file operations to the project root
+# ---------------------------------------------------------------------------
+def _get_project_root() -> Path:
+    """Return the resolved project root, falling back to cwd."""
+    try:
+        from forgeds._shared.config import find_project_root
+        return find_project_root().resolve()
+    except Exception:
+        return Path.cwd().resolve()
+
+
+def _resolve_safe_path(file_path: str) -> tuple[Path | None, str | None]:
+    """Resolve *file_path* and ensure it stays within the project root.
+
+    Returns ``(resolved_path, None)`` on success or ``(None, error_msg)``
+    if the path is unsafe.
+    """
+    if not file_path:
+        return None, "No file_path specified."
+
+    # Reject explicit traversal segments
+    if ".." in Path(file_path).parts:
+        return None, "Path traversal (..) is not allowed."
+
+    root = _get_project_root()
+    resolved = Path(file_path).resolve()
+
+    # Also accept paths supplied relative to the project root
+    if not resolved.is_absolute():
+        resolved = (root / file_path).resolve()
+
+    if not resolved.is_relative_to(root):
+        return None, "Path is outside the project root."
+
+    return resolved, None
+
 
 # ---------------------------------------------------------------------------
 # lint_check -- real implementation (invokes forgeds-lint CLI)
@@ -549,20 +586,23 @@ _EXTENSION_LANGUAGE_MAP = {
 }
 
 async def handle_read_file(data: dict) -> dict:
-    """Read a file from disk and return its content with detected language."""
-    file_path = data.get("file_path", "")
+    """Read a file from disk and return its content with detected language.
 
-    if not file_path:
-        return {"error": "No file_path specified.", "content": "", "language": "text"}
+    The path is resolved and confined to the project root directory to
+    prevent arbitrary file reads.
+    """
+    resolved, err = _resolve_safe_path(data.get("file_path", ""))
+    if err:
+        return {"error": err, "content": "", "language": "text"}
 
-    ext = Path(file_path).suffix.lower()
+    ext = resolved.suffix.lower()
     language = _EXTENSION_LANGUAGE_MAP.get(ext, "text")
 
-    if not os.path.isfile(file_path):
-        return {"error": f"File not found: {file_path}", "content": "", "language": language}
+    if not resolved.is_file():
+        return {"error": f"File not found: {resolved}", "content": "", "language": language}
 
     try:
-        content = Path(file_path).read_text(encoding="utf-8")
+        content = resolved.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         return {"error": f"Failed to read file: {exc}", "content": "", "language": language}
 
@@ -575,24 +615,18 @@ async def handle_read_file(data: dict) -> dict:
 async def handle_write_file(data: dict) -> dict:
     """Write content to a file on disk.
 
-    Accepts ``file_path`` and ``content``.  The path is validated to prevent
-    directory-traversal attacks (``..`` segments are rejected).
+    Accepts ``file_path`` and ``content``.  The path is resolved and confined
+    to the project root directory to prevent arbitrary filesystem writes.
 
     Returns ``{"success": True, "bytes": <int>}`` on success or an error dict.
     """
-    file_path = data.get("file_path", "")
     content = data.get("content")
-
-    if not file_path:
-        return {"error": "No file_path specified."}
     if content is None:
         return {"error": "No content specified."}
 
-    resolved = Path(file_path).resolve()
-
-    # Reject path traversal — no ".." allowed in the raw input
-    if ".." in Path(file_path).parts:
-        return {"error": "Path traversal is not allowed."}
+    resolved, err = _resolve_safe_path(data.get("file_path", ""))
+    if err:
+        return {"error": err}
 
     try:
         # Create parent directories if needed

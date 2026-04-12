@@ -16,14 +16,29 @@
 
 const GITHUB = "https://github.com";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept",
-};
+/** Build CORS headers, restricting origin when ALLOWED_ORIGIN is set. */
+function corsHeaders(request, env) {
+  const allowed = env.ALLOWED_ORIGIN || "*";
+  const origin = request.headers.get("Origin") || "";
+  // When restricted, only echo back the origin if it matches.
+  const acao =
+    allowed === "*"
+      ? "*"
+      : origin === allowed
+        ? allowed
+        : "null";
+  return {
+    "Access-Control-Allow-Origin": acao,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Accept",
+    ...(allowed !== "*" && { Vary: "Origin" }),
+  };
+}
 
 export default {
   async fetch(request, env) {
+    const CORS_HEADERS = corsHeaders(request, env);
+
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });

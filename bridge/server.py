@@ -29,6 +29,15 @@ from bridge.handlers import (
 HOST = "localhost"
 PORT = 9876
 
+# Origins allowed to connect via WebSocket.  Restricting this prevents
+# cross-site WebSocket hijacking (CSWSH) from arbitrary websites.
+_ALLOWED_WS_ORIGINS = [
+    "http://localhost:5173",    # Vite dev server
+    "http://localhost:4173",    # Vite preview
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:4173",
+]
+
 logger = logging.getLogger("bridge")
 
 
@@ -147,7 +156,7 @@ async def run_server() -> None:
         _handler,
         HOST,
         PORT,
-        origins=None,  # Allow connections from any origin (localhost only)
+        origins=_ALLOWED_WS_ORIGINS,
     ):
         await asyncio.Future()  # run forever
 
