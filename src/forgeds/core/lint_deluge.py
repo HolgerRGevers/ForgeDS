@@ -147,8 +147,14 @@ class DelugeDB:
                 self.form_fields[form] = set()
             self.form_fields[form].add(row["field_link"])
 
-        # Expense_claims fields (used for input.X validation)
-        self.expense_fields: set[str] = self.form_fields.get("expense_claims", set())
+        # All known fields across all forms (used for input.X validation).
+        # input.X is form-context-specific in Deluge, but without knowing
+        # which form a script is bound to we accept any known field.
+        self.all_known_fields: set[str] = set()
+        for fields in self.form_fields.values():
+            self.all_known_fields.update(fields)
+        # Backwards-compat alias
+        self.expense_fields: set[str] = self.all_known_fields
 
         # Approval_history fields (used for insert validation)
         self.approval_history_fields: set[str] = self.form_fields.get(
@@ -482,15 +488,27 @@ def check_dg018(
     diags: list[Diagnostic] = []
     for match in re.finditer(r"\bzoho\.(\w+(?:\.\w+)*)", line):
         full_var = f"zoho.{match.group(1)}"
-        if full_var not in db.zoho_variable_names:
-            # Check if it's a banned variable (handled by DG002)
-            if full_var in db.banned_variables:
-                continue
-            diags.append(_diag(
-                filename, lineno, Severity.WARNING, "DG018",
-                f"Unknown Zoho variable '{full_var}'. "
-                f"Known: {', '.join(sorted(db.zoho_variable_names))}",
-            ))
+        if full_var in db.zoho_variable_names:
+            continue
+        # Check if it's a banned variable (handled by DG002)
+        if full_var in db.banned_variables:
+            continue
+        # Check if a known prefix is a valid variable (e.g. zoho.currentdate
+        # in zoho.currentdate.subDay — the suffix is a method call, not a var)
+        parts = full_var.split(".")
+        prefix_known = False
+        for end in range(2, len(parts)):
+            prefix = ".".join(parts[:end])
+            if prefix in db.zoho_variable_names:
+                prefix_known = True
+                break
+        if prefix_known:
+            continue
+        diags.append(_diag(
+            filename, lineno, Severity.WARNING, "DG018",
+            f"Unknown Zoho variable '{full_var}'. "
+            f"Known: {', '.join(sorted(db.zoho_variable_names))}",
+        ))
     return diags
 
 
@@ -754,13 +772,22 @@ def check_dg005(filename: str, lines: list[str]) -> list[Diagnostic]:
             if table_name not in ("insert", "into", "if", "for", "while"):
                 query_vars[var_name] = lineno
 
-        # Detect null guard: if (var != null
+        # Detect null guard: if (var != null   OR   if (var == null || ...) { return; }
         guard_match = re.search(r"if\s*\(\s*(\w+)\s*!=\s*null", line)
         if guard_match:
             var_name = guard_match.group(1)
             if var_name in query_vars:
                 guarded_vars.add(var_name)
                 guard_scopes.append((var_name, brace_depth))
+
+        # Also recognise early-return null guard: if (var == null || var.count() == 0) { return; }
+        # The == null check short-circuits, so .count() on the same line is safe.
+        eq_null_match = re.search(r"if\s*\(\s*(\w+)\s*==\s*null", line)
+        if eq_null_match:
+            eq_var = eq_null_match.group(1)
+            if eq_var in query_vars:
+                guarded_vars.add(eq_var)
+                guard_scopes.append((eq_var, brace_depth))
 
         # Detect unguarded access: var.field
         for var_name, assign_line in query_vars.items():
