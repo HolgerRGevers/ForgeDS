@@ -942,6 +942,26 @@ def main() -> None:
         "--legacy", action="store_true",
         help="Use regex-based linter instead of AST-based engine",
     )
+    parser.add_argument(
+        "--rich", action="store_true", default=True,
+        help="Rich formatted output with AI prompts (default)",
+    )
+    parser.add_argument(
+        "--plain", action="store_true",
+        help="Plain single-line output (legacy format)",
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Show technical details for each diagnostic",
+    )
+    parser.add_argument(
+        "--json", action="store_true",
+        help="Output diagnostics as JSON (for IDE integration)",
+    )
+    parser.add_argument(
+        "--no-ai", action="store_true",
+        help="Hide AI prompt sections",
+    )
     args = parser.parse_args()
 
     files = resolve_files(args.paths)
@@ -973,23 +993,40 @@ def main() -> None:
     elif args.quiet:
         all_diags = [d for d in all_diags if d.severity != Severity.INFO]
 
-    # Sort and output
+    # Sort
     severity_order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
     all_diags.sort(key=lambda d: (d.file, d.line, severity_order[d.severity]))
-    for diag in all_diags:
-        print(diag)
 
-    # Summary
+    # Output
+    if args.json:
+        import json as json_mod
+        print(json_mod.dumps([d.to_dict() for d in all_diags], indent=2))
+    elif args.plain:
+        for diag in all_diags:
+            print(diag)
+        errors = sum(1 for d in all_diags if d.severity == Severity.ERROR)
+        warnings = sum(1 for d in all_diags if d.severity == Severity.WARNING)
+        infos = sum(1 for d in all_diags if d.severity == Severity.INFO)
+        print(
+            f"\n--- Linted {len(files)} file(s): "
+            f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
+        )
+    else:
+        # Rich formatted output
+        from forgeds._shared.diagnostics import format_diagnostic, format_summary
+        use_color = sys.stdout.isatty()
+        print()
+        for i, diag in enumerate(all_diags, 1):
+            print(format_diagnostic(
+                diag, i,
+                use_color=use_color,
+                show_technical=args.verbose,
+                show_ai_prompt=not args.no_ai,
+            ))
+        print(format_summary(all_diags, len(files), use_color=use_color))
+
     errors = sum(1 for d in all_diags if d.severity == Severity.ERROR)
-    warnings = sum(1 for d in all_diags if d.severity == Severity.WARNING)
-    infos = sum(1 for d in all_diags if d.severity == Severity.INFO)
-
-    print(
-        f"\n--- Linted {len(files)} file(s): "
-        f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
-    )
-
-    sys.exit(2 if errors > 0 else 1 if warnings > 0 else 0)
+    sys.exit(2 if errors > 0 else 1 if any(d.severity == Severity.WARNING for d in all_diags) else 0)
 
 
 if __name__ == "__main__":

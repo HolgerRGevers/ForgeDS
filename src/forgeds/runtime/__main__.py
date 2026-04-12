@@ -12,6 +12,7 @@ import argparse
 import json
 import sys
 
+from forgeds._shared.diagnostics import format_diagnostic
 from forgeds.runtime.interpreter import Interpreter
 
 
@@ -44,12 +45,15 @@ def main() -> None:
         print(f"Invalid --input JSON: {e}", file=sys.stderr)
         sys.exit(2)
 
-    result = Interpreter.run_source(source, input_data=input_data)
+    result = Interpreter.run_source(source, input_data=input_data,
+                                    filename=args.script)
 
     # Errors
     if result.errors:
-        for err in result.errors:
-            print(f"ERROR: {err}", file=sys.stderr)
+        use_color = sys.stderr.isatty()
+        for i, diag in enumerate(result.errors, 1):
+            print(format_diagnostic(diag, i, use_color=use_color),
+                  file=sys.stderr)
 
     # Info log
     if not args.quiet and result.info_log:
