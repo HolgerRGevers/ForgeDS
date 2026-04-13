@@ -28,6 +28,7 @@ from enum import Enum
 from pathlib import Path
 
 from forgeds._shared.config import load_config, get_db_dir
+from forgeds.schema.registry import get_registry
 from forgeds._shared.diagnostics import Severity, Diagnostic
 
 
@@ -135,12 +136,22 @@ class DelugeDB:
         return {row[0] for row in self._conn.execute(sql).fetchall()}
 
     def _load_caches(self) -> None:
-        self.valid_statuses: set[str] = self._query_set(
-            "SELECT value FROM valid_statuses"
+        # Schema data — delegated to SchemaRegistry (single source of truth)
+        reg = get_registry()
+        self.valid_statuses: set[str] = set(reg.valid_statuses())
+        self.valid_actions: set[str] = set(reg.valid_actions())
+
+        self.form_fields: dict[str, set[str]] = {
+            name: schema.field_names()
+            for name, schema in reg.all_forms().items()
+        }
+        self.all_known_fields: set[str] = reg.all_field_names()
+        self.expense_fields: set[str] = self.all_known_fields
+        self.approval_history_fields: set[str] = self.form_fields.get(
+            "approval_history", set()
         )
-        self.valid_actions: set[str] = self._query_set(
-            "SELECT value FROM valid_actions"
-        )
+
+        # Language data — loaded directly from SQLite (not schema)
         self.reserved_words: set[str] = self._query_set(
             "SELECT word FROM reserved_words"
         )
@@ -172,28 +183,6 @@ class DelugeDB:
             (re.compile(rf"\b{re.escape(var)}\b"), msg)
             for var, msg in self.banned_variables.items()
         ]
-
-        # Form fields: { form_name: { field_link_name, ... } }
-        self.form_fields: dict[str, set[str]] = {}
-        for row in self._conn.execute("SELECT form_name, field_link FROM form_fields"):
-            form = row["form_name"]
-            if form not in self.form_fields:
-                self.form_fields[form] = set()
-            self.form_fields[form].add(row["field_link"])
-
-        # All known fields across all forms (used for input.X validation).
-        # input.X is form-context-specific in Deluge, but without knowing
-        # which form a script is bound to we accept any known field.
-        self.all_known_fields: set[str] = set()
-        for fields in self.form_fields.values():
-            self.all_known_fields.update(fields)
-        # Backwards-compat alias
-        self.expense_fields: set[str] = self.all_known_fields
-
-        # Approval_history fields (used for insert validation)
-        self.approval_history_fields: set[str] = self.form_fields.get(
-            "approval_history", set()
-        )
 
         # Sendmail required params
         row = self._conn.execute(
