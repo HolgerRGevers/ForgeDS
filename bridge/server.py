@@ -23,6 +23,7 @@ from bridge.handlers import (
     handle_parse_ds,
     handle_read_file,
     handle_run_validation,
+    handle_search_files,
     handle_write_file,
 )
 
@@ -117,6 +118,10 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
 
         elif msg_type == "export_api":
             result = await handle_export_api(data)
+            await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
+
+        elif msg_type == "search_files":
+            result = await handle_search_files(data)
             await _send_json(ws, {"id": msg_id, "type": "response", "data": result})
 
         else:

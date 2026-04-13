@@ -24,10 +24,10 @@ function ExportModal({
   onOpenInIde?: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="mx-4 w-full max-w-2xl rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-700 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-2xl rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="text-base font-semibold text-white sm:text-lg">
             Export Setup Instructions
           </h2>
           <button
@@ -38,12 +38,12 @@ function ExportModal({
             &times;
           </button>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+        <div className="max-h-[50vh] overflow-y-auto px-4 py-4 sm:max-h-[60vh] sm:px-6">
           <pre className="whitespace-pre-wrap text-sm text-gray-300">
             {instructions}
           </pre>
         </div>
-        <div className="flex justify-end gap-2 border-t border-gray-700 px-6 py-3">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-gray-700 px-4 py-3 sm:px-6">
           {onOpenInIde && (
             <button
               type="button"
@@ -72,11 +72,11 @@ function ExportModal({
 
 function EmptyState() {
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="flex h-full items-center justify-center p-4">
       <div className="text-center">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="mx-auto h-12 w-12 text-gray-600"
+          className="mx-auto h-10 w-10 text-gray-600 sm:h-12 sm:w-12"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -113,15 +113,14 @@ export default function ApiPage() {
 
   const navigate = useNavigate();
 
-  const [exportInstructions, setExportInstructions] = useState<string | null>(
-    null,
-  );
+  const [exportInstructions, setExportInstructions] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportedFile, setExportedFile] = useState<{
     name: string;
     path: string;
     content: string;
   } | null>(null);
+  const [showApiList, setShowApiList] = useState(true);
 
   // On mount: connect to bridge and load API list
   useEffect(() => {
@@ -133,7 +132,6 @@ export default function ApiPage() {
   // Fetch API list once connected
   useEffect(() => {
     if (bridgeStatus !== "connected") return;
-
     const loadApis = async () => {
       try {
         const response = await send("get_api_list", {});
@@ -143,17 +141,15 @@ export default function ApiPage() {
           );
         }
       } catch {
-        // Bridge may not support get_api_list yet -- silently ignore
+        // silently ignore
       }
     };
-
     loadApis();
   }, [bridgeStatus, send, setApis]);
 
   // Export handler
   const handleExport = useCallback(async () => {
     if (!draftApi) return;
-
     setExportError(null);
     setExportedFile(null);
     try {
@@ -161,14 +157,8 @@ export default function ApiPage() {
         apiId: draftApi.id,
         api: draftApi as unknown as Record<string, unknown>,
       });
-
-      // Capture exported file for "Open in IDE"
-      const file = response.file as
-        | { name: string; path: string; content: string }
-        | undefined;
-      if (file) {
-        setExportedFile(file);
-      }
+      const file = response.file as { name: string; path: string; content: string } | undefined;
+      if (file) setExportedFile(file);
 
       if (response.instructions && typeof response.instructions === "string") {
         setExportInstructions(response.instructions);
@@ -178,13 +168,12 @@ export default function ApiPage() {
         );
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Export failed";
+      const message = err instanceof Error ? err.message : "Export failed";
       setExportError(message);
     }
   }, [draftApi, send]);
 
-  // Open exported file in the IDE editor
+  // Open exported file in IDE
   const handleOpenInIde = useCallback(() => {
     if (!exportedFile) return;
     useIdeStore.getState().openTab({
@@ -198,61 +187,68 @@ export default function ApiPage() {
     navigate("/ide");
   }, [exportedFile, navigate]);
 
-  // Whether we're in edit/create mode (draft exists)
   const hasDraft = draftApi !== null && isCreating;
 
   return (
     <div className="flex h-full flex-col bg-gray-950">
+      {/* Mobile API list toggle */}
+      <button
+        type="button"
+        onClick={() => setShowApiList((v) => !v)}
+        className="flex items-center gap-2 border-b border-gray-800 px-3 py-2 text-xs text-gray-400 hover:text-white md:hidden"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+        </svg>
+        {showApiList ? "Hide API List" : "Show API List"}
+      </button>
+
       {/* Main content area */}
-      <div className="flex min-h-0 flex-1">
-        {/* Left column: API list (~300px) */}
-        <div className="w-[300px] shrink-0 border-r border-gray-800 p-3">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        {/* Left column: API list */}
+        <div className={`${showApiList ? "block" : "hidden"} w-full shrink-0 border-b border-gray-800 p-3 md:block md:w-[260px] md:border-b-0 md:border-r lg:w-[300px] ${showApiList ? "max-h-[35vh] overflow-y-auto md:max-h-none md:overflow-visible" : ""}`}>
           <ApiList />
         </div>
 
         {/* Right column (flex-1) */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {hasDraft ? (
-            /* Edit/Create mode: wizard on top, code preview on bottom */
             <>
-              {/* Export button bar (visible on summary step for existing APIs) */}
+              {/* Export button bar */}
               {wizardStep === "summary" && selectedApiId && (
-                <div className="flex items-center justify-end border-b border-gray-800 px-4 py-2">
+                <div className="flex items-center justify-end border-b border-gray-800 px-3 py-2 sm:px-4">
                   <button
                     type="button"
                     onClick={handleExport}
                     disabled={bridgeStatus !== "connected"}
-                    className="rounded bg-green-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
                   >
                     Export
                   </button>
                   {exportError && (
-                    <span className="ml-2 text-xs text-red-400">
-                      {exportError}
-                    </span>
+                    <span className="ml-2 text-xs text-red-400">{exportError}</span>
                   )}
                 </div>
               )}
 
               {/* Wizard (top) */}
-              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
                 <ApiWizard />
               </div>
 
               {/* Code preview (bottom) */}
-              <div className="h-[280px] shrink-0 border-t border-gray-800 p-3">
+              <div className="h-[200px] shrink-0 border-t border-gray-800 p-2 sm:h-[280px] sm:p-3">
                 <ApiCodePreview />
               </div>
             </>
           ) : (
-            /* No draft -- show empty state */
             <EmptyState />
           )}
         </div>
       </div>
 
-      {/* Bottom bar: AI prompt (always visible) */}
-      <div className="shrink-0 border-t border-gray-800 px-4 py-3">
+      {/* Bottom bar: AI prompt */}
+      <div className="safe-bottom shrink-0 border-t border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
         <ApiAiPrompt />
       </div>
 

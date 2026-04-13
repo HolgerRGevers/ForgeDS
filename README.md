@@ -229,6 +229,16 @@ See [templates/forgeds.yaml.example](templates/forgeds.yaml.example) for the ful
 
 Describe your application in plain language. The IDE generates Deluge code, provides a visual `.ds` editor with element inspection, manages database migrations (Access to Zoho), and builds Custom APIs with AI assistance.
 
+The IDE is fully responsive — desktop multi-panel layout, tablet with narrower panels, and mobile with bottom-sheet navigation. Touch-friendly targets and safe-area support for modern devices.
+
+### Design Language
+
+ForgeDS ships a formal design system in [`DESIGN-LANGUAGE.md`](DESIGN-LANGUAGE.md) covering color tokens, typography, spacing, component patterns, and responsive breakpoints. The design language applies at three levels:
+
+- **ForgeDS IDE** — dark-first aesthetic with blue accent for interactivity, semantic color coding (green/yellow/red for status), and depth hierarchy via background shading
+- **AI-generated code** — the built-in skills system injects ForgeDS conventions (field ordering, naming, workflow patterns, status colors) into Claude prompts, so generated Zoho Creator apps inherit the design language where Creator allows customization
+- **Zoho Creator apps** — guidance for form design, report layout, dashboard structure, and theme colors that align with the ForgeDS palette
+
 ### Running the Bridge
 
 The IDE connects to a local bridge server for code generation.

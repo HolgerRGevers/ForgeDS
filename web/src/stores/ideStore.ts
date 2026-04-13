@@ -159,9 +159,12 @@ export const useIdeStore = create<IdeStore>()(persist(
 
   updateTabContent: (tabId, content) => {
     set({
-      tabs: get().tabs.map((t) =>
-        t.id === tabId ? { ...t, content, isDirty: true } : t,
-      ),
+      tabs: get().tabs.map((t) => {
+        if (t.id !== tabId) return t;
+        // Set originalContent on first content load (when content was empty)
+        const originalContent = t.content === "" && !t.originalContent ? content : t.originalContent;
+        return { ...t, content, isDirty: true, originalContent };
+      }),
     });
   },
 
@@ -183,10 +186,10 @@ export const useIdeStore = create<IdeStore>()(persist(
         return false;
       }
 
-      // Clear dirty flag on success
+      // Clear dirty flag and update originalContent on success
       set({
         tabs: get().tabs.map((t) =>
-          t.id === tabId ? { ...t, isDirty: false } : t,
+          t.id === tabId ? { ...t, isDirty: false, originalContent: t.content } : t,
         ),
       });
 
