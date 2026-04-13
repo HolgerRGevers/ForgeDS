@@ -22,7 +22,7 @@ export function GlobalSearchPanel({ onClose }: GlobalSearchPanelProps) {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [searchScope, setSearchScope] = useState<"project" | "open">("project");
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const bridgeStatus = useBridgeStore((s) => s.status);
   const send = useBridgeStore((s) => s.send);

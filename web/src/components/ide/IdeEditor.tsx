@@ -88,7 +88,6 @@ export function IdeEditor() {
   const closeTab = useIdeStore((s) => s.closeTab);
   const updateTabContent = useIdeStore((s) => s.updateTabContent);
   const setInspectorData = useIdeStore((s) => s.setInspectorData);
-  const saveFile = useIdeStore((s) => s.saveFile);
 
   /** Close a tab, prompting to save if dirty. */
   const handleCloseTab = useCallback(
@@ -531,7 +530,6 @@ export function IdeEditor() {
               renderSideBySide: true,
               minimap: { enabled: false },
               fontSize: 14,
-              tabSize: 4,
               scrollBeyondLastLine: false,
               automaticLayout: true,
             }}
