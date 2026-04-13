@@ -915,10 +915,16 @@ def emit_application(
 # ============================================================
 
 def validate_ds(content: str, source: str = "<generated>") -> list[Diagnostic]:
-    """Validate a .ds file for structural correctness."""
+    """Validate a .ds file for structural correctness.
+
+    Two validation passes:
+      Pass 1 — Delimiter balance, form/report references, field checks
+      Pass 2 — Section-aware context validation (constructs in wrong section)
+    """
     diagnostics: list[Diagnostic] = []
     lines = content.splitlines()
 
+    # --- Pass 1: Balance + references ---
     brace_count = 0
     paren_count = 0
     form_names: set[str] = set()
@@ -976,6 +982,131 @@ def validate_ds(content: str, source: str = "<generated>") -> list[Diagnostic]:
                 severity=Severity.WARNING,
                 message=f"Form reference '{ref_name}' not found in form definitions",
             ))
+
+    # --- Pass 2: Section-aware context validation ---
+    diagnostics.extend(_validate_sections(lines, source))
+
+    return diagnostics
+
+
+# Top-level .ds section keywords that define structural blocks
+_SECTION_KEYWORDS = frozenset({
+    "forms", "workflow", "schedule", "approval",
+    "web", "share_settings", "phone", "tablet",
+})
+
+
+def _validate_sections(
+    lines: list[str], source: str,
+) -> list[Diagnostic]:
+    """Validate that .ds constructs appear in the correct section context.
+
+    Tracks a section stack using brace-depth matching to determine the
+    current context (forms, workflow, approval, etc.) and flags constructs
+    that appear in the wrong section.
+
+    Rules:
+      DS006 — 'on level N' found outside the approval section
+      DS007 — 'on approve' / 'on reject' found outside the approval section
+    """
+    diagnostics: list[Diagnostic] = []
+
+    # Section stack: (section_name, brace_depth_at_opening_brace)
+    # When brace_depth drops below this value, the section is closed.
+    section_stack: list[tuple[str, int]] = []
+    brace_depth = 0
+    paren_depth = 0
+
+    # Pending section: keyword detected, waiting for { to confirm
+    pending: str | None = None
+
+    # Block-comment tracking
+    in_block_comment = False
+
+    for i in range(len(lines)):
+        line_num = i + 1
+        stripped = lines[i].strip()
+
+        # Track block comments
+        if in_block_comment:
+            if "*/" in stripped:
+                in_block_comment = False
+            continue
+        if stripped.startswith("/*"):
+            if "*/" not in stripped:
+                in_block_comment = True
+            continue
+
+        # Skip single-line comments
+        if stripped.startswith("//"):
+            continue
+
+        if not stripped:
+            continue
+
+        # --- 1. Detect section-opening keywords BEFORE brace processing ---
+        # Extract the keyword portion (everything before { or ()
+        first_word = stripped.split("{")[0].split("(")[0].strip()
+
+        if paren_depth == 0:
+            if first_word in _SECTION_KEYWORDS:
+                pending = first_word
+            elif first_word == "actions":
+                if any(s[0].startswith("form:") for s in section_stack):
+                    pending = "form_actions"
+            else:
+                fm = re.match(r"^form\s+(\w+)$", first_word)
+                if fm and any(s[0] == "forms" for s in section_stack):
+                    pending = f"form:{fm.group(1)}"
+
+        # --- 2. Process delimiters character by character ---
+        for ch in stripped:
+            if ch == '(':
+                paren_depth += 1
+            elif ch == ')':
+                paren_depth = max(0, paren_depth - 1)
+            elif ch == '{' and paren_depth == 0:
+                brace_depth += 1
+                if pending:
+                    section_stack.append((pending, brace_depth))
+                    pending = None
+            elif ch == '}' and paren_depth == 0:
+                while section_stack and brace_depth == section_stack[-1][1]:
+                    section_stack.pop()
+                brace_depth -= 1
+
+        # --- 3. Validation rules ---
+        # Only validate outside of paren blocks (Deluge script code)
+        if paren_depth > 0:
+            continue
+
+        section_names = {s[0] for s in section_stack}
+        in_approval = "approval" in section_names
+        in_form_actions = "form_actions" in section_names
+
+        # DS006: "on level N" outside approval section
+        if re.match(r"on level \d+", stripped):
+            if not in_approval:
+                ctx = "form actions block" if in_form_actions else "non-approval context"
+                diagnostics.append(Diagnostic(
+                    file=source, line=line_num, rule="DS006",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"'{stripped}' found in {ctx} — "
+                        f"approval levels must be inside the approval {{}} section"
+                    ),
+                ))
+
+        # DS007: "on approve" / "on reject" outside approval section
+        for kw in ("on approve", "on reject"):
+            if stripped == kw or stripped.startswith(kw + " "):
+                if not in_approval:
+                    diagnostics.append(Diagnostic(
+                        file=source, line=line_num, rule="DS007",
+                        severity=Severity.ERROR,
+                        message=f"'{kw}' found outside approval section",
+                    ))
+                break
 
     return diagnostics
 
