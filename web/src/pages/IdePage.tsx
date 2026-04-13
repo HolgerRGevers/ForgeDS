@@ -305,7 +305,7 @@ export default function IdePage() {
           setMobilePanel("explorer");
         } else {
           if (explorerMode !== "search") {
-            prevExplorerMode.current = explorerMode === "search" ? "repo" : explorerMode;
+            prevExplorerMode.current = explorerMode;
           }
           setExplorerMode("search");
           setShowExplorer(true);
@@ -427,7 +427,7 @@ export default function IdePage() {
             <button
               type="button"
               onClick={() => {
-                if (explorerMode !== "search") prevExplorerMode.current = explorerMode === "search" ? "repo" : explorerMode;
+                if (explorerMode !== "search") prevExplorerMode.current = explorerMode;
                 setExplorerMode("search");
               }}
               className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${explorerMode === "search" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-200"}`}
@@ -495,7 +495,7 @@ export default function IdePage() {
                     className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${explorerMode === "repo" ? "bg-blue-600 text-white" : "text-gray-400"}`}>Repo</button>
                   <button type="button" onClick={() => setExplorerMode("ds")}
                     className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${explorerMode === "ds" ? "bg-blue-600 text-white" : "text-gray-400"}`}>.ds</button>
-                  <button type="button" onClick={() => { if (explorerMode !== "search") prevExplorerMode.current = explorerMode === "search" ? "repo" : explorerMode; setExplorerMode("search"); }}
+                  <button type="button" onClick={() => { if (explorerMode !== "search") prevExplorerMode.current = explorerMode; setExplorerMode("search"); }}
                     className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${explorerMode === "search" ? "bg-blue-600 text-white" : "text-gray-400"}`}>Search</button>
                 </div>
               )}
