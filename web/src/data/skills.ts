@@ -88,6 +88,34 @@ export const SKILL_CATEGORIES: SkillCategoryInfo[] = [
 ];
 
 export const SKILLS: Skill[] = [
+  // ── Design Language ────────────────────────────────────────────────────
+  {
+    id: "forgeds-design-language",
+    name: "ForgeDS Design Language",
+    category: "general",
+    description: "Apply the ForgeDS design language to generated Zoho Creator apps: naming conventions, form layout, workflow structure, color themes, and dashboard patterns",
+    systemPrompt:
+      "Apply the ForgeDS Design Language to all generated code and configuration. " +
+      "Form design: key identifiers first, then data fields, then audit fields (Added_User, Modified_Time) last. " +
+      "Section naming: title case, max 3 words. Field display names: Title Case with spaces (e.g. 'Amount ZAR'). " +
+      "Field link names: snake_case (e.g. Amount_ZAR). " +
+      "Workflow naming: form_name.trigger_event.dg. Always include a header comment with form name, trigger, and purpose. " +
+      "Null guards: always wrap lookups with if (result != null && result.count() > 0). " +
+      "Audit fields: set Added_User = zoho.loginuser on create, never trust user input for audit data. " +
+      "Reports: default sort most recent first, SUM for currency, COUNT for records. " +
+      "Dashboards: top row = 3-4 KPI cards, middle = primary chart, bottom = secondary views. " +
+      "Color conventions: Draft=gray, Pending=yellow, Approved=green, Rejected=red. " +
+      "Zoho theme primary color: #2563eb. " +
+      "Code style: lowercase snake_case variables, descriptive function names, inline comments for complex logic only.",
+    examplePrompts: [
+      "Generate an expense claim form following ForgeDS conventions",
+      "Create a dashboard layout for project management",
+      "Build a multi-level approval workflow with proper naming",
+    ],
+    tags: ["design", "conventions", "naming", "layout", "zoho"],
+    source: "built-in",
+  },
+
   // ── Strategic Thinking ──────────────────────────────────────────────────
   {
     id: "swot-analysis",

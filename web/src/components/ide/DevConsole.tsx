@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIdeStore } from "../../stores/ideStore";
 import { useBridgeStore } from "../../stores/bridgeStore";
+import { useSkillStore } from "../../stores/skillStore";
 import type { ConsoleEntry, ConsoleTab, LintDiagnostic, RelationshipLink } from "../../types/ide";
 
 // --- Severity helpers ---
@@ -351,7 +352,12 @@ export function DevConsole() {
 
   const handleAiSend = useCallback(
     async (message: string): Promise<string> => {
-      const result = await bridgeSend("ai_chat", { message });
+      const systemPrompt = useSkillStore.getState().getActiveSystemPrompt();
+      const payload: Record<string, unknown> = { message };
+      if (systemPrompt) {
+        payload.system_prompt = systemPrompt;
+      }
+      const result = await bridgeSend("ai_chat", payload);
       const data = result as unknown as { response: string };
       return data.response ?? "No response received.";
     },

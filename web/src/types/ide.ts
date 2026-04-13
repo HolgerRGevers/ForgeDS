@@ -46,6 +46,8 @@ export interface EditorTab {
   content: string;
   language: string;
   isDirty: boolean;
+  /** The content as of the last save (for diff view) */
+  originalContent?: string;
   /** Cursor position */
   cursorLine?: number;
   cursorColumn?: number;

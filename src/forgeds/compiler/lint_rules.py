@@ -187,7 +187,10 @@ class ASTLinter(ast.Visitor):
 
         if guarded:
             self._guard_stack.pop()
-            self._guarded_vars.discard(guarded)
+            # If the if-body ends with a return/continue, the guard persists
+            # beyond the if-block (early-return pattern).  Keep the var guarded.
+            if not self._body_exits(node.body):
+                self._guarded_vars.discard(guarded)
 
         if node.else_body is not None:
             self.visit(node.else_body)
@@ -457,9 +460,17 @@ class ASTLinter(ast.Visitor):
             if dotted not in self.db.zoho_variable_names:
                 # Skip if handled by DG002
                 if dotted not in self.db.banned_variables:
-                    self._emit(line, Severity.WARNING, "DG018",
-                               f"Unknown Zoho variable '{dotted}'. "
-                               f"Known: {', '.join(sorted(self.db.zoho_variable_names))}")
+                    # Check if a known prefix is a valid variable (e.g. zoho.currentdate
+                    # in zoho.currentdate.subDay — the suffix is a method call, not a var)
+                    parts = dotted.split(".")
+                    prefix_known = any(
+                        ".".join(parts[:end]) in self.db.zoho_variable_names
+                        for end in range(2, len(parts))
+                    )
+                    if not prefix_known:
+                        self._emit(line, Severity.WARNING, "DG018",
+                                   f"Unknown Zoho variable '{dotted}'. "
+                                   f"Known: {', '.join(sorted(self.db.zoho_variable_names))}")
 
         self.visit(node.object)
 
@@ -551,7 +562,7 @@ class ASTLinter(ast.Visitor):
     # ----------------------------------------------------------
 
     def _detect_null_guard(self, expr: ast.Expr) -> str | None:
-        """Check if expression is a null guard: var != null."""
+        """Check if expression is a null guard: var != null  OR  var == null || ... (early-return)."""
         if isinstance(expr, ast.BinaryExpr):
             if expr.op == "!=":
                 if isinstance(expr.left, ast.Identifier) and isinstance(expr.right, ast.Literal):
@@ -566,7 +577,41 @@ class ASTLinter(ast.Visitor):
                 if left_guard:
                     return left_guard
                 return self._detect_null_guard(expr.right)
+            # Also check OR-chained early-return guards: var == null || var.count() == 0
+            # The == null short-circuits, so .count() on the RHS is safe.
+            if expr.op == "||":
+                guard = self._detect_eq_null_guard(expr.left)
+                if guard:
+                    return guard
+                return self._detect_null_guard(expr.right)
+            # Check == null as standalone (e.g. if (var == null) { return; })
+            if expr.op == "==":
+                if isinstance(expr.left, ast.Identifier) and isinstance(expr.right, ast.Literal):
+                    if expr.right.kind == "null" and expr.left.name in self._query_vars:
+                        return expr.left.name
+                if isinstance(expr.right, ast.Identifier) and isinstance(expr.left, ast.Literal):
+                    if expr.left.kind == "null" and expr.right.name in self._query_vars:
+                        return expr.right.name
         return None
+
+    def _detect_eq_null_guard(self, expr: ast.Expr) -> str | None:
+        """Check if expression is var == null (left side of an || early-return guard)."""
+        if isinstance(expr, ast.BinaryExpr) and expr.op == "==":
+            if isinstance(expr.left, ast.Identifier) and isinstance(expr.right, ast.Literal):
+                if expr.right.kind == "null" and expr.left.name in self._query_vars:
+                    return expr.left.name
+            if isinstance(expr.right, ast.Identifier) and isinstance(expr.left, ast.Literal):
+                if expr.left.kind == "null" and expr.right.name in self._query_vars:
+                    return expr.right.name
+        return None
+
+    @staticmethod
+    def _body_exits(body: ast.Block) -> bool:
+        """Check if a block unconditionally exits (return as last statement)."""
+        if not isinstance(body, ast.Block) or not body.body:
+            return False
+        last = body.body[-1]
+        return isinstance(last, ast.ReturnStmt)
 
     # ----------------------------------------------------------
     # DG013 helper

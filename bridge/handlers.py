@@ -638,6 +638,101 @@ async def handle_write_file(data: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# search_files -- search for text across project files
+# ---------------------------------------------------------------------------
+
+_SEARCHABLE_EXTENSIONS = {
+    ".dg", ".ds", ".json", ".yaml", ".yml", ".py", ".md", ".sql", ".txt",
+    ".csv", ".js", ".ts", ".tsx", ".jsx", ".html", ".css",
+}
+
+_MAX_SEARCH_RESULTS = 200
+_MAX_LINE_LENGTH = 300
+
+
+async def handle_search_files(data: dict) -> dict:
+    """Search for a text pattern across all project files.
+
+    Accepts ``query`` (plain text or regex), optional ``regex`` (bool),
+    optional ``case_sensitive`` (bool, default False), and optional
+    ``glob`` (file pattern like ``*.dg``).
+
+    Returns ``{"results": [{"file": str, "line": int, "text": str, "col": int}], "truncated": bool}``.
+    """
+    query = data.get("query", "").strip()
+    if not query:
+        return {"results": [], "truncated": False}
+
+    use_regex = data.get("regex", False)
+    case_sensitive = data.get("case_sensitive", False)
+    file_glob = data.get("glob", "")
+
+    root = _get_project_root()
+
+    # Compile the search pattern
+    flags = 0 if case_sensitive else re.IGNORECASE
+    try:
+        if use_regex:
+            pattern = re.compile(query, flags)
+        else:
+            pattern = re.compile(re.escape(query), flags)
+    except re.error as exc:
+        return {"error": f"Invalid search pattern: {exc}", "results": [], "truncated": False}
+
+    results: list[dict] = []
+    truncated = False
+
+    # Walk the project tree
+    for dirpath, _dirnames, filenames in os.walk(root):
+        rel_dir = Path(dirpath).relative_to(root)
+
+        # Skip hidden dirs and common non-source dirs
+        parts = rel_dir.parts
+        if any(p.startswith(".") or p in ("node_modules", "__pycache__", "dist", "build", ".git") for p in parts):
+            continue
+
+        for fname in filenames:
+            fpath = Path(dirpath) / fname
+
+            # Filter by extension
+            if fpath.suffix.lower() not in _SEARCHABLE_EXTENSIONS:
+                continue
+
+            # Filter by glob if specified
+            if file_glob:
+                import fnmatch
+                if not fnmatch.fnmatch(fname, file_glob):
+                    continue
+
+            rel_path = str(fpath.relative_to(root)).replace("\\", "/")
+
+            try:
+                text = fpath.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+
+            for line_no, line in enumerate(text.splitlines(), start=1):
+                match = pattern.search(line)
+                if match:
+                    results.append({
+                        "file": rel_path,
+                        "line": line_no,
+                        "col": match.start(),
+                        "text": line[:_MAX_LINE_LENGTH],
+                    })
+                    if len(results) >= _MAX_SEARCH_RESULTS:
+                        truncated = True
+                        break
+
+            if truncated:
+                break
+        if truncated:
+            break
+
+    return {"results": results, "truncated": truncated}
+
+
+# ---------------------------------------------------------------------------
 # inspect_element -- real implementation using ForgeDS DB and AST
 # ---------------------------------------------------------------------------
 
@@ -837,9 +932,11 @@ async def handle_inspect_element(data: dict) -> dict:
 async def handle_ai_chat(data: dict) -> dict:
     """Process an AI chat message and return a mock response.
 
+    Accepts ``message`` and optional ``system_prompt`` (from skillStore).
     A future version will route to Claude Code CLI with ForgeDS context.
     """
     message = data.get("message", "")
+    system_prompt = data.get("system_prompt", "")  # noqa: F841 — reserved for Phase 5.5
     await asyncio.sleep(0.3)
 
     # Generate a contextual mock response based on keywords
