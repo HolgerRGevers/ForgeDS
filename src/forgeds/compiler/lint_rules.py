@@ -24,6 +24,7 @@ from forgeds._shared.config import load_config
 from forgeds._shared.diagnostics import Severity, Diagnostic, build_ai_prompt
 from forgeds.lang import ast_nodes as ast
 from forgeds.lang.tokens import SourceSpan
+from forgeds.schema import get_registry, DelugeType
 
 
 # ============================================================
@@ -106,6 +107,29 @@ def _expr_to_dotted(expr: ast.Expr) -> str:
     if isinstance(expr, ast.FieldAccess):
         return _expr_to_dotted(expr.object) + "." + expr.field
     return ""
+
+
+def _closest_field(name: str, known: set[str]) -> str | None:
+    """Return the closest match from *known* fields, or None if no good match."""
+    if not known:
+        return None
+    name_lower = name.lower()
+    # Exact case-insensitive match
+    for k in known:
+        if k.lower() == name_lower:
+            return k
+    # Substring match — only if both strings are long enough to be meaningful
+    # (prevents "id" matching "incident", etc.)
+    if len(name_lower) >= 4:
+        candidates: list[str] = []
+        for k in known:
+            k_lower = k.lower()
+            if len(k_lower) >= 4 and (name_lower in k_lower or k_lower in name_lower):
+                candidates.append(k)
+        if len(candidates) == 1:
+            return candidates[0]
+    # No confident match
+    return None
 
 
 def _collect_string_values(expr: ast.Expr) -> list[str]:
@@ -447,9 +471,24 @@ class ASTLinter(ast.Visitor):
             if self.file_type != FileType.CUSTOM_API:
                 field_name = node.field
                 if field_name not in self.db.expense_fields:
-                    self._emit(line, Severity.ERROR, "DG004",
-                               f"Unknown field 'input.{field_name}'. "
-                               "Valid fields: check docs/build-guide/field-link-names.md")
+                    suggestion = _closest_field(field_name, self.db.expense_fields)
+                    if suggestion:
+                        reg = get_registry()
+                        ftype = reg.field_type("", "")  # placeholder
+                        # Search all forms for the suggested field's type
+                        for schema in reg.all_forms().values():
+                            fd = schema.get_field(suggestion)
+                            if fd is not None:
+                                ftype = fd.deluge_type
+                                break
+                        type_hint = f" ({ftype.value})" if ftype is not DelugeType.UNKNOWN else ""
+                        self._emit(line, Severity.ERROR, "DG004",
+                                   f"Unknown field 'input.{field_name}'. "
+                                   f"Did you mean '{suggestion}'{type_hint}?")
+                    else:
+                        self._emit(line, Severity.ERROR, "DG004",
+                                   f"Unknown field 'input.{field_name}'. "
+                                   "Valid fields: check docs/build-guide/field-link-names.md")
 
         # DG005: Unguarded query result access
         if isinstance(node.object, ast.Identifier):
@@ -458,8 +497,12 @@ class ASTLinter(ast.Visitor):
                     and var_name not in self._guarded_vars
                     and var_name not in self._dg005_reported):
                 self._dg005_reported.add(var_name)
+                # Include type info if available from type checker
+                type_note = ""
+                if node.object.resolved_type is not None:
+                    type_note = f" (type: {node.object.resolved_type.value})"
                 self._emit(line, Severity.ERROR, "DG005",
-                           f"Query result '{var_name}' accessed without null guard. "
+                           f"Query result '{var_name}'{type_note} accessed without null guard. "
                            f"Add: if ({var_name} != null && {var_name}.count() > 0)")
 
         # DG018: Unknown zoho system variable
@@ -732,6 +775,10 @@ def lint_source(db: Any, filename: str, source: str, file_type: str | None = Non
                 source_line=src_line, col=tok.col,
             ))
         # Still run linter on recovered AST, append parse errors at the end
+
+    # Run type inference before linting so resolved_type is available
+    from forgeds.compiler.type_checker import check_types
+    check_types(tree)
 
     linter = ASTLinter(db, filename, file_type, source=source)
     linter.visit(tree)

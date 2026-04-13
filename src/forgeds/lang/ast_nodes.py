@@ -11,9 +11,12 @@ never bare.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from forgeds.lang.tokens import SourceSpan
+
+if TYPE_CHECKING:
+    from forgeds.schema.types import DelugeType
 
 
 # ============================================================
@@ -28,8 +31,12 @@ class Node:
 
 @dataclass
 class Expr(Node):
-    """Base for all expression nodes."""
-    pass
+    """Base for all expression nodes.
+
+    ``resolved_type`` is populated post-parse by the TypeChecker,
+    not by the parser.  It remains None until type inference runs.
+    """
+    resolved_type: DelugeType | None = field(default=None, init=False, repr=False)
 
 
 @dataclass
