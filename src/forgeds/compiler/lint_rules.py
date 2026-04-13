@@ -1,4 +1,4 @@
-"""AST-based Deluge lint rules (DG001–DG021).
+"""AST-based Deluge lint rules (DG001–DG024).
 
 Reimplements all 21 lint rules from core/lint_deluge.py as AST Visitor
 methods. Each rule walks the typed AST instead of scanning raw text
@@ -47,6 +47,15 @@ _DEMO_EMAIL_DOMAINS = set(_lint_cfg.get(
 ))
 
 VALID_ADDED_USER_VALUES = {"zoho.loginuser", "zoho.adminuser"}
+
+# Methods on collection/record objects — skip DG024 field validation for these
+_COLLECTION_METHODS = {
+    "count", "size", "length", "isEmpty", "isNotEmpty",
+    "toMap", "toString", "toList", "toJSONList", "toJSONMap",
+    "getAll", "get", "put", "keys", "values", "clear",
+    "sort", "distinct", "subList", "contains", "containsKey",
+    "remove", "removeAll", "addAll", "add",
+}
 
 
 # ============================================================
@@ -109,8 +118,11 @@ def _expr_to_dotted(expr: ast.Expr) -> str:
     return ""
 
 
-def _closest_field(name: str, known: set[str]) -> str | None:
-    """Return the closest match from *known* fields, or None if no good match."""
+def _closest_match(name: str, known: set[str]) -> str | None:
+    """Return the closest match from *known* names, or None if no good match.
+
+    Works for both field names and form names.
+    """
     if not known:
         return None
     name_lower = name.lower()
@@ -132,6 +144,11 @@ def _closest_field(name: str, known: set[str]) -> str | None:
     return None
 
 
+def _closest_field(name: str, known: set[str]) -> str | None:
+    """Return the closest match from *known* fields, or None if no good match."""
+    return _closest_match(name, known)
+
+
 def _collect_string_values(expr: ast.Expr) -> list[str]:
     """Collect all string literal values reachable from an expression."""
     results: list[str] = []
@@ -151,7 +168,7 @@ def _collect_string_values(expr: ast.Expr) -> list[str]:
 # ============================================================
 
 class ASTLinter(ast.Visitor):
-    """Walk the AST and collect lint diagnostics for DG001–DG021."""
+    """Walk the AST and collect lint diagnostics for DG001–DG024."""
 
     def __init__(self, db: Any, filename: str, file_type: str, source: str = "") -> None:
         self.db = db
@@ -169,6 +186,9 @@ class ASTLinter(ast.Visitor):
         # DG020 tracking
         self._has_map_constructor = False
         self._has_put_call = False
+
+        # DG024 tracking: query var -> form name (from FormQuery assignments)
+        self._query_form_vars: dict[str, str] = {}  # var_name -> form_name
 
         # Use module-level pre-loaded config values (avoids per-instance re-parsing)
         self._threshold_fallback = _THRESHOLD_FALLBACK
@@ -279,10 +299,11 @@ class ASTLinter(ast.Visitor):
                                "Added_User only accepts zoho.loginuser or zoho.adminuser. "
                                "zoho.adminuserid (email) is rejected by Creator. See discovery-log.md DL-001.")
 
-        # DG005: Track query assignments (var = FormName[criteria] or var = table[criteria])
+        # DG005/DG024: Track query assignments (var = FormName[criteria] or var = table[criteria])
         if isinstance(node.target, ast.Identifier) and node.op == "=":
             if isinstance(node.value, ast.FormQuery):
                 self._query_vars[node.target.name] = line
+                self._query_form_vars[node.target.name] = node.value.form
             elif isinstance(node.value, ast.IndexAccess):
                 # IndexAccess with an identifier object that looks like a table name
                 # (regex linter matches any_name[criteria], so we do too)
@@ -315,6 +336,53 @@ class ASTLinter(ast.Visitor):
     def visit_InsertStmt(self, node: ast.InsertStmt) -> None:
         line = node.span.start_line
         table = node.table
+
+        # DG022: Validate insert target form exists in schema
+        reg = get_registry()
+        known_forms = set(reg.all_forms().keys())
+        if known_forms and table not in known_forms:
+            suggestion = _closest_match(table, known_forms)
+            if suggestion:
+                self._emit(line, Severity.WARNING, "DG022",
+                           f"Unknown form '{table}' in insert statement. "
+                           f"Did you mean '{suggestion}'?")
+            else:
+                self._emit(line, Severity.WARNING, "DG022",
+                           f"Unknown form '{table}' in insert statement. "
+                           f"Not found in schema registry.")
+
+        # DG023: FK field reference validation
+        if known_forms and table in known_forms:
+            fk_edges = reg.get_relations().parents_of(table)
+            if fk_edges:
+                param_names = {p.name for p in node.params.params}
+                for fk in fk_edges:
+                    if fk.child_field in param_names:
+                        # Validate that the FK value looks like it references
+                        # the correct parent form (FormQuery or variable bound
+                        # to the right form)
+                        for p in node.params.params:
+                            if p.name == fk.child_field:
+                                self._check_fk_value(p, fk, line)
+
+        # DG010 enhancement: Validate insert param names against target form schema
+        target_form = reg.get_form(table)
+        if target_form is not None:
+            target_fields = target_form.field_names()
+            if target_fields:
+                for p in node.params.params:
+                    if p.name not in target_fields:
+                        suggestion = _closest_match(p.name, target_fields)
+                        if suggestion:
+                            ftype = target_form.field_type(suggestion)
+                            type_hint = f" ({ftype.value})" if ftype is not DelugeType.UNKNOWN else ""
+                            self._emit(p.span.start_line, Severity.WARNING, "DG010",
+                                       f"Unknown field '{p.name}' in insert into {table}. "
+                                       f"Did you mean '{suggestion}'{type_hint}?")
+                        else:
+                            self._emit(p.span.start_line, Severity.WARNING, "DG010",
+                                       f"Unknown field '{p.name}' in insert into {table}. "
+                                       f"Field not found in form schema.")
 
         if table == "approval_history":
             param_names = {p.name for p in node.params.params}
@@ -504,6 +572,32 @@ class ASTLinter(ast.Visitor):
                 self._emit(line, Severity.ERROR, "DG005",
                            f"Query result '{var_name}'{type_note} accessed without null guard. "
                            f"Add: if ({var_name} != null && {var_name}.count() > 0)")
+
+        # DG024: Cross-form field access validation
+        # If var was assigned from a FormQuery, validate the field exists
+        # on that form's schema.
+        if isinstance(node.object, ast.Identifier):
+            var_name = node.object.name
+            if var_name in self._query_form_vars:
+                form_name = self._query_form_vars[var_name]
+                reg = get_registry()
+                form_schema = reg.get_form(form_name)
+                if form_schema is not None:
+                    field_name = node.field
+                    # Skip method-like accesses (count, size, etc.)
+                    if field_name not in _COLLECTION_METHODS and not form_schema.has_field(field_name):
+                        known = form_schema.field_names()
+                        suggestion = _closest_match(field_name, known)
+                        if suggestion:
+                            ftype = form_schema.field_type(suggestion)
+                            type_hint = f" ({ftype.value})" if ftype is not DelugeType.UNKNOWN else ""
+                            self._emit(line, Severity.WARNING, "DG024",
+                                       f"Unknown field '{var_name}.{field_name}' on form '{form_name}'. "
+                                       f"Did you mean '{suggestion}'{type_hint}?")
+                        else:
+                            self._emit(line, Severity.WARNING, "DG024",
+                                       f"Unknown field '{var_name}.{field_name}' on form '{form_name}'. "
+                                       f"Field not found in form schema.")
 
         # DG018: Unknown zoho system variable
         if dotted.startswith("zoho."):
@@ -703,6 +797,27 @@ class ASTLinter(ast.Visitor):
             else:
                 self._emit(line, Severity.INFO, "DG016",
                            f"Hardcoded email '{email}'. Consider using role-based lookup.")
+
+    # ----------------------------------------------------------
+    # DG023 helper
+    # ----------------------------------------------------------
+
+    def _check_fk_value(self, param: ast.ParamAssignment, fk: 'ForeignKey', line: int) -> None:
+        """Validate that an FK param value references the correct parent form."""
+        # If the value is a FormQuery, check that it queries the right parent form
+        if isinstance(param.value, ast.FormQuery):
+            if param.value.form != fk.parent_form:
+                self._emit(line, Severity.WARNING, "DG023",
+                           f"FK field '{fk.child_field}' should reference "
+                           f"'{fk.parent_form}' but queries '{param.value.form}'.")
+        # If the value is a variable bound to a FormQuery, check the form
+        elif isinstance(param.value, ast.Identifier):
+            bound_form = self._query_form_vars.get(param.value.name)
+            if bound_form is not None and bound_form != fk.parent_form:
+                self._emit(line, Severity.WARNING, "DG023",
+                           f"FK field '{fk.child_field}' should reference "
+                           f"'{fk.parent_form}' but variable '{param.value.name}' "
+                           f"is bound to '{bound_form}'.")
 
 
 # ============================================================
