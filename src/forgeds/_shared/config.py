@@ -8,6 +8,11 @@ defaults when no config file is found, so tools work out-of-the-box.
 import os
 from pathlib import Path
 
+# Module-level caches — avoids repeated filesystem walks and YAML re-parsing
+_project_root_cache: dict[str | None, Path] = {}
+_config_cache: dict[str | None, dict] = {}
+_db_dir_cache: Path | None = None
+
 
 def _load_yaml_simple(path: str) -> dict:
     """Minimal YAML loader — handles the subset used by forgeds.yaml.
@@ -20,6 +25,7 @@ def _load_yaml_simple(path: str) -> dict:
     stack = [(result, -1)]  # (current_dict, indent_level)
     current_list_key = None
     current_list = None
+    current_list_parent = None  # dict that owns current_list_key
 
     with open(path, "r", encoding="utf-8") as f:
         for raw_line in f:
@@ -35,23 +41,43 @@ def _load_yaml_simple(path: str) -> dict:
             # List item
             if stripped.startswith("- "):
                 item_text = stripped[2:].strip()
-                # Check if it's a list of inline lists like - ["a", "b"]
-                if item_text.startswith("[") and item_text.endswith("]"):
-                    inner = item_text[1:-1]
-                    parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
-                    if current_list is not None:
-                        current_list.append(parts)
-                    continue
-                # Check if it's a dict-like list item: - key: value
-                if ": " in item_text and not item_text.startswith('"'):
-                    k, v = item_text.split(": ", 1)
-                    entry = {k.strip(): _parse_value(v.strip())}
-                    if current_list is not None:
-                        current_list.append(entry)
-                    continue
-                # Simple scalar list item
+
+                # First list item after an empty-value key: convert the
+                # placeholder dict into a list.
+                if current_list_key and current_list is None and current_list_parent is not None:
+                    target = current_list_parent
+                    if (current_list_key in target
+                            and isinstance(target[current_list_key], dict)
+                            and len(target[current_list_key]) == 0):
+                        target[current_list_key] = []
+                        current_list = target[current_list_key]
+
                 if current_list is not None:
-                    current_list.append(_parse_value(item_text))
+                    if item_text.startswith("[") and item_text.endswith("]"):
+                        inner = item_text[1:-1]
+                        parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
+                        current_list.append(parts)
+                    elif ": " in item_text and not item_text.startswith('"'):
+                        k, v = item_text.split(": ", 1)
+                        entry = {k.strip(): _parse_value(v.strip())}
+                        current_list.append(entry)
+                        # Track for continuation keys on following lines
+                        self_indent = indent + 2  # expected indent for "- " content
+                        stack.append((entry, self_indent))
+                    else:
+                        current_list.append(_parse_value(item_text))
+                continue
+
+            # Continuation key for a multi-key dict inside a list
+            # e.g. "  parent: [...]" following "- child: [...]"
+            if (current_list is not None and ":" in stripped
+                    and len(stack) > 1 and isinstance(stack[-1][0], dict)
+                    and stack[-1][0] in current_list
+                    and indent >= stack[-1][1]):
+                colon_pos = stripped.index(":")
+                key = stripped[:colon_pos].strip()
+                rest = stripped[colon_pos + 1:].strip()
+                stack[-1][0][key] = _parse_value(rest)
                 continue
 
             # Key: value pair
@@ -65,13 +91,20 @@ def _load_yaml_simple(path: str) -> dict:
                     stack.pop()
                 parent = stack[-1][0]
 
+                # Reset list state on any key: line
+                current_list_key = None
+                current_list = None
+                current_list_parent = None
+
                 if rest == "" or rest == "|":
-                    # Nested dict or upcoming list
+                    # Nested dict or upcoming list — create a placeholder dict.
+                    # If the first child turns out to be "- ", it will be
+                    # converted to a list above.
                     new_dict = {}
                     parent[key] = new_dict
                     stack.append((new_dict, indent))
-                    current_list_key = None
-                    current_list = None
+                    current_list_key = key
+                    current_list_parent = parent
                 elif rest.startswith("[") and rest.endswith("]"):
                     # Inline list
                     inner = rest[1:-1]
@@ -80,59 +113,19 @@ def _load_yaml_simple(path: str) -> dict:
                     else:
                         items = []
                     parent[key] = items
-                    current_list_key = None
-                    current_list = None
                 else:
                     parent[key] = _parse_value(rest)
-                    current_list_key = None
-                    current_list = None
-
-                # Check if next lines will be list items for this key
-                # We detect this when the value is empty (already handled as nested dict)
-                # or when we see "- " items at a deeper indent. For now, set up for list detection.
-                if rest == "":
-                    # Could be a dict or a list — we'll know when we see the first child.
-                    # If first child is "- ", convert to list.
-                    current_list_key = key
-                    current_list = None
-                    # We need a way to convert the dict to a list if needed
-                    class _ListDetector:
-                        def __init__(self, parent_dict, key_name):
-                            self.parent = parent_dict
-                            self.key = key_name
-                            self.converted = False
-                    detector = _ListDetector(parent, key)
-                    stack[-1] = (parent, stack[-1][1])
-
-            # Detect list after seeing "- " following an empty-value key
-            if current_list_key and stripped.startswith("- ") and current_list is None:
-                parent = stack[-1][0]
-                if current_list_key in parent and isinstance(parent[current_list_key], dict) and len(parent[current_list_key]) == 0:
-                    parent[current_list_key] = []
-                    current_list = parent[current_list_key]
-                elif current_list_key in parent and isinstance(parent[current_list_key], list):
-                    current_list = parent[current_list_key]
-                else:
-                    current_list = []
-                    parent[current_list_key] = current_list
-
-                # Re-process this line as a list item
-                item_text = stripped[2:].strip()
-                if item_text.startswith("[") and item_text.endswith("]"):
-                    inner = item_text[1:-1]
-                    parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
-                    current_list.append(parts)
-                elif ": " in item_text and not item_text.startswith('"'):
-                    k, v = item_text.split(": ", 1)
-                    current_list.append({k.strip(): _parse_value(v.strip())})
-                else:
-                    current_list.append(_parse_value(item_text))
 
     return result
 
 
 def _parse_value(text: str):
-    """Parse a YAML scalar value."""
+    """Parse a YAML scalar value (or inline list)."""
+    if text.startswith("[") and text.endswith("]"):
+        inner = text[1:-1]
+        if not inner.strip():
+            return []
+        return [p.strip().strip('"').strip("'") for p in inner.split(",")]
     if text.startswith('"') and text.endswith('"'):
         return text[1:-1]
     if text.startswith("'") and text.endswith("'"):
@@ -156,27 +149,38 @@ def _parse_value(text: str):
 
 def find_project_root(start: str = None) -> Path:
     """Walk up from start (default: cwd) looking for forgeds.yaml."""
+    if start in _project_root_cache:
+        return _project_root_cache[start]
     current = Path(start) if start else Path.cwd()
     for parent in [current] + list(current.parents):
         if (parent / "forgeds.yaml").exists():
+            _project_root_cache[start] = parent
             return parent
-    return Path.cwd()
+    result = Path.cwd()
+    _project_root_cache[start] = result
+    return result
 
 
 def load_config(start: str = None) -> dict:
     """Load forgeds.yaml from the project root.
 
     Returns the parsed config dict, or an empty dict with sensible
-    defaults if no config file is found.
+    defaults if no config file is found.  Results are cached so
+    repeated calls avoid filesystem walks and YAML re-parsing.
     """
+    if start in _config_cache:
+        return _config_cache[start]
+
     root = find_project_root(start)
     config_path = root / "forgeds.yaml"
 
     if config_path.exists():
-        return _load_yaml_simple(str(config_path))
+        result = _load_yaml_simple(str(config_path))
+        _config_cache[start] = result
+        return result
 
     # Sensible defaults when no config exists
-    return {
+    defaults = {
         "project": {"name": "Unknown", "version": "0.0.0"},
         "lint": {
             "threshold_fallback": "999.99",
@@ -192,6 +196,8 @@ def load_config(start: str = None) -> dict:
         },
         "seed_data_dir": "config/seed-data",
     }
+    _config_cache[start] = defaults
+    return defaults
 
 
 def get_db_dir() -> Path:
@@ -200,12 +206,18 @@ def get_db_dir() -> Path:
     Uses FORGEDS_DB_DIR env var if set, otherwise the tool's own
     package directory (backward-compatible with ERM layout).
     """
+    global _db_dir_cache
+    if _db_dir_cache is not None:
+        return _db_dir_cache
     env_dir = os.environ.get("FORGEDS_DB_DIR")
     if env_dir:
-        return Path(env_dir)
+        _db_dir_cache = Path(env_dir)
+        return _db_dir_cache
     # Default: next to the consumer project root
     root = find_project_root()
     tools_dir = root / "tools"
     if tools_dir.is_dir():
-        return tools_dir
-    return root
+        _db_dir_cache = tools_dir
+        return _db_dir_cache
+    _db_dir_cache = root
+    return _db_dir_cache
