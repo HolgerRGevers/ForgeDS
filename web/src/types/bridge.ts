@@ -13,7 +13,7 @@ export interface BridgeMessage {
 /** Inbound message received from the bridge server. */
 export interface BridgeResponse {
   id: string;
-  type: "response" | "stream" | "stream_end" | "error";
+  type: "response" | "stream" | "stream_end" | "error" | "pong";
   data: Record<string, unknown>;
 }
 

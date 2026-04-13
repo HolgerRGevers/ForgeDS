@@ -52,7 +52,7 @@ interface PendingRequest {
 
 const BRIDGE_URL =
   (typeof import.meta !== "undefined" &&
-    (import.meta as Record<string, Record<string, string>>).env
+    (import.meta as unknown as Record<string, Record<string, string>>).env
       ?.VITE_BRIDGE_URL) ||
   "ws://localhost:9876";
 const MAX_BACKOFF_MS = 30_000;
