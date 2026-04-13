@@ -9,6 +9,45 @@ from __future__ import annotations
 
 from forgeds.lang.tokens import Token, TokenType, KEYWORDS
 
+# Module-level operator lookup tables (avoids dict construction per token)
+_TWO_CHAR_OPS: dict[str, TokenType] = {
+    "==": TokenType.EQEQ,
+    "!=": TokenType.BANGEQ,
+    "<=": TokenType.LTEQ,
+    ">=": TokenType.GTEQ,
+    "&&": TokenType.AND,
+    "||": TokenType.OR,
+    "+=": TokenType.PLUS_EQ,
+    "-=": TokenType.MINUS_EQ,
+    "*=": TokenType.STAR_EQ,
+    "/=": TokenType.SLASH_EQ,
+    "%=": TokenType.PERCENT_EQ,
+}
+
+_ONE_CHAR_OPS: dict[str, TokenType] = {
+    "+": TokenType.PLUS,
+    "-": TokenType.MINUS,
+    "*": TokenType.STAR,
+    "/": TokenType.SLASH,
+    "%": TokenType.PERCENT,
+    "=": TokenType.EQ,
+    "<": TokenType.LT,
+    ">": TokenType.GT,
+    "!": TokenType.BANG,
+    "(": TokenType.LPAREN,
+    ")": TokenType.RPAREN,
+    "[": TokenType.LBRACKET,
+    "]": TokenType.RBRACKET,
+    "{": TokenType.LBRACE,
+    "}": TokenType.RBRACE,
+    ";": TokenType.SEMICOLON,
+    ":": TokenType.COLON,
+    ".": TokenType.DOT,
+    ",": TokenType.COMMA,
+}
+
+_WHITESPACE = frozenset(" \t\r\n")
+
 
 class LexError(Exception):
     """Raised on unrecoverable lexer errors."""
@@ -118,8 +157,16 @@ class Lexer:
         return ch
 
     def _skip_whitespace(self) -> None:
-        while self.pos < len(self.source) and self.source[self.pos] in " \t\r\n":
-            self._advance()
+        src = self.source
+        pos = self.pos
+        while pos < len(src) and src[pos] in _WHITESPACE:
+            if src[pos] == "\n":
+                self.line += 1
+                self.col = 0
+            else:
+                self.col += 1
+            pos += 1
+        self.pos = pos
 
     def _emit(self, ttype: TokenType, value: str, start_line: int, start_col: int, start_offset: int) -> None:
         self.tokens.append(Token(ttype, value, start_line, start_col, start_offset))
@@ -133,8 +180,13 @@ class Lexer:
 
     def _line_comment(self) -> None:
         """Skip // ... to end of line."""
-        while self.pos < len(self.source) and self.source[self.pos] != "\n":
-            self._advance()
+        nl = self.source.find("\n", self.pos)
+        if nl == -1:
+            self.col += len(self.source) - self.pos
+            self.pos = len(self.source)
+        else:
+            self.col += nl - self.pos
+            self.pos = nl
 
     def _block_comment(self) -> None:
         """Skip /* ... */."""
@@ -199,27 +251,32 @@ class Lexer:
     def _number(self) -> None:
         """Scan integer or decimal number (with optional leading -)."""
         start_line, start_col, start_offset = self.line, self.col, self.pos
-        buf: list[str] = []
-        if self.source[self.pos] == "-":
-            buf.append(self._advance())
-        while self.pos < len(self.source) and self.source[self.pos].isdigit():
-            buf.append(self._advance())
+        src = self.source
+        pos = self.pos
+        if src[pos] == "-":
+            pos += 1
+        while pos < len(src) and src[pos].isdigit():
+            pos += 1
         # Decimal part
-        if self.pos < len(self.source) and self.source[self.pos] == ".":
-            nxt = self._peek(1)
-            if nxt.isdigit():
-                buf.append(self._advance())  # .
-                while self.pos < len(self.source) and self.source[self.pos].isdigit():
-                    buf.append(self._advance())
-        self._emit(TokenType.NUMBER, "".join(buf), start_line, start_col, start_offset)
+        if pos < len(src) and src[pos] == "." and pos + 1 < len(src) and src[pos + 1].isdigit():
+            pos += 1  # .
+            while pos < len(src) and src[pos].isdigit():
+                pos += 1
+        word = src[self.pos:pos]
+        self.col += len(word)
+        self.pos = pos
+        self._emit(TokenType.NUMBER, word, start_line, start_col, start_offset)
 
     def _identifier(self) -> None:
         """Scan identifier or keyword."""
         start_line, start_col, start_offset = self.line, self.col, self.pos
-        buf: list[str] = []
-        while self.pos < len(self.source) and (self.source[self.pos].isalnum() or self.source[self.pos] == "_"):
-            buf.append(self._advance())
-        word = "".join(buf)
+        src = self.source
+        pos = self.pos
+        while pos < len(src) and (src[pos].isalnum() or src[pos] == "_"):
+            pos += 1
+        word = src[self.pos:pos]
+        self.col += len(word)
+        self.pos = pos
         ttype = KEYWORDS.get(word, TokenType.IDENT)
         self._emit(ttype, word, start_line, start_col, start_offset)
 
@@ -231,50 +288,18 @@ class Lexer:
 
         # Two-char operators
         two = ch + nxt if nxt != "\0" else ""
-        two_map = {
-            "==": TokenType.EQEQ,
-            "!=": TokenType.BANGEQ,
-            "<=": TokenType.LTEQ,
-            ">=": TokenType.GTEQ,
-            "&&": TokenType.AND,
-            "||": TokenType.OR,
-            "+=": TokenType.PLUS_EQ,
-            "-=": TokenType.MINUS_EQ,
-            "*=": TokenType.STAR_EQ,
-            "/=": TokenType.SLASH_EQ,
-            "%=": TokenType.PERCENT_EQ,
-        }
-        if two in two_map:
+        ttype = _TWO_CHAR_OPS.get(two)
+        if ttype is not None:
             self._advance()
             self._advance()
-            self._emit(two_map[two], two, start_line, start_col, start_offset)
+            self._emit(ttype, two, start_line, start_col, start_offset)
             return True
 
         # Single-char operators & punctuation
-        one_map = {
-            "+": TokenType.PLUS,
-            "-": TokenType.MINUS,
-            "*": TokenType.STAR,
-            "/": TokenType.SLASH,
-            "%": TokenType.PERCENT,
-            "=": TokenType.EQ,
-            "<": TokenType.LT,
-            ">": TokenType.GT,
-            "!": TokenType.BANG,
-            "(": TokenType.LPAREN,
-            ")": TokenType.RPAREN,
-            "[": TokenType.LBRACKET,
-            "]": TokenType.RBRACKET,
-            "{": TokenType.LBRACE,
-            "}": TokenType.RBRACE,
-            ";": TokenType.SEMICOLON,
-            ":": TokenType.COLON,
-            ".": TokenType.DOT,
-            ",": TokenType.COMMA,
-        }
-        if ch in one_map:
+        ttype = _ONE_CHAR_OPS.get(ch)
+        if ttype is not None:
             self._advance()
-            self._emit(one_map[ch], ch, start_line, start_col, start_offset)
+            self._emit(ttype, ch, start_line, start_col, start_offset)
             return True
 
         return False

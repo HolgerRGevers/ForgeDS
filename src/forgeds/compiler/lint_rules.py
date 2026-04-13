@@ -20,6 +20,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from forgeds._shared.config import load_config
 from forgeds._shared.diagnostics import Severity, Diagnostic, build_ai_prompt
 from forgeds.lang import ast_nodes as ast
 from forgeds.lang.tokens import SourceSpan
@@ -32,6 +33,17 @@ from forgeds.lang.tokens import SourceSpan
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$")
 TIME_PATTERN = re.compile(r"^\d{2}:\d{2}(:\d{2})?$")
 EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+_RE_ASSIGNMENT = re.compile(r"(\w+)\s*=[^=]")
+
+# Pre-load config once at module level (cached by load_config)
+_config = load_config()
+_lint_cfg = _config.get("lint", {})
+_THRESHOLD_FALLBACK = float(_lint_cfg.get("threshold_fallback", "999.99"))
+_DUAL_THRESHOLD_FALLBACK = float(_lint_cfg.get("dual_threshold_fallback", "5000.00"))
+_VALID_THRESHOLDS = {_THRESHOLD_FALLBACK, _DUAL_THRESHOLD_FALLBACK}
+_DEMO_EMAIL_DOMAINS = set(_lint_cfg.get(
+    "demo_email_domains", ["yourdomain.com", "example.com", "placeholder.com"]
+))
 
 VALID_ADDED_USER_VALUES = {"zoho.loginuser", "zoho.adminuser"}
 
@@ -134,16 +146,11 @@ class ASTLinter(ast.Visitor):
         self._has_map_constructor = False
         self._has_put_call = False
 
-        # Load config-driven thresholds
-        from forgeds._shared.config import load_config
-        _config = load_config()
-        _lint_cfg = _config.get("lint", {})
-        self._threshold_fallback = float(_lint_cfg.get("threshold_fallback", "999.99"))
-        self._dual_threshold_fallback = float(_lint_cfg.get("dual_threshold_fallback", "5000.00"))
-        self._valid_thresholds = {self._threshold_fallback, self._dual_threshold_fallback}
-        self._demo_email_domains = set(_lint_cfg.get(
-            "demo_email_domains", ["yourdomain.com", "example.com", "placeholder.com"]
-        ))
+        # Use module-level pre-loaded config values (avoids per-instance re-parsing)
+        self._threshold_fallback = _THRESHOLD_FALLBACK
+        self._dual_threshold_fallback = _DUAL_THRESHOLD_FALLBACK
+        self._valid_thresholds = _VALID_THRESHOLDS
+        self._demo_email_domains = _DEMO_EMAIL_DOMAINS
 
     def _emit(self, line: int, severity: Severity, code: str, message: str) -> None:
         src = self._source_lines[line - 1] if 0 < line <= len(self._source_lines) else ""
@@ -758,7 +765,7 @@ def _check_dg017_raw(db: Any, filename: str, source: str, diags: list[Diagnostic
         stripped = line.strip()
         if stripped.startswith("//"):
             continue
-        m = re.match(r"(\w+)\s*=[^=]", stripped)
+        m = _RE_ASSIGNMENT.match(stripped)
         if m:
             var_name = m.group(1)
             if var_name in db.reserved_words:

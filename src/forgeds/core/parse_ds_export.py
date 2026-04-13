@@ -31,6 +31,17 @@ from pathlib import Path
 
 from forgeds._shared.config import load_config, get_db_dir
 
+# Pre-compiled patterns for DS parsing (avoids per-line recompilation)
+_RE_FORM = re.compile(r"^\t{2,3}form\s+(\w+)\s*$")
+_RE_DISPLAYNAME = re.compile(r'\s*displayname\s*=\s*"([^"]*)"')
+_RE_FIELD_DEF = re.compile(r"^\s*(?:must have\s+)?(\w+)\s*$")
+_RE_FIELD_TYPE = re.compile(r"type\s*=\s*(\w[\w\s]*)")
+_RE_FIELD_DISPLAY = re.compile(r'displayname\s*=\s*"([^"]*)"')
+_RE_INITIAL_VALUE = re.compile(r"initial value\s*=\s*(\S+)")
+_RE_WF_NAME = re.compile(r'\s*(\w+)\s+as\s+"([^"]*)"')
+_RE_FORM_ASSIGN = re.compile(r"form\s*=\s*(\w+)")
+_RE_RECORD_EVENT = re.compile(r"record event\s*=\s*(.+)")
+
 
 # ============================================================
 # Data structures
@@ -89,7 +100,7 @@ class DSParser:
             line = self.lines[i].strip()
 
             # Match: form <name> at top level (indented by 2-3 tabs)
-            m = re.match(r"^\t{2,3}form\s+(\w+)\s*$", self.lines[i])
+            m = _RE_FORM.match(self.lines[i])
             if m and i + 1 < len(self.lines) and self.lines[i + 1].strip() == "{":
                 form_name = m.group(1)
                 form = self._parse_single_form(form_name, i)
@@ -121,7 +132,7 @@ class DSParser:
                     break
 
             # Extract form-level displayname (first one at brace depth 1)
-            dm = re.match(r'\s*displayname\s*=\s*"([^"]*)"', stripped)
+            dm = _RE_DISPLAYNAME.match(stripped)
             if dm and brace_depth == 1 and not got_display_name:
                 display_name = dm.group(1)
                 got_display_name = True
@@ -129,9 +140,7 @@ class DSParser:
             # Extract field: look for field definition patterns
             # Fields have format: field_name ( type = xxx ... )
             # They can also be: must have field_name ( type = xxx ... )
-            fm = re.match(
-                r"^\s*(?:must have\s+)?(\w+)\s*$", stripped
-            )
+            fm = _RE_FIELD_DEF.match(stripped)
             if fm and brace_depth == 1 and i + 1 < len(self.lines):
                 next_line = self.lines[i + 1].strip()
                 if next_line == "(":
@@ -163,11 +172,11 @@ class DSParser:
             stripped = self.lines[i].strip()
             paren_depth += stripped.count("(") - stripped.count(")")
 
-            tm = re.match(r"type\s*=\s*(\w[\w\s]*)", stripped)
+            tm = _RE_FIELD_TYPE.match(stripped)
             if tm:
                 field_type = tm.group(1).strip()
 
-            dnm = re.match(r'displayname\s*=\s*"([^"]*)"', stripped)
+            dnm = _RE_FIELD_DISPLAY.match(stripped)
             if dnm:
                 display_name = dnm.group(1)
 
@@ -175,8 +184,8 @@ class DSParser:
                 notes_parts.append("personal data")
             if "private = true" in stripped:
                 notes_parts.append("private/hidden")
-            if re.search(r"initial value\s*=", stripped):
-                m = re.search(r"initial value\s*=\s*(\S+)", stripped)
+            if "initial value" in stripped:
+                m = _RE_INITIAL_VALUE.search(stripped)
                 if m:
                     notes_parts.append(f"default: {m.group(1)}")
 
@@ -239,9 +248,7 @@ class DSParser:
                 continue
 
             # Match workflow names like: Name_Here as "Display Name"
-            wm = re.match(
-                r'\s*(\w+)\s+as\s+"([^"]*)"', stripped
-            )
+            wm = _RE_WF_NAME.match(stripped)
             if wm:
                 name = wm.group(1)
                 display = wm.group(2)
@@ -265,11 +272,11 @@ class DSParser:
                         if in_block and inner_brace <= 0:
                             break
 
-                    fm = re.match(r"form\s*=\s*(\w+)", line)
+                    fm = _RE_FORM_ASSIGN.match(line)
                     if fm:
                         form_name = fm.group(1)
 
-                    rem = re.match(r"record event\s*=\s*(.+)", line)
+                    rem = _RE_RECORD_EVENT.match(line)
                     if rem:
                         record_event = rem.group(1).strip()
 
@@ -311,7 +318,7 @@ class DSParser:
         i = start
         while i < len(self.lines):
             stripped = self.lines[i].strip()
-            sm = re.match(r'(\w+)\s+as\s+"([^"]*)"', stripped)
+            sm = _RE_WF_NAME.match(stripped)
             if sm:
                 name = sm.group(1)
                 display = sm.group(2)
@@ -324,7 +331,7 @@ class DSParser:
                     line = self.lines[j].strip()
                     brace_depth += line.count("{") - line.count("}")
 
-                    fm = re.match(r"form\s*=\s*(\w+)", line)
+                    fm = _RE_FORM_ASSIGN.match(line)
                     if fm:
                         form_name = fm.group(1)
 
@@ -370,7 +377,7 @@ class DSParser:
             stripped = self.lines[i].strip()
 
             # Match approval process name
-            am = re.match(r'(\w+)\s+as\s+"([^"]*)"', stripped)
+            am = _RE_WF_NAME.match(stripped)
             if am:
                 current_approval = am.group(1)
                 current_display = am.group(2)

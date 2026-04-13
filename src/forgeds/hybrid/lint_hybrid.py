@@ -78,6 +78,7 @@ class HybridDB:
     ) -> None:
         # Access DB data
         self.access_table_fields: dict[tuple[str, str], str] = {}  # (table, field) -> access_type
+        self._fields_by_table: dict[str, dict[str, str]] = {}  # pre-indexed: table -> {field: type}
         self.type_mappings: dict[str, dict[str, str]] = {}  # access_type -> {zoho_type, notes, risk}
         self.field_name_mappings: dict[tuple[str, str], dict[str, str]] = {}  # (access_table, access_field) -> {zoho_form, zoho_field}
         self.access_constraints: list[dict[str, str]] = []  # list of FK constraint dicts
@@ -91,16 +92,23 @@ class HybridDB:
         self._load_access_db(access_db_path)
         self._load_deluge_db(deluge_db_path)
 
+        # Pre-compute cached sets (avoids re-deriving on every call)
+        self._access_tables: set[str] = {table for table, _ in self.access_table_fields}
+        self._mapped_access_tables: set[str] = {table for table, _ in self.field_name_mappings}
+        self._mapped_zoho_forms: set[str] = {m["zoho_form"] for m in self.field_name_mappings.values()}
+
     def _load_access_db(self, db_path: Path) -> None:
         if not db_path.exists():
             return
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
 
-        # access_table_fields
+        # access_table_fields (+ pre-indexed by-table lookup)
         try:
             for row in conn.execute("SELECT table_name, field_name, access_type FROM access_table_fields"):
-                self.access_table_fields[(row["table_name"], row["field_name"])] = row["access_type"]
+                tname, fname, atype = row["table_name"], row["field_name"], row["access_type"]
+                self.access_table_fields[(tname, fname)] = atype
+                self._fields_by_table.setdefault(tname, {})[fname] = atype
         except sqlite3.OperationalError:
             pass
 
@@ -181,15 +189,11 @@ class HybridDB:
 
     def get_access_tables(self) -> set[str]:
         """Return set of distinct Access table names."""
-        return {table for table, _ in self.access_table_fields}
+        return self._access_tables
 
     def get_access_fields_for_table(self, table: str) -> dict[str, str]:
         """Return {field_name: access_type} for a given Access table."""
-        result: dict[str, str] = {}
-        for (t, f), atype in self.access_table_fields.items():
-            if t == table:
-                result[f] = atype
-        return result
+        return self._fields_by_table.get(table, {})
 
     def get_zoho_forms(self) -> set[str]:
         """Return set of distinct Zoho form names."""
@@ -197,11 +201,11 @@ class HybridDB:
 
     def get_mapped_access_tables(self) -> set[str]:
         """Return Access tables that have at least one field_name_mapping."""
-        return {table for table, _ in self.field_name_mappings}
+        return self._mapped_access_tables
 
     def get_mapped_zoho_forms(self) -> set[str]:
         """Return Zoho forms that have at least one field_name_mapping target."""
-        return {m["zoho_form"] for m in self.field_name_mappings.values()}
+        return self._mapped_zoho_forms
 
     def get_fk_constraints(self) -> list[dict[str, str]]:
         """Return FK constraints only."""
