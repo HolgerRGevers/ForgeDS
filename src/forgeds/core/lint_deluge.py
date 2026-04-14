@@ -147,8 +147,12 @@ class DelugeDB:
                 self.form_fields[form] = set()
             self.form_fields[form].add(row["field_link"])
 
-        # Expense_claims fields (used for input.X validation)
-        self.expense_fields: set[str] = self.form_fields.get("expense_claims", set())
+        # All fields across all forms (used for input.X validation)
+        self.all_input_fields: set[str] = set()
+        for fields in self.form_fields.values():
+            self.all_input_fields.update(fields)
+        # Legacy alias — kept for backward compatibility
+        self.expense_fields: set[str] = self.all_input_fields
 
         # Approval_history fields (used for insert validation)
         self.approval_history_fields: set[str] = self.form_fields.get(
@@ -428,6 +432,12 @@ def check_dg011(
 def check_dg013(filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG013: Mixed && and || without parentheses."""
     if "&&" in line and "||" in line:
+        # Skip if groups are explicitly parenthesized: (A && B) || C or A || (B && C)
+        stripped = strip_comments(line).strip()
+        if re.search(r"\([^)]*&&[^)]*\)\s*\|\|", stripped):
+            return []
+        if re.search(r"\|\|\s*\([^)]*&&[^)]*\)", stripped):
+            return []
         return [_diag(
             filename, lineno, Severity.WARNING, "DG013",
             "Mixed && and || on same line. Creator evaluates OR before AND "
@@ -650,7 +660,11 @@ def check_dg012(db: DelugeDB, filename: str, block: Block) -> list[Diagnostic]:
     if block.block_type != "insert" or block.target_table != "approval_history":
         return []
     if "action_1" in block.fields:
-        val = block.fields["action_1"].value.strip().strip('"')
+        raw = block.fields["action_1"].value.strip()
+        # Skip dynamic (concatenated) action_1 values — can't validate at lint time
+        if "+" in raw:
+            return []
+        val = raw.strip('"')
         if val not in db.valid_actions:
             return [_diag(
                 filename, block.fields["action_1"].line, Severity.WARNING, "DG012",
@@ -754,8 +768,8 @@ def check_dg005(filename: str, lines: list[str]) -> list[Diagnostic]:
             if table_name not in ("insert", "into", "if", "for", "while"):
                 query_vars[var_name] = lineno
 
-        # Detect null guard: if (var != null
-        guard_match = re.search(r"if\s*\(\s*(\w+)\s*!=\s*null", line)
+        # Detect null guard: if (var != null  OR  if (var == null (early-exit pattern)
+        guard_match = re.search(r"if\s*\(\s*(\w+)\s*[!=]=\s*null", line)
         if guard_match:
             var_name = guard_match.group(1)
             if var_name in query_vars:

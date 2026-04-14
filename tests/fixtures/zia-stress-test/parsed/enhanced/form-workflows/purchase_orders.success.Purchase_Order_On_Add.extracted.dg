@@ -41,7 +41,7 @@ if (vendor != null)
 		from : zoho.adminuserid
 		to : input.Requester_Email
 		subject : "Purchase Order " + input.PO_Number + " Submitted"
-		message : "<h2>Purchase Order Submitted</h2><table border='1'><tr><td>PO Number</td><td>" + input.PO_Number + "</td></tr><tr><td>Vendor</td><td>" + ifnull(vendor.Vendor_Name, "N/A") + "</td></tr><tr><td>Total</td><td>R " + input.Total + "</td></tr></table><p>This order is now pending approval.</p>"
+		message : "<h2>Purchase Order Submitted</h2><table border=\"1\"><tr><td>PO Number</td><td>" + input.PO_Number + "</td></tr><tr><td>Vendor</td><td>" + ifnull(vendor.Vendor_Name, "N/A") + "</td></tr><tr><td>Total</td><td>R " + input.Total + "</td></tr></table><p>This order is now pending approval.</p>"
 		content_type : Html
 	];
 }

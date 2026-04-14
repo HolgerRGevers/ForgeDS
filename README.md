@@ -21,9 +21,9 @@ Creator apps as code, not click-ops.
 
 | Capability | Tool | Rules/Features |
 |---|---|---|
-| **Lint Deluge** | `forgeds-lint` | 41 rules (DG001-DG018+) |
-| **Lint Access SQL** | `forgeds-lint-access` | 8 rules (AV001-AV008) |
-| **Lint Hybrid** | `forgeds-lint-hybrid` | 16 rules (HY001-HY016) |
+| **Lint Deluge** | `forgeds-lint` | 25 rules (DG000-DG027) |
+| **Lint Access SQL** | `forgeds-lint-access` | 9 rules (AV001-AV009) |
+| **Lint Hybrid** | `forgeds-lint-hybrid` | 18 rules (HY000-HY018) |
 | **Build language DBs** | `forgeds-build-db`, `forgeds-build-access-db` | SQLite reference data |
 | **Scaffold scripts** | `forgeds-scaffold` | Generate `.dg` from manifest |
 | **Parse .ds exports** | `forgeds-parse-ds` | Extract forms, scripts, field docs |
@@ -100,7 +100,10 @@ and optional **extensions** (custom dashboard builders, project-specific
 Your Project (e.g., ERM)          ForgeDS (this package)
 +---------------------------+     +---------------------------+
 | forgeds.yaml              | --> | _shared/config.py         |
-| config/seed-data/*.json   |     | _shared/diagnostics.py    |
+| config/seed-data/         |     | _shared/diagnostics.py    |
+|   form-fields.json        | --> | core/build_deluge_db.py   |
+|   valid-statuses.json     | --> | core/lint_deluge.py       |
+|   valid-actions.json      | --> |                           |
 | src/deluge/*.dg           | --> | core/lint_deluge.py       |
 | src/access/*.sql          | --> | access/lint_access.py     |
 | exports/*.ds              | --> | core/ds_editor.py         |
