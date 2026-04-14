@@ -99,6 +99,37 @@ class ScheduleSpec:
     code: str
 
 
+@dataclass
+class BlueprintStage:
+    name: str
+    display_name: str
+
+
+@dataclass
+class BlueprintTransition:
+    link_name: str
+    display_name: str
+    from_stage: str
+    to_stage: str
+
+
+@dataclass
+class BlueprintSpec:
+    link_name: str
+    display_name: str
+    form: str  # form link_name this blueprint is on
+    status_field: str  # field that holds the state (usually "Status")
+    stages: list[BlueprintStage] = field(default_factory=list)
+    transitions: list[BlueprintTransition] = field(default_factory=list)
+
+
+@dataclass
+class PageSpec:
+    link_name: str
+    display_name: str
+    components: list[str] = field(default_factory=list)  # report link_names
+
+
 # ============================================================
 # YAML parser for forms.yaml
 # ============================================================
@@ -535,6 +566,83 @@ def emit_forms(forms: list[FormSpec]) -> list[str]:
     return lines
 
 
+def emit_blueprints(blueprints: list[BlueprintSpec]) -> list[str]:
+    """Generate blueprint blocks in .ds format.
+
+    Blueprints define state machines on forms — stages (states) and
+    transitions (edges).  The KB requires every form with a Status field
+    to have a blueprint; the builder now generates them from config.
+    """
+    if not blueprints:
+        return []
+
+    lines: list[str] = []
+    lines.append(f"\tblueprints")
+    lines.append(f"\t{{")
+
+    for bp in blueprints:
+        lines.append(f'\t\tblueprint {bp.link_name} as "{bp.display_name}"')
+        lines.append(f"\t\t{{")
+        lines.append(f"\t\t\tform = {bp.form}")
+        lines.append(f"\t\t\tstatus field = {bp.status_field}")
+        lines.append(f"")
+
+        # Stages
+        lines.append(f"\t\t\tstages")
+        lines.append(f"\t\t\t{{")
+        for stage in bp.stages:
+            lines.append(f'\t\t\t\tstage {stage.name} as "{stage.display_name}"')
+            lines.append(f"\t\t\t\t{{")
+            lines.append(f"\t\t\t\t}}")
+        lines.append(f"\t\t\t}}")
+        lines.append(f"")
+
+        # Transitions
+        lines.append(f"\t\t\ttransitions")
+        lines.append(f"\t\t\t{{")
+        for t in bp.transitions:
+            lines.append(f'\t\t\t\ttransition {t.link_name} as "{t.display_name}"')
+            lines.append(f"\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\tfrom = {t.from_stage}")
+            lines.append(f"\t\t\t\t\tto = {t.to_stage}")
+            lines.append(f"\t\t\t\t}}")
+        lines.append(f"\t\t\t}}")
+
+        lines.append(f"\t\t}}")
+    lines.append(f"\t}}")
+    return lines
+
+
+def emit_pages(pages: list[PageSpec]) -> list[str]:
+    """Generate page/dashboard blocks in .ds format.
+
+    The KB documents that Creator apps require at least one page with a
+    dashboard for the app to load in the browser.  Without pages, the
+    import succeeds but the app shows a blank screen.
+    """
+    if not pages:
+        return []
+
+    lines: list[str] = []
+    lines.append(f"\tpages")
+    lines.append(f"\t{{")
+
+    for page in pages:
+        lines.append(f'\t\tpage {page.link_name} as "{page.display_name}"')
+        lines.append(f"\t\t{{")
+        lines.append(f'\t\t\ttype = "dashboard"')
+        for comp in page.components:
+            lines.append(f"\t\t\tcomponent {comp}")
+            lines.append(f"\t\t\t{{")
+            lines.append(f'\t\t\t\ttype = "report"')
+            lines.append(f'\t\t\t\treport = {comp}')
+            lines.append(f"\t\t\t}}")
+        lines.append(f"\t\t}}")
+
+    lines.append(f"\t}}")
+    return lines
+
+
 def emit_reports(reports: list[ReportSpec]) -> list[str]:
     """Generate reports block matching real Zoho .ds export format."""
     if not reports:
@@ -575,6 +683,9 @@ def emit_application(
     reports: list[ReportSpec],
     workflows: list[WorkflowSpec],
     schedules: list[ScheduleSpec],
+    *,
+    blueprints: list[BlueprintSpec] | None = None,
+    pages: list[PageSpec] | None = None,
 ) -> str:
     """Generate the complete .ds file content matching real Zoho export format."""
     from datetime import datetime
@@ -603,6 +714,16 @@ def emit_application(
     if reports:
         lines.append("")
         lines.extend(emit_reports(reports))
+
+    # Blueprints (KB-adherent: generated for any form with a Status field)
+    if blueprints:
+        lines.append("")
+        lines.extend(emit_blueprints(blueprints))
+
+    # Pages / Dashboards (KB-adherent: required for app to load in Creator)
+    if pages:
+        lines.append("")
+        lines.extend(emit_pages(pages))
 
     # Workflows + Schedules (nested inside workflow block, like real exports)
     if workflows or schedules:
@@ -1184,6 +1305,11 @@ def main() -> None:
         metavar="PATH",
         help="Validate an existing .ds file instead of generating",
     )
+    parser.add_argument(
+        "--kb-validate",
+        action="store_true",
+        help="After generating, ingest into KB and run projections to compute residual.",
+    )
     args = parser.parse_args()
 
     # Validate-only mode
@@ -1248,8 +1374,60 @@ def main() -> None:
     app_name = project.get("name", "") or config.get("name", "My_App")
     display_name = app_name
 
+    # KB-adherent: auto-generate blueprints for forms with a Status field
+    blueprints: list[BlueprintSpec] = []
+    for form in forms:
+        status_fields = [f for f in form.fields if f.name.lower() == "status"]
+        if status_fields:
+            sf = status_fields[0]
+            # Build stages from picklist choices if available
+            stages: list[BlueprintStage] = []
+            if sf.choices:
+                for choice in [c.strip() for c in sf.choices.split(",") if c.strip()]:
+                    stage_link = choice.replace(" ", "_").replace("-", "_")
+                    stages.append(BlueprintStage(name=stage_link, display_name=choice))
+
+            # Auto-generate sequential transitions between stages
+            transitions: list[BlueprintTransition] = []
+            for i in range(len(stages) - 1):
+                t_name = f"{stages[i].name}_to_{stages[i+1].name}".lower()
+                t_display = f"{stages[i].display_name} to {stages[i+1].display_name}"
+                transitions.append(BlueprintTransition(
+                    link_name=t_name,
+                    display_name=t_display,
+                    from_stage=stages[i].name,
+                    to_stage=stages[i+1].name,
+                ))
+
+            if stages:
+                bp = BlueprintSpec(
+                    link_name=f"{form.link_name}_workflow",
+                    display_name=f"{form.display_name} Workflow",
+                    form=form.link_name,
+                    status_field="Status",
+                    stages=stages,
+                    transitions=transitions,
+                )
+                blueprints.append(bp)
+                print(f"  Blueprint: {bp.display_name} ({len(stages)} stages, "
+                      f"{len(transitions)} transitions)", file=sys.stderr)
+
+    # KB-adherent: auto-generate default dashboard page
+    pages: list[PageSpec] = []
+    if reports:
+        page_components = [r.link_name for r in reports[:6]]  # max 6 per dashboard
+        pages.append(PageSpec(
+            link_name="Dashboard",
+            display_name="Dashboard",
+            components=page_components,
+        ))
+        print(f"  Page: Dashboard ({len(page_components)} components)", file=sys.stderr)
+
     # Generate .ds content
-    content = emit_application(app_name, display_name, forms, reports, workflows, schedules)
+    content = emit_application(
+        app_name, display_name, forms, reports, workflows, schedules,
+        blueprints=blueprints, pages=pages,
+    )
 
     # Validate output
     output_diags = validate_ds(content, args.output or "<stdout>")
@@ -1268,10 +1446,48 @@ def main() -> None:
         print(f"Generated: {out_path}")
         print(f"  Forms: {len(forms)}")
         print(f"  Reports: {len(reports)}")
+        print(f"  Blueprints: {len(blueprints)}")
+        print(f"  Pages: {len(pages)}")
         print(f"  Workflows: {len(workflows)}")
         print(f"  Schedules: {len(schedules)}")
     else:
         sys.stdout.write(content)
+
+    # KB post-build validation (optional)
+    if args.kb_validate:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if kb.available():
+            import tempfile
+            # Write .ds to a temp file if output was stdout
+            if args.output:
+                ds_for_ingest = Path(args.output)
+            else:
+                tmp = tempfile.NamedTemporaryFile(suffix=".ds", delete=False, mode="w", encoding="utf-8")
+                tmp.write(content)
+                tmp.close()
+                ds_for_ingest = Path(tmp.name)
+
+            try:
+                from forgeds.knowledge.app_ingest import ingest_ds_app
+                module = f"app:{app_name.replace(' ', '_')}"
+                ingest_ds_app(str(ds_for_ingest), str(kb.db_path), module_name=module)
+                report = kb.project(module)
+                if report:
+                    print(f"\n  KB Projection: R({app_name}) = {report.residual:.1f}", file=sys.stderr)
+                    print(f"  Gaps: {len(report.gaps)}", file=sys.stderr)
+                    for g in sorted(report.gaps, key=lambda x: -x.severity)[:10]:
+                        sev = {2.0: "CRITICAL", 1.5: "HIGH", 1.0: "MEDIUM", 0.5: "LOW"}.get(g.severity, "INFO")
+                        print(f"    [{sev}] {g.entity}: {g.message[:80]}", file=sys.stderr)
+                    if len(report.gaps) > 10:
+                        print(f"    ... and {len(report.gaps) - 10} more gap(s)", file=sys.stderr)
+            except Exception as e:
+                print(f"  KB validation error: {e}", file=sys.stderr)
+            finally:
+                if not args.output:
+                    ds_for_ingest.unlink(missing_ok=True)
+        else:
+            print("WARNING: knowledge.db not found. KB validation disabled.", file=sys.stderr)
 
     # Exit code
     warnings = len(input_diags) + len(output_diags) - len(input_errors) - len(output_errors)

@@ -1,0 +1,78 @@
+// ============================================================
+// Script:   chargeback_status_change.dg
+// Location: Chargeback Incidents > Form Workflow
+// Trigger:  On Success (status change)
+// Purpose:  Handle status transitions with audit trail and notifications
+// Version:  v2.1 (KB-Informed Redesign)
+// ============================================================
+
+// Detect status change
+oldStatus = input.Status;
+newStatus = input.Status;
+
+// Audit trail for every status change
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "Status changed to " + newStatus
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+];
+
+// Notification logic based on status
+if(newStatus == "Under Review")
+{
+    // Notify assigned Line Manager
+    if(input.Assigned_LM != null && input.Assigned_LM != "")
+    {
+        sendmail
+        [
+            from : zoho.adminuserid
+            to : input.Assigned_LM
+            subject : "Chargeback Incident " + input.PSP_Reference + " - Assigned for Review"
+            message : "You have been assigned chargeback incident " + input.PSP_Reference + " (Amount: " + input.Amount_Original + " " + input.Currency_Original + "). Dispute deadline: " + input.Dispute_Deadline + "."
+        ];
+    }
+}
+else if(newStatus == "Disputed")
+{
+    // Notify finance team
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : zoho.adminuserid
+        subject : "Chargeback " + input.PSP_Reference + " - Dispute Filed"
+        message : "A dispute has been filed for chargeback incident " + input.PSP_Reference + ". Reason: " + input.Dispute_Reason + "."
+    ];
+}
+else if(newStatus == "Resolved" || newStatus == "Won" || newStatus == "Lost")
+{
+    // Final resolution notification
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : zoho.adminuserid
+        subject : "Chargeback " + input.PSP_Reference + " - " + newStatus
+        message : "Chargeback incident " + input.PSP_Reference + " has been resolved with status: " + newStatus + ". Amount: " + input.Amount_Original + " " + input.Currency_Original + "."
+    ];
+}
+
+// SLA warning: if dispute deadline is approaching
+if(input.Days_Remaining != null && input.Days_Remaining <= 3 && newStatus != "Resolved" && newStatus != "Won" && newStatus != "Lost")
+{
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : input.Assigned_LM
+        subject : "URGENT: Chargeback " + input.PSP_Reference + " - " + input.Days_Remaining + " days to deadline"
+        message : "Chargeback incident " + input.PSP_Reference + " has only " + input.Days_Remaining + " days remaining before the dispute deadline. Immediate action required."
+    ];
+
+    row = insert into audit_trail
+    [
+        Incident_ID = input.ID
+        Action = "SLA Warning: " + input.Days_Remaining + " days to deadline"
+        Performed_By = "System"
+        Action_Date = zoho.currenttime
+    ];
+}

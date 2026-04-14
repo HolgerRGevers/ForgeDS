@@ -1,0 +1,57 @@
+// ============================================================
+// Script:   dispute_submission_validate.dg
+// Location: Dispute Submissions > Form Workflow
+// Trigger:  On Validate
+// Purpose:  Validate dispute submission entries
+// Version:  v2.1 (KB-Informed Redesign)
+// ============================================================
+
+// 1. Mandatory incident reference
+if(input.Incident_ID == null || input.Incident_ID == 0)
+{
+    alert "Incident ID is required for dispute submissions.";
+    cancel submit;
+}
+
+// 2. Check that referenced incident exists (with null guard)
+incident = chargeback_incidents[ID == input.Incident_ID];
+if(incident == null || incident.count() == 0)
+{
+    alert "Referenced chargeback incident not found.";
+    cancel submit;
+}
+
+// 3. Check dispute deadline has not passed
+if(incident != null && incident.Dispute_Deadline != null && incident.Dispute_Deadline < zoho.currentdate)
+{
+    alert "Cannot submit dispute — the deadline has passed (" + incident.Dispute_Deadline + ").";
+    cancel submit;
+}
+
+// 4. Document substantiation (similar to SARS S11(a))
+if(input.Evidence_Documents == null || input.Evidence_Documents == "")
+{
+    alert "Supporting evidence documents are required for dispute submissions.";
+    cancel submit;
+}
+
+// 5. Update parent incident status
+incident.Status = "Disputed";
+
+// 6. Audit trail
+row = insert into audit_trail
+[
+    Incident_ID = input.Incident_ID
+    Action = "Dispute submitted"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+];
+
+// 7. Notification
+sendmail
+[
+    from : zoho.adminuserid
+    to : zoho.adminuserid
+    subject : "Dispute Filed for Chargeback " + incident.PSP_Reference
+    message : "A dispute has been submitted for chargeback incident " + incident.PSP_Reference + " by " + zoho.loginuser + "."
+];

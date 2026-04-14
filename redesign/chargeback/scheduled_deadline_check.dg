@@ -1,0 +1,66 @@
+// ============================================================
+// Script:   scheduled_deadline_check.dg
+// Location: Scheduled Workflow
+// Trigger:  Daily at 08:00
+// Purpose:  Check for approaching dispute deadlines and send SLA alerts
+// Version:  v2.1 (KB-Informed Redesign)
+// ============================================================
+
+// Note: Uses daysBetween (not hoursBetween) due to daily schedule constraint
+
+// Fetch all open incidents with upcoming deadlines
+openIncidents = chargeback_incidents[Status != "Resolved" && Status != "Won" && Status != "Lost" && Status != "Closed"];
+
+if(openIncidents != null && openIncidents.count() > 0)
+{
+    for each rec in openIncidents
+    {
+        if(rec.Dispute_Deadline != null)
+        {
+            daysLeft = daysBetween(zoho.currentdate, rec.Dispute_Deadline);
+            rec.Days_Remaining = daysLeft;
+
+            // 3-day warning
+            if(daysLeft <= 3 && daysLeft > 0)
+            {
+                sendmail
+                [
+                    from : zoho.adminuserid
+                    to : rec.Assigned_LM
+                    subject : "SLA WARNING: Chargeback " + rec.PSP_Reference + " - " + daysLeft + " days remaining"
+                    message : "Chargeback incident " + rec.PSP_Reference + " has " + daysLeft + " days before the dispute deadline. Amount: " + rec.Amount_Original + " " + rec.Currency_Original + "."
+                ];
+
+                row = insert into audit_trail
+                [
+                    Incident_ID = rec.ID
+                    Action = "SLA Warning: " + daysLeft + " days remaining"
+                    Performed_By = "System"
+                    Action_Date = zoho.currenttime
+                ];
+            }
+
+            // Overdue — deadline passed
+            if(daysLeft <= 0 && rec.Status != "Expired")
+            {
+                rec.Status = "Expired";
+
+                sendmail
+                [
+                    from : zoho.adminuserid
+                    to : zoho.adminuserid
+                    subject : "OVERDUE: Chargeback " + rec.PSP_Reference + " - Dispute deadline passed"
+                    message : "The dispute deadline for chargeback " + rec.PSP_Reference + " has passed. This incident is now expired."
+                ];
+
+                row = insert into audit_trail
+                [
+                    Incident_ID = rec.ID
+                    Action = "Status changed to Expired — dispute deadline passed"
+                    Performed_By = "System"
+                    Action_Date = zoho.currenttime
+                ];
+            }
+        }
+    }
+}

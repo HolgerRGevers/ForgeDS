@@ -256,6 +256,10 @@ def main() -> None:
         "--batch-size", type=int, default=MAX_BATCH_SIZE,
         help=f"Records per API request (max {MAX_BATCH_SIZE})",
     )
+    parser.add_argument(
+        "--kb-report", action="store_true",
+        help="After upload, run KB projections and report residual.",
+    )
     args = parser.parse_args()
 
     # Load config
@@ -337,6 +341,27 @@ def main() -> None:
     print(f"Total: {total_records} records in {total_batches} batches ({mode} mode)")
     if not args.live:
         print("To actually upload, re-run with --live flag")
+
+    # KB report (optional)
+    if args.kb_report:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if kb.available():
+            app_name = config.get("app", "Unknown")
+            for mod in kb.list_app_modules():
+                if app_name.lower().replace(" ", "_") in mod.lower():
+                    report = kb.project(mod)
+                    if report:
+                        print(f"\nKB Projection: R({report.app_name}) = {report.residual:.1f}")
+                        print(f"  Gaps: {len(report.gaps)}")
+                        for g in sorted(report.gaps, key=lambda x: -x.severity)[:5]:
+                            sev = {2.0: "CRIT", 1.5: "HIGH", 1.0: "MED"}.get(g.severity, "LOW")
+                            print(f"    [{sev}] {g.entity}: {g.message[:70]}")
+                    break
+            else:
+                print(f"\nKB: No ingested module found for app '{app_name}'.", file=sys.stderr)
+        else:
+            print("WARNING: knowledge.db not found. KB report disabled.", file=sys.stderr)
 
 
 if __name__ == "__main__":

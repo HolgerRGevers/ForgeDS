@@ -1,0 +1,47 @@
+// ============================================================
+// Script:   sla_enforcement_null_fix.dg
+// Location: Scheduled Workflow
+// Trigger:  Daily
+// Purpose:  Fix gap: add null guard to record lookup in SLA Enforcement
+// Version:  v2.1 (KB-Informed Fix for R=7.5 gap)
+// ============================================================
+
+// PATCH: The existing SLA Enforcement Daily script fetches records
+// without checking for null results. This fix adds the null guard.
+
+// Original pattern (vulnerable):
+//   pendingClaims = expense_claims[status == "Pending LM Approval"];
+//   for each claim in pendingClaims { ... }
+
+// Fixed pattern:
+pendingClaims = expense_claims[status == "Pending LM Approval"];
+if(pendingClaims != null && pendingClaims.count() > 0)
+{
+    for each claim in pendingClaims
+    {
+        daysSinceSubmit = daysBetween(claim.Modified_Time, zoho.currentdate);
+        if(daysSinceSubmit > 3)
+        {
+            // SLA breach: escalate
+            claim.status = "Pending HoD Approval";
+
+            row = insert into approval_history
+            [
+                claim = claim.ID
+                action_1 = "Escalated (SLA Breach)"
+                actor = "System"
+                timestamp = zoho.currenttime
+                comments = "Auto-escalated after " + daysSinceSubmit + " days without LM action."
+                Added_User = zoho.loginuser
+            ];
+
+            sendmail
+            [
+                from : zoho.adminuserid
+                to : zoho.adminuserid
+                subject : "SLA Breach: Expense Claim " + claim.claim_id + " escalated"
+                message : "Expense claim " + claim.claim_id + " has been auto-escalated to HoD after " + daysSinceSubmit + " days without Line Manager action."
+            ];
+        }
+    }
+}

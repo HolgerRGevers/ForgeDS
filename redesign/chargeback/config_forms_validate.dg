@@ -1,0 +1,48 @@
+// ============================================================
+// Script:   config_forms_validate.dg
+// Location: Config Forms > Form Workflow
+// Trigger:  On Validate (shared across config forms)
+// Purpose:  Basic validation for reference/config tables
+// Version:  v2.1 (KB-Informed Redesign)
+// ============================================================
+
+// This pattern applies to: regional_config, currency_config,
+// merchant_platforms, dispute_reason_codes, merchant_responses,
+// file_uploads, lm_followups
+
+// Regional Config validation
+// if(input.form_name == "regional_config")
+// {
+//     if(input.Region_Name == null || input.Region_Name == "")
+//     {
+//         alert "Region name is required.";
+//         cancel submit;
+//     }
+// }
+
+// Currency Config validation
+// if(input.form_name == "currency_config")
+// {
+//     if(input.Currency_Code == null || input.Currency_Code == "")
+//     {
+//         alert "Currency code is required.";
+//         cancel submit;
+//     }
+// }
+
+// Duplicate prevention for config records
+// duplicates = thisform[Name == input.Name && ID != input.ID];
+// if(duplicates != null && duplicates.count() > 0)
+// {
+//     alert "A record with this name already exists.";
+//     cancel submit;
+// }
+
+// Audit trail for config changes
+row = insert into audit_trail
+[
+    Incident_ID = 0
+    Action = "Config record updated"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+];

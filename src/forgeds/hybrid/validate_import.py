@@ -331,6 +331,10 @@ def main() -> None:
         "--check-refs", action="store_true",
         help="Validate FK referential integrity across tables",
     )
+    parser.add_argument(
+        "--kb", action="store_true",
+        help="Enrich validation with KB-sourced field rules and patterns.",
+    )
     args = parser.parse_args()
 
     if not os.path.isdir(args.csv_dir):
@@ -367,6 +371,27 @@ def main() -> None:
             parent_data=parent_data,
         )
         all_diagnostics.extend(diagnostics)
+
+    # KB-enriched validation (optional)
+    if args.kb:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if kb.available():
+            # Query KB for field-level validation rules
+            for csv_file in csv_files:
+                form_name = csv_file.stem
+                kb_context = kb.query(f"{form_name} field validation rules required", max_words=500)
+                if kb_context and "required" in kb_context.lower():
+                    all_diagnostics.append(Diagnostic(
+                        file=str(csv_file), line=0,
+                        rule="KB-VAL",
+                        severity=Severity.INFO,
+                        message=f"KB documents validation rules for '{form_name}'. "
+                                f"Review KB context for additional constraints.",
+                    ))
+            print(f"KB: enriched validation with knowledge base context.", file=sys.stderr)
+        else:
+            print("WARNING: knowledge.db not found. KB validation disabled.", file=sys.stderr)
 
     # Print results
     errors = sum(1 for d in all_diagnostics if d.severity == Severity.ERROR)

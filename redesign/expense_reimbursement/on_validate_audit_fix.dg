@@ -1,0 +1,38 @@
+// ============================================================
+// Script:   on_validate_audit_fix.dg
+// Location: Expense Claims > Form Workflow
+// Trigger:  On Validate (patch — add to existing On Validate hard stops)
+// Purpose:  Fix gap: add audit trail and notification after status change
+// Version:  v2.1 (KB-Informed Fix for R=7.5 gap)
+// ============================================================
+
+// PATCH: Add after existing status change logic in On_Validate_hard_stops_
+// The existing script changes input.status but does not:
+//   1. Create an audit trail record
+//   2. Send a notification
+
+// Fix 1: Audit trail for status change
+if(input.status != null && input.status != "")
+{
+    row = insert into approval_history
+    [
+        claim = input.ID
+        action_1 = "Status set to " + input.status
+        actor = zoho.loginuser
+        timestamp = zoho.currenttime
+        comments = "Set during form validation"
+        Added_User = zoho.loginuser
+    ];
+}
+
+// Fix 2: Notification on status change
+if(input.status == "Submitted" || input.status == "Resubmitted")
+{
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : zoho.adminuserid
+        subject : "Expense Claim " + input.claim_id + " - " + input.status
+        message : "Expense claim " + input.claim_id + " has been " + input.status + " by " + zoho.loginuser + "."
+    ];
+}

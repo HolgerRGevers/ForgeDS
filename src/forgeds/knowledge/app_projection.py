@@ -464,6 +464,93 @@ def _pi_compliance(
 # Helpers
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# π_structural_completeness — app must have blueprints, pages, dashboards
+# ---------------------------------------------------------------------------
+
+def _pi_structural_completeness(
+    conn: sqlite3.Connection, module: str,
+) -> list[AppGap]:
+    """Check that the app has the structural elements required to function.
+
+    The KB documents three structural requirements:
+    1. Every form with a Status/picklist field should have a Blueprint
+    2. Every app should have at least one Page (dashboard)
+    3. Apps without pages cannot load in the Creator browser UI
+
+    These are weighted higher than behavioural gaps because they are
+    foundational — an app without a page literally shows a blank screen.
+    """
+    gaps: list[AppGap] = []
+
+    # Get overview for context
+    overview = conn.execute(
+        "SELECT content FROM tokens WHERE module = ? AND page_url LIKE '%/overview'",
+        (module,),
+    ).fetchone()
+    overview_content = overview[0].lower() if overview else ""
+
+    # 1. Blueprint check: forms with Status fields should have blueprints
+    has_bp = _has_blueprints(conn, module)
+    form_tokens = conn.execute(
+        "SELECT content, page_url FROM tokens WHERE module = ? AND page_url LIKE '%/forms/%'",
+        (module,),
+    ).fetchall()
+
+    forms_with_status = 0
+    for content, page_url in form_tokens:
+        if "status" in content.lower() and ("picklist" in content.lower() or "dropdown" in content.lower()):
+            forms_with_status += 1
+
+    if forms_with_status > 0 and not has_bp:
+        gaps.append(AppGap(
+            projection="π_structural_completeness",
+            severity=CRITICAL,
+            entity=f"app:{module}",
+            message=f"App has {forms_with_status} form(s) with Status fields but no "
+                    f"Blueprint state machine. State transitions are unmanaged.",
+            kb_pattern="KB pattern: every form with a Status picklist should have a "
+                       "Blueprint defining stages and transitions.",
+            remediation="Add a Blueprint to each stateful form via Creator > Blueprint "
+                        "or use forgeds-build-ds which auto-generates blueprints.",
+        ))
+
+    # 2. Page/Dashboard check
+    page_tokens = conn.execute(
+        "SELECT COUNT(*) FROM tokens WHERE module = ? AND "
+        "(page_url LIKE '%/pages/%' OR page_url LIKE '%/dashboard%')",
+        (module,),
+    ).fetchone()[0]
+
+    # Also check overview text for page references
+    has_page_ref = "page" in overview_content or "dashboard" in overview_content
+
+    if page_tokens == 0 and not has_page_ref:
+        gaps.append(AppGap(
+            projection="π_structural_completeness",
+            severity=HIGH,
+            entity=f"app:{module}",
+            message="App has no pages or dashboards. Creator apps require at least "
+                    "one page to load in the browser UI.",
+            kb_pattern="KB pattern: every app needs at least one page with a "
+                       "dashboard containing report components.",
+            remediation="Add a dashboard page via Creator > Pages or use "
+                        "forgeds-build-ds which auto-generates a default dashboard.",
+        ))
+
+    # 3. Report coverage: are there reports for the main forms?
+    report_count = 0
+    for content, _ in form_tokens:
+        # Check overview for report references
+        form_name_match = re.search(r'`(\w+)`', content)
+        if form_name_match:
+            fname = form_name_match.group(1)
+            if fname in overview_content and "report" not in overview_content:
+                report_count += 1
+
+    return gaps
+
+
 def _has_blueprints(conn: sqlite3.Connection, module: str) -> bool:
     """Check if the app has any Blueprint tokens."""
     row = conn.execute(
@@ -507,6 +594,7 @@ def project_kb_onto_app(
 
         # Run all projections
         all_gaps: list[AppGap] = []
+        all_gaps.extend(_pi_structural_completeness(conn, module))
         all_gaps.extend(_pi_form_validation(conn, module))
         all_gaps.extend(_pi_transition_logic(conn, module))
         all_gaps.extend(_pi_audit_trail(conn, module))

@@ -1,0 +1,142 @@
+// ============================================================
+// Script:   blueprint_transitions.dg
+// Location: Chargeback Incidents > Blueprint Transitions
+// Trigger:  Before/After on each transition
+// Purpose:  Handle all blueprint transitions with audit + notification
+// Version:  v2.1 (KB-Informed Blueprint Design)
+// ============================================================
+
+// --- assign_review: New -> Under Review ---
+// Before: validate that Assigned_LM is set
+if(input.Assigned_LM == null || input.Assigned_LM == "")
+{
+    alert "Please assign a Line Manager before moving to review.";
+    cancel submit;
+}
+// After assign_review:
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "assign_review — Assigned for review to " + input.Assigned_LM
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : input.Assigned_LM
+    subject : "Chargeback " + input.PSP_Reference + " assigned to you"
+    message : "You have been assigned chargeback " + input.PSP_Reference + " for review. Deadline: " + input.Dispute_Deadline
+];
+
+// --- file_dispute: Under Review -> Disputed ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "file_dispute — Dispute filed"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : zoho.adminuserid
+    subject : "Dispute filed: " + input.PSP_Reference
+    message : "Dispute has been filed for chargeback " + input.PSP_Reference + ". Reason: " + input.Dispute_Reason
+];
+
+// --- reject_incident: Under Review -> Lost ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "reject_incident — Incident rejected"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+
+// --- request_merchant_response: Disputed -> Awaiting Merchant Response ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "request_merchant_response — Waiting for merchant"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+
+// --- process_merchant_response: Awaiting Merchant Response -> Under Review ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "process_merchant_response — Merchant responded"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+
+// --- approve_resolution: Under Review -> Resolved ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "approve_resolution — Resolution approved"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : zoho.adminuserid
+    subject : "Chargeback " + input.PSP_Reference + " resolved"
+    message : "Chargeback " + input.PSP_Reference + " has been resolved. Amount: " + input.Amount_Original + " " + input.Currency_Original
+];
+
+// --- mark_won: Resolved -> Won ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "mark_won — Dispute won"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+
+// --- mark_lost: Resolved -> Lost ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "mark_lost — Dispute lost"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+
+// --- close_expired: Under Review -> Expired ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "close_expired — Deadline passed, incident expired"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+
+// --- reopen_incident: Lost -> Under Review ---
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "reopen_incident — Incident reopened for re-review"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : input.Assigned_LM
+    subject : "Chargeback " + input.PSP_Reference + " reopened"
+    message : "Chargeback " + input.PSP_Reference + " has been reopened for re-review."
+];

@@ -1,0 +1,201 @@
+// ============================================================
+// Script:   blueprint_transitions.dg
+// Location: Expense Claims > Blueprint Transitions
+// Trigger:  Before/After on each transition
+// Purpose:  Handle all approval workflow transitions
+// Version:  v2.1 (KB-Informed Blueprint Design)
+// ============================================================
+
+// --- submit_claim: Draft -> Submitted ---
+// Self-approval prevention (King IV Principle 1)
+if(thisapp.permissions.isUserInRole("Line Manager"))
+{
+    input.status = "Pending HoD Approval";
+    row = insert into approval_history
+    [
+        claim = input.ID
+        action_1 = "submit_claim — Self-approval bypass: routed directly to HoD"
+        actor = zoho.loginuser
+        timestamp = zoho.currenttime
+        comments = "Submitter holds Line Manager role. Self-approval prevention engaged."
+        Added_User = zoho.loginuser
+    ];
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : zoho.adminuserid
+        subject : "Expense Claim " + input.claim_id + " — Direct HoD Review"
+        message : "Submitted by a Line Manager. Self-approval prevention engaged."
+    ];
+    return;
+}
+
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "submit_claim — Submitted for approval"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Claim submitted by " + zoho.loginuser
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : zoho.adminuserid
+    subject : "Expense Claim " + input.claim_id + " submitted"
+    message : "Expense claim " + input.claim_id + " has been submitted for approval."
+];
+
+// --- route_to_lm: Submitted -> Pending LM Approval ---
+// Threshold lookup
+thresholdRec = approval_thresholds[tier_name == "Tier 1 - Line Manager" && Active == true];
+if(thresholdRec != null)
+{
+    thresholdAmount = ifnull(thresholdRec.max_amount_zar, 999.99);
+}
+else
+{
+    thresholdAmount = 999.99;
+}
+
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "route_to_lm — Routed to Line Manager (threshold: R" + thresholdAmount + ")"
+    actor = "System"
+    timestamp = zoho.currenttime
+    comments = "Auto-routed based on approval threshold configuration."
+    Added_User = zoho.loginuser
+];
+
+// --- approve_lm: Pending LM Approval -> Pending HoD Approval ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "approve_lm — Approved by Line Manager"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Approved at Line Manager level."
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : zoho.adminuserid
+    subject : "Expense Claim " + input.claim_id + " — LM Approved"
+    message : "Claim approved by Line Manager " + zoho.loginuser + ". Awaiting HoD approval."
+];
+
+// --- reject_lm: Pending LM Approval -> Rejected ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "reject_lm — Rejected by Line Manager"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Rejected at Line Manager level."
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : input.Added_User
+    subject : "Expense Claim " + input.claim_id + " — Rejected by LM"
+    message : "Your expense claim has been rejected by Line Manager " + zoho.loginuser + "."
+];
+
+// --- approve_hod: Pending HoD Approval -> Approved ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "approve_hod — Approved by HoD"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Final approval granted."
+    Added_User = zoho.loginuser
+];
+sendmail
+[
+    from : zoho.adminuserid
+    to : input.Added_User
+    subject : "Expense Claim " + input.claim_id + " — Approved"
+    message : "Your expense claim has been approved. Payment will be processed."
+];
+
+// --- reject_hod: Pending HoD Approval -> Rejected ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "reject_hod — Rejected by HoD"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Rejected at HoD level."
+    Added_User = zoho.loginuser
+];
+
+// --- escalate_key2: Pending HoD Approval -> Pending Second Key ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "escalate_key2 — Escalated to Key 2 approver"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Escalated for second key approval."
+    Added_User = zoho.loginuser
+];
+
+// --- approve_key2: Pending Second Key -> Approved ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "approve_key2 — Approved by Key 2"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Key 2 approval granted."
+    Added_User = zoho.loginuser
+];
+
+// --- reject_key2: Pending Second Key -> Key 2 Dispute ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "reject_key2 — Disputed by Key 2"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Key 2 has raised a dispute."
+    Added_User = zoho.loginuser
+];
+
+// --- resubmit_claim: Rejected -> Submitted ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "resubmit_claim — Resubmitted after rejection"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Claim resubmitted by employee."
+    Added_User = zoho.loginuser
+];
+
+// --- resolve_key2_dispute: Key 2 Dispute -> Pending HoD Approval ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "resolve_key2_dispute — Key 2 dispute resolved"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Key 2 dispute resolved. Returning to HoD for final decision."
+    Added_User = zoho.loginuser
+];
+
+// --- withdraw_claim: Submitted -> Draft ---
+row = insert into approval_history
+[
+    claim = input.ID
+    action_1 = "withdraw_claim — Claim withdrawn"
+    actor = zoho.loginuser
+    timestamp = zoho.currenttime
+    comments = "Claim withdrawn by employee."
+    Added_User = zoho.loginuser
+];

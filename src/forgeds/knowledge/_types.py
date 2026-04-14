@@ -38,6 +38,7 @@ class RelationType(Enum):
     FUNCTION_OF = "FUNCTION_OF"          # Token describes a function
     EXAMPLE_OF = "EXAMPLE_OF"            # Code example -> concept
     SUPERSEDES = "SUPERSEDES"            # Newer token replaces older
+    LEARNED_FROM = "LEARNED_FROM"        # Shadow case learning → source token
 
 
 # Default coupling weights for HRC residual field computation.
@@ -53,6 +54,31 @@ RELATION_WEIGHTS: dict[RelationType, float] = {
     RelationType.FUNCTION_OF: 0.8,
     RelationType.EXAMPLE_OF: 0.6,
     RelationType.SUPERSEDES: 1.0,
+    RelationType.LEARNED_FROM: 0.95,
+}
+
+
+# Content-type weights for projection severity scaling.
+# Structural tokens (blueprints, pages, dashboards) carry higher weight
+# because they are foundational — an app without a page cannot load,
+# an app without a blueprint has no state machine.
+CONTENT_WEIGHTS: dict[str, float] = {
+    # Structural (foundational — app cannot function without these)
+    "BLUEPRINT": 2.0,
+    "PAGE": 1.8,
+    "DASHBOARD": 1.8,
+    # Behavioural (operational — app works but is hollow without these)
+    "CODE_EXAMPLE": 1.0,
+    "SIGNATURE": 0.9,
+    # Informational (documentation — completeness, not correctness)
+    "PROSE": 0.5,
+    "TABLE_ROW": 0.4,
+    "NOTE": 0.6,
+    "IMPORTANT": 1.0,
+    "VERY_IMPORTANT": 1.2,
+    "PRO_TIP": 0.5,
+    # Learning (runtime shadow cases — high weight because hard-won)
+    "LEARNED": 1.5,
 }
 
 
