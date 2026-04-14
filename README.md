@@ -1,29 +1,35 @@
 # ForgeDS
 
-A development engine for Zoho Creator. Lint, scaffold, parse, edit, and deploy Deluge scripts and `.ds` exports. Zero external dependencies.
+Zoho Creator rapid development engine. Lint, scaffold, edit, and deploy
+Deluge scripts and `.ds` exports — with zero external dependencies.
 
-ForgeDS treats Zoho Creator applications as code. It provides the toolchain that Zoho doesn't ship: a formal Deluge language parser, AST-based linting, structured `.ds` manipulation, Access-to-Zoho migration, and a web IDE for AI-assisted development.
+Tidally locked to the Zoho/Deluge ecosystem. Built for teams that treat
+Creator apps as code, not click-ops.
 
----
+## ForgeDS IDE
 
-## At a Glance
+**[Launch ForgeDS IDE](https://holgerrgevers.github.io/ForgeDS/)** -- AI-powered web IDE for Zoho Creator development.
 
-ForgeDS is a pip-installable Python package (3.10+, stdlib only) that reverse-engineers Zoho Creator's Deluge language into a proper compiler toolchain. Where Zoho gives you a browser editor and an opaque `.ds` export, ForgeDS gives you a lexer, parser, typed AST, 21-rule linter, code generation, and a local development workflow.
+- Describe your app in plain language, AI generates the code
+- Visual .ds code editor with element inspection
+- Database migration management (Access to Zoho)
+- Custom API builder with AI assistance
 
-The architecture follows a machine-code model. There is no bytecode stage — the AST is the IR.
+> Requires the ForgeDS bridge server running locally. See [IDE Setup](#ide-setup) below.
 
-```mermaid
-flowchart LR
-    A[".dg source\nassembly"] --> B["Typed AST\nintermediate representation"] --> C[".ds export\nmachine code"]
-    B --> D["Local Interpreter\noffline execution"]
+## What it does
 
-    style A fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
-    style B fill:#1f3a5f,stroke:#58a6ff,color:#c9d1d9
-    style C fill:#3b1f2b,stroke:#f47067,color:#c9d1d9
-    style D fill:#2d333b,stroke:#768390,color:#adbac7
-```
-
----
+| Capability | Tool | Rules/Features |
+|---|---|---|
+| **Lint Deluge** | `forgeds-lint` | 41 rules (DG001-DG018+) |
+| **Lint Access SQL** | `forgeds-lint-access` | 8 rules (AV001-AV008) |
+| **Lint Hybrid** | `forgeds-lint-hybrid` | 16 rules (HY001-HY016) |
+| **Build language DBs** | `forgeds-build-db`, `forgeds-build-access-db` | SQLite reference data |
+| **Scaffold scripts** | `forgeds-scaffold` | Generate `.dg` from manifest |
+| **Parse .ds exports** | `forgeds-parse-ds` | Extract forms, scripts, field docs |
+| **Edit .ds files** | `forgeds-ds-editor` | Descriptions, reports, menus, dashboards |
+| **Validate imports** | `forgeds-validate` | Pre-flight CSV data validation |
+| **Upload to Creator** | `forgeds-upload` | REST API v2.1 (mock mode default) |
 
 ## Install
 
@@ -31,178 +37,36 @@ flowchart LR
 pip install git+https://github.com/HolgerRGevers/ForgeDS.git
 ```
 
-## Capabilities
-
-| Tool | What it does |
-|------|-------------|
-| `forgeds-lint` | 21 rules (DG001–DG021), AST-based with three-layer diagnostics |
-| `forgeds-lint-access` | 8 rules (AV001–AV008) for Access SQL migration scripts |
-| `forgeds-lint-hybrid` | 16 rules (HY001–HY016) for cross-environment validation |
-| `forgeds-build-db` | Build `deluge_lang.db` — SQLite reference data (200+ functions, types, operators) |
-| `forgeds-build-access-db` | Build `access_vba_lang.db` for Access/VBA analysis |
-| `forgeds-scaffold` | Generate `.dg` scripts from a YAML manifest |
-| `forgeds-parse-ds` | Parse `.ds` exports, extract forms, scripts, field documentation |
-| `forgeds-ds-editor` | Edit `.ds` files: descriptions, reports, menus, dashboards |
-| `forgeds-validate` | Pre-flight CSV data validation before Zoho import |
-| `forgeds-upload` | Upload to Creator via REST API v2.1 (mock mode by default) |
-
 ## Quick Start
 
 ```bash
-# Install
+# 1. Install
 pip install git+https://github.com/HolgerRGevers/ForgeDS.git
 
-# Create project config
+# 2. Create project config
 cp templates/forgeds.yaml.example forgeds.yaml
+# Edit forgeds.yaml with your project's table/form mappings
 
-# Build language databases
+# 3. Build language databases
 forgeds-build-db
 forgeds-build-access-db
 
-# Lint your Deluge scripts
+# 4. Lint your scripts
 forgeds-lint src/deluge/
-forgeds-lint --fix src/deluge/        # auto-fix DG006, DG007, DG008
-forgeds-lint --json src/deluge/       # JSON output for tooling
+forgeds-lint-access src/access/
 
-# Run a script locally (no Zoho needed)
-python -m forgeds.runtime script.dg --input '{"Name": "Test"}'
-
-# Parse and manipulate .ds exports
+# 5. Parse and edit .ds exports
 forgeds-parse-ds exports/MyApp.ds --extract-scripts src/deluge/
 forgeds-ds-editor audit exports/MyApp.ds
 ```
 
----
+## Project Config
 
-## Language Engineering
+Create a `forgeds.yaml` in your Zoho Creator project root. This file tells
+ForgeDS about your project's schema, thresholds, and mappings.
 
-ForgeDS includes a formal language core for Deluge, built from scratch with no external dependencies.
-
-### Architecture
-
-```mermaid
-flowchart TD
-    DG[".dg source"] --> DL["Deluge Lexer"]
-    DS[".ds export"] --> DSL["DS Lexer"]
-
-    DL --> DP["Deluge Parser"]
-    DSL --> DSP["DS Parser"]
-
-    DP --> AST
-    DSP --> AST
-
-    AST["Unified AST\n~35 node types"]
-
-    AST --> Lint["Lint Engine\n21 rules · DG001–DG021"]
-    AST --> Codegen["Code Generator\npretty-printer"]
-    AST --> Interp["Local Interpreter\nstubbed side effects"]
-
-    Lint --> Diag
-    Interp --> Diag
-
-    Diag["Three-Layer Diagnostics\nmessage · ai_prompt · technical"]
-
-    style DG fill:#2d333b,stroke:#768390,color:#adbac7
-    style DS fill:#2d333b,stroke:#768390,color:#adbac7
-    style AST fill:#1f3a5f,stroke:#58a6ff,color:#c9d1d9
-    style Diag fill:#3b1f2b,stroke:#f47067,color:#c9d1d9
-    style Lint fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
-    style Codegen fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
-    style Interp fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
-```
-
-<details>
-<summary>Module mapping</summary>
-
-| Block | Source |
-|-------|--------|
-| Deluge Lexer / Parser | `src/forgeds/lang/` — `tokens.py`, `lexer.py`, `parser.py`, `ast_nodes.py` |
-| DS Lexer / Parser | `src/forgeds/lang/` — `ds_lexer.py`, `ds_parser.py` |
-| Lint Engine | `src/forgeds/compiler/lint_rules.py` |
-| Code Generator | `src/forgeds/compiler/codegen_deluge.py` |
-| Local Interpreter | `src/forgeds/runtime/interpreter.py`, `stubs.py`, `environment.py` |
-| Diagnostics | `src/forgeds/_shared/diagnostics.py` |
-
-</details>
-
-### Design Decisions
-
-**Hand-written recursive descent parser** with Pratt expression parsing. Deluge has context-sensitive constructs (`for each rec in Form[criteria]`, bracket parameter blocks `[field=val]`) that make parser generators awkward. Error recovery and future incremental parsing for LSP require hand-written control.
-
-**Structural design rule: `[]` inside `{}`**. Action attribute blocks (bracket-delimited `[field=val, ...]`) can only appear as children of statement nodes (control flow `{}`), never bare. This is enforced structurally in the AST — `ParamBlock` nodes exist only inside `InsertStmt`, `SendmailStmt`, `InvokeUrlStmt`.
-
-**Two lexer/parser pairs**. Deluge (`.dg` script files) and DS (`.ds` packaging format) are different languages. Both produce AST nodes, unified at the Program level.
-
-### Error Model
-
-Every diagnostic serves two audiences: the user and the user's AI assistant.
-
-```mermaid
-flowchart LR
-    Source["Error Source\nlinter · parser · interpreter"]
-
-    Source --> L1
-    Source --> L2
-    Source --> L3
-
-    L1["**message**\nPlain explanation\nno jargon required"]
-    L2["**ai_prompt**\nStructured context\ncopy into your AI"]
-    L3["**technical**\nToken positions\nAST nodes · stack traces"]
-
-    L1 --> User["User"]
-    L2 --> AI["User's AI"]
-    L3 --> Debug["--verbose"]
-
-    style L1 fill:#2a3a2a,stroke:#57ab5a,color:#c9d1d9
-    style L2 fill:#1f3a5f,stroke:#58a6ff,color:#c9d1d9
-    style L3 fill:#2d333b,stroke:#768390,color:#adbac7
-    style Source fill:#3b1f2b,stroke:#f47067,color:#c9d1d9
-```
-
-Each error carries three layers of information. The first is a plain explanation — what happened and what to do about it, written for someone who may not know Deluge syntax. The second is a structured AI prompt the user can copy directly into their assistant; it includes the file, line, rule, source code, and enough context for the AI to diagnose and fix without follow-up questions. The third is technical detail — token positions, AST node types, stack traces — hidden by default and available via `--verbose`.
-
-```
-  [1] ERROR  script.dg:10  DG005
-      Query result 'glRec' accessed without null guard.
-      10 | glCode = glRec.gl_code;
-      > Prompt for your AI:
-        I have a Deluge script issue in `script.dg` at line 10.
-        The tool reports [DG005]: Query result 'glRec' accessed without
-        null guard. Add: if (glRec != null && glRec.count() > 0)
-        The line of code is: `glCode = glRec.gl_code;`
-        What is the correct fix? Show me the corrected code.
-```
-
-The same structure applies to lexer errors, parser errors (with panic-mode recovery), and runtime interpreter errors. JSON output (`--json`) includes the `ai_prompt` field for web IDE integration.
-
-### Local Interpreter
-
-Deluge has no local runtime — it only executes on Zoho's servers. ForgeDS provides a tree-walking interpreter that evaluates the AST directly. Side effects (`sendmail`, `insert into`, `invokeUrl`) are logged stubs. `input.*` fields come from a provided JSON dict. This enables offline testing without a Zoho account.
-
-```bash
-python -m forgeds.runtime script.dg --input '{"Amount": 100, "Status": "Draft"}'
-```
-
-The interpreter reports runtime errors (division by zero, infinite loops) using the same three-layer diagnostic model.
-
----
-
-## Package Structure
-
-```
-src/forgeds/
-  lang/             Deluge language core (lexer, parser, AST, ~35 node types)
-  compiler/         AST-based linter (21 rules) and code generation
-  runtime/          Local tree-walking interpreter with stubbed side effects
-  core/             Zoho/Deluge tools (lint, build, scaffold, parse, edit)
-  access/           Access/VBA migration tools
-  hybrid/           Cross-environment tools (validate, upload)
-  _shared/          Shared internals (three-layer diagnostics, config)
-```
-
-## Project Configuration
-
-All project-specific values come from `forgeds.yaml` in the consumer project root. ForgeDS auto-discovers this file by walking up from the working directory.
+See [templates/forgeds.yaml.example](templates/forgeds.yaml.example) for the
+full template with comments.
 
 ```yaml
 project:
@@ -217,48 +81,94 @@ schema:
   table_to_form:
     Departments: "departments"
     Employees: "employees"
+
+  upload_order:
+    - ["Departments", "departments"]
+    - ["Employees", "employees"]
 ```
 
-See [templates/forgeds.yaml.example](templates/forgeds.yaml.example) for the full template.
+## Architecture
 
----
+ForgeDS is the **engine**. Your project provides the **config** (`forgeds.yaml`)
+and optional **extensions** (custom dashboard builders, project-specific
+`ds_editor` subcommands).
 
-## ForgeDS IDE
+```
+Your Project (e.g., ERM)          ForgeDS (this package)
++---------------------------+     +---------------------------+
+| forgeds.yaml              | --> | _shared/config.py         |
+| config/seed-data/*.json   |     | _shared/diagnostics.py    |
+| src/deluge/*.dg           | --> | core/lint_deluge.py       |
+| src/access/*.sql          | --> | access/lint_access.py     |
+| exports/*.ds              | --> | core/ds_editor.py         |
+| exports/csv/*.csv         | --> | hybrid/validate_import.py |
++---------------------------+     +---------------------------+
+```
 
-**[Launch ForgeDS IDE](https://holgerrgevers.github.io/ForgeDS/)** — a web IDE for AI-assisted Zoho Creator development.
+## Package Structure
 
-Describe your application in plain language. The IDE generates Deluge code, provides a visual `.ds` editor with element inspection, manages database migrations (Access to Zoho), and builds Custom APIs with AI assistance.
+```
+src/forgeds/
+  core/           # Zoho/Deluge core tools
+    lint_deluge.py, build_deluge_db.py, scaffold_deluge.py,
+    parse_ds_export.py, ds_editor.py
+  access/         # Access/VBA migration tools
+    lint_access.py, build_access_vba_db.py, export_access_csv.py
+  hybrid/         # Cross-environment tools
+    lint_hybrid.py, validate_import.py, upload_to_creator.py
+  _shared/        # Internal utilities
+    diagnostics.py, config.py
+```
 
-The IDE is fully responsive — desktop multi-panel layout, tablet with narrower panels, and mobile with bottom-sheet navigation. Touch-friendly targets and safe-area support for modern devices.
+## CLI Commands
 
-### Design Language
-
-ForgeDS ships a formal design system in [`DESIGN-LANGUAGE.md`](DESIGN-LANGUAGE.md) covering color tokens, typography, spacing, component patterns, and responsive breakpoints. The design language applies at three levels:
-
-- **ForgeDS IDE** — dark-first aesthetic with blue accent for interactivity, semantic color coding (green/yellow/red for status), and depth hierarchy via background shading
-- **AI-generated code** — the built-in skills system injects ForgeDS conventions (field ordering, naming, workflow patterns, status colors) into Claude prompts, so generated Zoho Creator apps inherit the design language where Creator allows customization
-- **Zoho Creator apps** — guidance for form design, report layout, dashboard structure, and theme colors that align with the ForgeDS palette
-
-### Running the Bridge
-
-The IDE connects to a local bridge server for code generation.
+After `pip install`, these commands are available:
 
 ```bash
-pip install websockets
-cd ForgeDS
-python -m bridge
+forgeds-lint src/deluge/              # Lint .dg files
+forgeds-lint --fix src/deluge/        # Auto-fix + lint
+forgeds-build-db                      # Build deluge_lang.db
+forgeds-scaffold --name SCRIPT_NAME   # Scaffold .dg from manifest
+forgeds-parse-ds exports/FILE.ds      # Parse .ds export
+forgeds-ds-editor audit exports/FILE.ds
+
+forgeds-lint-access src/access/       # Lint .sql files
+forgeds-build-access-db               # Build access_vba_lang.db
+
+forgeds-lint-hybrid                   # Validate Access<->Zoho mappings
+forgeds-validate exports/csv/         # Pre-flight CSV validation
+forgeds-upload --config config/zoho-api.yaml  # Upload (mock by default)
 ```
-
-Then open the IDE at [holgerrgevers.github.io/ForgeDS](https://holgerrgevers.github.io/ForgeDS/).
-
----
 
 ## Requirements
 
-- Python 3.10+
+- Python >= 3.10
 - Zero external dependencies (stdlib only)
-- Optional: `pyodbc` for Access database operations (Windows)
-- Optional: `websockets` for the IDE bridge server
+- Optional: `pyodbc` for Access database operations (Windows only)
+
+## IDE Setup
+
+The ForgeDS IDE is a web app that connects to a local bridge server for AI-powered code generation.
+
+### Prerequisites
+
+- Python >= 3.10
+- [Claude Code](https://claude.ai/claude-code) CLI installed
+- ForgeDS installed (`pip install git+https://github.com/HolgerRGevers/ForgeDS.git`)
+
+### Running the Bridge
+
+```bash
+# Install bridge dependencies
+pip install websockets
+
+# Start the bridge server
+cd ForgeDS
+python -m bridge
+# Bridge running on ws://localhost:9876
+```
+
+Then open [https://holgerrgevers.github.io/ForgeDS/](https://holgerrgevers.github.io/ForgeDS/) in your browser.
 
 ## License
 

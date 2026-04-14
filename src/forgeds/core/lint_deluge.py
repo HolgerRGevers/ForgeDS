@@ -28,7 +28,6 @@ from enum import Enum
 from pathlib import Path
 
 from forgeds._shared.config import load_config, get_db_dir
-from forgeds.schema.registry import get_registry
 from forgeds._shared.diagnostics import Severity, Diagnostic
 
 
@@ -42,35 +41,11 @@ DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$")
 TIME_PATTERN = re.compile(r"^\d{2}:\d{2}(:\d{2})?$")
 EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
-# Pre-compiled patterns for line-scoped rules (avoids per-line recompilation)
-_RE_INPUT_FIELD = re.compile(r"\binput\.(\w+)")
-_RE_SINGLE_QUOTE = re.compile(r"'([^']*)'")
-_RE_STATUS_ASSIGN = re.compile(r'\.status\s*=\s*"([^"]*)"')
-_RE_ASSIGNMENT = re.compile(r"\s*(\w+)\s*=[^=]")
-_RE_ZOHO_VAR = re.compile(r"\bzoho\.(\w+(?:\.\w+)*)")
-_RE_ADDED_USER_ADMIN = re.compile(r"\bAdded_User\s*=\s*zoho\.adminuserid\b")
-_RE_HOURS_BETWEEN = re.compile(r"\bhoursBetween\b")
-_RE_INSERT_INTO = re.compile(r"\binsert\s+into\s+(\w+)", re.IGNORECASE)
-_RE_SENDMAIL = re.compile(r"\bsendmail\b", re.IGNORECASE)
-_RE_INVOKE_URL = re.compile(r"\binvokeUrl\b", re.IGNORECASE)
-_RE_FIELD_EQ = re.compile(r"(\w+)\s*=\s*(.+?)(?:\s*$)")
-_RE_FIELD_COLON = re.compile(r"(\w+)\s*:\s*(.+?)(?:\s*$)")
-_RE_QUERY_VAR = re.compile(r"\s*(\w+)\s*=\s*(\w+)\s*\[")
-_RE_NULL_GUARD_NE = re.compile(r"if\s*\(\s*(\w+)\s*!=\s*null")
-_RE_NULL_GUARD_EQ = re.compile(r"if\s*\(\s*(\w+)\s*==\s*null")
-_RE_THRESHOLD = re.compile(r"\bthreshold\w*\s*=\s*(\d+\.?\d*)", re.IGNORECASE)
-_RE_IFNULL_THRESHOLD = re.compile(r"ifnull\s*\([^,]+,\s*(\d+\.?\d*)\s*\)")
-_RE_MAP_RESPONSE = re.compile(r"\bMap\s*\(\s*\)")
-_RE_PUT_CALL = re.compile(r"\.put\s*\(")
-
 _config = load_config()
 _lint_cfg = _config.get("lint", {})
 THRESHOLD_FALLBACK = _lint_cfg.get("threshold_fallback", "999.99")
 DUAL_THRESHOLD_FALLBACK = _lint_cfg.get("dual_threshold_fallback", "5000.00")
 DEMO_EMAIL_DOMAINS = set(_lint_cfg.get("demo_email_domains", ["yourdomain.com", "example.com", "placeholder.com"]))
-
-# Reusable empty list — avoids allocating a new [] on every no-match return
-_EMPTY: list[Diagnostic] = []
 
 
 # ============================================================
@@ -136,22 +111,12 @@ class DelugeDB:
         return {row[0] for row in self._conn.execute(sql).fetchall()}
 
     def _load_caches(self) -> None:
-        # Schema data — delegated to SchemaRegistry (single source of truth)
-        reg = get_registry()
-        self.valid_statuses: set[str] = set(reg.valid_statuses())
-        self.valid_actions: set[str] = set(reg.valid_actions())
-
-        self.form_fields: dict[str, set[str]] = {
-            name: schema.field_names()
-            for name, schema in reg.all_forms().items()
-        }
-        self.all_known_fields: set[str] = reg.all_field_names()
-        self.expense_fields: set[str] = self.all_known_fields
-        self.approval_history_fields: set[str] = self.form_fields.get(
-            "approval_history", set()
+        self.valid_statuses: set[str] = self._query_set(
+            "SELECT value FROM valid_statuses"
         )
-
-        # Language data — loaded directly from SQLite (not schema)
+        self.valid_actions: set[str] = self._query_set(
+            "SELECT value FROM valid_actions"
+        )
         self.reserved_words: set[str] = self._query_set(
             "SELECT word FROM reserved_words"
         )
@@ -174,15 +139,21 @@ class DelugeDB:
             ).fetchall()
         }
 
-        # Pre-compiled patterns for banned functions/variables
-        self.banned_function_patterns: list[tuple[re.Pattern, str]] = [
-            (re.compile(rf"\b{re.escape(func)}\s*\("), msg)
-            for func, msg in self.banned_functions.items()
-        ]
-        self.banned_variable_patterns: list[tuple[re.Pattern, str]] = [
-            (re.compile(rf"\b{re.escape(var)}\b"), msg)
-            for var, msg in self.banned_variables.items()
-        ]
+        # Form fields: { form_name: { field_link_name, ... } }
+        self.form_fields: dict[str, set[str]] = {}
+        for row in self._conn.execute("SELECT form_name, field_link FROM form_fields"):
+            form = row["form_name"]
+            if form not in self.form_fields:
+                self.form_fields[form] = set()
+            self.form_fields[form].add(row["field_link"])
+
+        # Expense_claims fields (used for input.X validation)
+        self.expense_fields: set[str] = self.form_fields.get("expense_claims", set())
+
+        # Approval_history fields (used for insert validation)
+        self.approval_history_fields: set[str] = self.form_fields.get(
+            "approval_history", set()
+        )
 
         # Sendmail required params
         row = self._conn.execute(
@@ -267,7 +238,7 @@ def extract_blocks(lines: list[str]) -> list[Block]:
             continue
 
         # Detect insert into
-        insert_match = _RE_INSERT_INTO.search(stripped)
+        insert_match = re.search(r"\binsert\s+into\s+(\w+)", stripped, re.IGNORECASE)
         if insert_match:
             block = _extract_bracket_block(
                 lines, i, "insert", insert_match.group(1)
@@ -278,7 +249,7 @@ def extract_blocks(lines: list[str]) -> list[Block]:
                 continue
 
         # Detect sendmail
-        if _RE_SENDMAIL.search(stripped):
+        if re.search(r"\bsendmail\b", stripped, re.IGNORECASE):
             block = _extract_bracket_block(lines, i, "sendmail", None)
             if block:
                 blocks.append(block)
@@ -286,7 +257,7 @@ def extract_blocks(lines: list[str]) -> list[Block]:
                 continue
 
         # Detect invokeUrl
-        if _RE_INVOKE_URL.search(stripped):
+        if re.search(r"\binvokeUrl\b", stripped, re.IGNORECASE):
             block = _extract_bracket_block(lines, i, "invokeUrl", None)
             if block:
                 blocks.append(block)
@@ -335,8 +306,8 @@ def _extract_bracket_block(
         if is_comment_line(line):
             continue
 
-        eq_match = _RE_FIELD_EQ.match(line)
-        colon_match = _RE_FIELD_COLON.match(line)
+        eq_match = re.match(r"(\w+)\s*=\s*(.+?)(?:\s*$)", line)
+        colon_match = re.match(r"(\w+)\s*:\s*(.+?)(?:\s*$)", line)
 
         if block_type == "insert":
             if eq_match:
@@ -378,8 +349,8 @@ def _extract_bracket_block(
 def check_dg001(db: DelugeDB, filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG001: Banned function call."""
     diags: list[Diagnostic] = []
-    for pat, msg in db.banned_function_patterns:
-        if pat.search(line):
+    for func, msg in db.banned_functions.items():
+        if re.search(rf"\b{re.escape(func)}\s*\(", line):
             diags.append(_diag(filename, lineno, Severity.ERROR, "DG001", msg))
     return diags
 
@@ -387,8 +358,8 @@ def check_dg001(db: DelugeDB, filename: str, line: str, lineno: int) -> list[Dia
 def check_dg002(db: DelugeDB, filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG002: Banned variable reference."""
     diags: list[Diagnostic] = []
-    for pat, msg in db.banned_variable_patterns:
-        if pat.search(line):
+    for var, msg in db.banned_variables.items():
+        if re.search(rf"\b{re.escape(var)}\b", line):
             diags.append(_diag(filename, lineno, Severity.ERROR, "DG002", msg))
     return diags
 
@@ -397,12 +368,12 @@ def check_dg003(
     filename: str, line: str, lineno: int, file_type: FileType,
 ) -> list[Diagnostic]:
     """DG003: hoursBetween in scheduled scripts (Free Trial limitation)."""
-    if file_type == FileType.SCHEDULED and _RE_HOURS_BETWEEN.search(line):
+    if file_type == FileType.SCHEDULED and re.search(r"\bhoursBetween\b", line):
         return [_diag(
             filename, lineno, Severity.ERROR, "DG003",
             "hoursBetween not available on Free Trial daily schedules. Use daysBetween.",
         )]
-    return _EMPTY
+    return []
 
 
 def check_dg004(
@@ -410,7 +381,7 @@ def check_dg004(
 ) -> list[Diagnostic]:
     """DG004: Unknown input.FieldName reference."""
     diags: list[Diagnostic] = []
-    for match in _RE_INPUT_FIELD.finditer(line):
+    for match in re.finditer(r"\binput\.(\w+)", line):
         field_name = match.group(1)
         if field_name not in db.expense_fields:
             diags.append(_diag(
@@ -424,7 +395,7 @@ def check_dg004(
 def check_dg008(filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG008: Single quotes used for text (not date/time)."""
     diags: list[Diagnostic] = []
-    for match in _RE_SINGLE_QUOTE.finditer(line):
+    for match in re.finditer(r"'([^']*)'", line):
         content = match.group(1)
         if not content:
             continue
@@ -442,7 +413,7 @@ def check_dg011(
     db: DelugeDB, filename: str, line: str, lineno: int,
 ) -> list[Diagnostic]:
     """DG011: Unknown status value."""
-    match = _RE_STATUS_ASSIGN.search(line)
+    match = re.search(r'\.status\s*=\s*"([^"]*)"', line)
     if match:
         status = match.group(1)
         if status not in db.valid_statuses:
@@ -451,7 +422,7 @@ def check_dg011(
                 f'Unknown status value "{status}". '
                 f"Valid: {', '.join(sorted(db.valid_statuses))}",
             )]
-    return _EMPTY
+    return []
 
 
 def check_dg013(filename: str, line: str, lineno: int) -> list[Diagnostic]:
@@ -462,13 +433,13 @@ def check_dg013(filename: str, line: str, lineno: int) -> list[Diagnostic]:
             "Mixed && and || on same line. Creator evaluates OR before AND "
             "(opposite of most languages). Use explicit parentheses.",
         )]
-    return _EMPTY
+    return []
 
 
 def check_dg015_016(filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG015/DG016: Hardcoded email addresses."""
     if "zoho.adminuserid" in line or "zoho.loginuserid" in line:
-        return _EMPTY
+        return []
     diags: list[Diagnostic] = []
     for match in EMAIL_PATTERN.finditer(line):
         email = match.group(0)
@@ -491,7 +462,8 @@ def check_dg017(
     db: DelugeDB, filename: str, line: str, lineno: int,
 ) -> list[Diagnostic]:
     """DG017: Reserved word used as variable name."""
-    match = _RE_ASSIGNMENT.match(line)
+    # Match assignment patterns: word = value (but not == comparison)
+    match = re.match(r"\s*(\w+)\s*=[^=]", line)
     if match:
         var_name = match.group(1)
         if var_name in db.reserved_words:
@@ -500,7 +472,7 @@ def check_dg017(
                 f"Reserved word '{var_name}' cannot be used as a variable name. "
                 f"Reserved: {', '.join(sorted(db.reserved_words))}",
             )]
-    return _EMPTY
+    return []
 
 
 def check_dg018(
@@ -508,41 +480,29 @@ def check_dg018(
 ) -> list[Diagnostic]:
     """DG018: Unknown zoho system variable."""
     diags: list[Diagnostic] = []
-    for match in _RE_ZOHO_VAR.finditer(line):
+    for match in re.finditer(r"\bzoho\.(\w+(?:\.\w+)*)", line):
         full_var = f"zoho.{match.group(1)}"
-        if full_var in db.zoho_variable_names:
-            continue
-        # Check if it's a banned variable (handled by DG002)
-        if full_var in db.banned_variables:
-            continue
-        # Check if a known prefix is a valid variable (e.g. zoho.currentdate
-        # in zoho.currentdate.subDay — the suffix is a method call, not a var)
-        parts = full_var.split(".")
-        prefix_known = False
-        for end in range(2, len(parts)):
-            prefix = ".".join(parts[:end])
-            if prefix in db.zoho_variable_names:
-                prefix_known = True
-                break
-        if prefix_known:
-            continue
-        diags.append(_diag(
-            filename, lineno, Severity.WARNING, "DG018",
-            f"Unknown Zoho variable '{full_var}'. "
-            f"Known: {', '.join(sorted(db.zoho_variable_names))}",
-        ))
+        if full_var not in db.zoho_variable_names:
+            # Check if it's a banned variable (handled by DG002)
+            if full_var in db.banned_variables:
+                continue
+            diags.append(_diag(
+                filename, lineno, Severity.WARNING, "DG018",
+                f"Unknown Zoho variable '{full_var}'. "
+                f"Known: {', '.join(sorted(db.zoho_variable_names))}",
+            ))
     return diags
 
 
 def check_dg019(filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG019: Added_User with zoho.adminuserid (must be zoho.adminuser or zoho.loginuser)."""
-    if _RE_ADDED_USER_ADMIN.search(line):
+    if re.search(r"\bAdded_User\s*=\s*zoho\.adminuserid\b", line):
         return [_diag(
             filename, lineno, Severity.ERROR, "DG019",
             "Added_User only accepts zoho.loginuser or zoho.adminuser. "
             "zoho.adminuserid (email) is rejected by Creator. See discovery-log.md DL-001.",
         )]
-    return _EMPTY
+    return []
 
 
 CUSTOM_API_BANNED_TASKS = re.compile(
@@ -553,13 +513,13 @@ CUSTOM_API_BANNED_TASKS = re.compile(
 def check_dg020(filename: str, lines: list[str], file_type: FileType) -> list[Diagnostic]:
     """DG020: Custom API script should build a response Map."""
     if file_type != FileType.CUSTOM_API:
-        return _EMPTY
+        return []
     has_response_map = False
     for raw_line in lines:
         if is_comment_line(raw_line):
             continue
         line = strip_comments(raw_line)
-        if _RE_MAP_RESPONSE.search(line) or _RE_PUT_CALL.search(line):
+        if re.search(r"\bMap\s*\(\s*\)", line) or re.search(r"\.put\s*\(", line):
             has_response_map = True
             break
     if not has_response_map:
@@ -568,7 +528,7 @@ def check_dg020(filename: str, lines: list[str], file_type: FileType) -> list[Di
             "Custom API script does not appear to build a response Map. "
             "Custom APIs should construct a Map() response matching the Response step definition.",
         )]
-    return _EMPTY
+    return []
 
 
 def check_dg021(
@@ -576,7 +536,7 @@ def check_dg021(
 ) -> list[Diagnostic]:
     """DG021: Form-specific tasks used in Custom API context."""
     if file_type != FileType.CUSTOM_API:
-        return _EMPTY
+        return []
     match = CUSTOM_API_BANNED_TASKS.search(line)
     if match:
         task = match.group(0).strip()
@@ -585,7 +545,7 @@ def check_dg021(
             f"Form-specific task '{task}' used in Custom API context. "
             "Custom APIs have no form context -- use response Map for error reporting.",
         )]
-    return _EMPTY
+    return []
 
 
 def run_line_rules(
@@ -624,13 +584,13 @@ def run_line_rules(
 def check_dg006(filename: str, block: Block) -> list[Diagnostic]:
     """DG006: Missing Added_User in insert into approval_history."""
     if block.block_type != "insert" or block.target_table != "approval_history":
-        return _EMPTY
+        return []
     if "Added_User" not in block.fields:
         return [_diag(
             filename, block.start_line, Severity.ERROR, "DG006",
             "Missing 'Added_User = zoho.loginuser' in insert into approval_history block.",
         )]
-    return _EMPTY
+    return []
 
 
 VALID_ADDED_USER_VALUES = {"zoho.loginuser", "zoho.adminuser"}
@@ -639,7 +599,7 @@ VALID_ADDED_USER_VALUES = {"zoho.loginuser", "zoho.adminuser"}
 def check_dg007(filename: str, block: Block) -> list[Diagnostic]:
     """DG007: Wrong Added_User value (must be zoho.loginuser or zoho.adminuserid for scheduled)."""
     if block.block_type != "insert" or block.target_table != "approval_history":
-        return _EMPTY
+        return []
     if "Added_User" in block.fields:
         val = block.fields["Added_User"].value.strip()
         if val not in VALID_ADDED_USER_VALUES:
@@ -647,13 +607,13 @@ def check_dg007(filename: str, block: Block) -> list[Diagnostic]:
                 filename, block.fields["Added_User"].line, Severity.ERROR, "DG007",
                 f"Added_User must be 'zoho.loginuser' (or 'zoho.adminuser' for scheduled tasks), got '{val}'.",
             )]
-    return _EMPTY
+    return []
 
 
 def check_dg009(filename: str, block: Block) -> list[Diagnostic]:
     """DG009: Colon instead of = in insert into blocks."""
     if block.block_type != "insert":
-        return _EMPTY
+        return []
     diags: list[Diagnostic] = []
     for fa in block.fields.values():
         if fa.separator == ":":
@@ -672,7 +632,7 @@ def check_dg010(db: DelugeDB, filename: str, block: Block) -> list[Diagnostic]:
     elif block.block_type == "invokeUrl":
         required = db.invoke_url_required
     else:
-        return _EMPTY
+        return []
 
     diags: list[Diagnostic] = []
     param_names = {k.lower().strip() for k in block.fields}
@@ -688,7 +648,7 @@ def check_dg010(db: DelugeDB, filename: str, block: Block) -> list[Diagnostic]:
 def check_dg012(db: DelugeDB, filename: str, block: Block) -> list[Diagnostic]:
     """DG012: Unknown action_1 value in audit trail."""
     if block.block_type != "insert" or block.target_table != "approval_history":
-        return _EMPTY
+        return []
     if "action_1" in block.fields:
         val = block.fields["action_1"].value.strip().strip('"')
         if val not in db.valid_actions:
@@ -711,7 +671,9 @@ def check_dg014(filename: str, lines: list[str]) -> list[Diagnostic]:
         line = strip_comments(raw_line)
 
         # Direct threshold assignment
-        match = _RE_THRESHOLD.search(line)
+        match = re.search(
+            r"\bthreshold\w*\s*=\s*(\d+\.?\d*)", line, re.IGNORECASE,
+        )
         if match:
             val = match.group(1)
             try:
@@ -726,7 +688,9 @@ def check_dg014(filename: str, lines: list[str]) -> list[Diagnostic]:
 
         # ifnull with threshold context
         if "ifnull" in line and "threshold" in line.lower():
-            ifnull_match = _RE_IFNULL_THRESHOLD.search(line)
+            ifnull_match = re.search(
+                r"ifnull\s*\([^,]+,\s*(\d+\.?\d*)\s*\)", line,
+            )
             if ifnull_match:
                 val = ifnull_match.group(1)
                 try:
@@ -765,7 +729,6 @@ def check_dg005(filename: str, lines: list[str]) -> list[Diagnostic]:
     """DG005: Query result used without null guard."""
     diags: list[Diagnostic] = []
     query_vars: dict[str, int] = {}
-    query_access_pats: dict[str, re.Pattern] = {}  # pre-compiled per-variable patterns
     guarded_vars: set[str] = set()
     guard_scopes: list[tuple[str, int]] = []
     brace_depth = 0
@@ -784,36 +747,26 @@ def check_dg005(filename: str, lines: list[str]) -> list[Diagnostic]:
             guarded_vars.discard(var)
 
         # Detect query: var = TableName[criteria]
-        q_match = _RE_QUERY_VAR.match(line)
+        q_match = re.match(r"\s*(\w+)\s*=\s*(\w+)\s*\[", line)
         if q_match:
             var_name = q_match.group(1)
             table_name = q_match.group(2)
             if table_name not in ("insert", "into", "if", "for", "while"):
                 query_vars[var_name] = lineno
-                query_access_pats[var_name] = re.compile(rf"\b{re.escape(var_name)}\.(\w+)")
 
-        # Detect null guard: if (var != null   OR   if (var == null || ...) { return; }
-        guard_match = _RE_NULL_GUARD_NE.search(line)
+        # Detect null guard: if (var != null
+        guard_match = re.search(r"if\s*\(\s*(\w+)\s*!=\s*null", line)
         if guard_match:
             var_name = guard_match.group(1)
             if var_name in query_vars:
                 guarded_vars.add(var_name)
                 guard_scopes.append((var_name, brace_depth))
 
-        # Also recognise early-return null guard: if (var == null || var.count() == 0) { return; }
-        # The == null check short-circuits, so .count() on the same line is safe.
-        eq_null_match = _RE_NULL_GUARD_EQ.search(line)
-        if eq_null_match:
-            eq_var = eq_null_match.group(1)
-            if eq_var in query_vars:
-                guarded_vars.add(eq_var)
-                guard_scopes.append((eq_var, brace_depth))
-
         # Detect unguarded access: var.field
         for var_name, assign_line in query_vars.items():
             if var_name in guarded_vars or lineno == assign_line:
                 continue
-            if query_access_pats[var_name].search(line):
+            if re.search(rf"\b{re.escape(var_name)}\.(\w+)", line):
                 if guard_match and guard_match.group(1) == var_name:
                     continue
                 diags.append(_diag(
@@ -916,19 +869,8 @@ def apply_fixes(db: DelugeDB, files: list[str]) -> int:
 # Main pipeline
 # ============================================================
 
-def lint_file(db: DelugeDB, filepath: str, *, legacy: bool = False) -> list[Diagnostic]:
-    """Run all lint passes on a single .dg file.
-
-    By default uses the AST-based engine (compiler.lint_rules).
-    Pass legacy=True to use the original regex-based engine.
-    """
-    if not legacy:
-        try:
-            from forgeds.compiler.lint_rules import lint_file as ast_lint_file
-            return ast_lint_file(db, filepath)
-        except Exception:
-            pass  # fall through to regex engine
-
+def lint_file(db: DelugeDB, filepath: str) -> list[Diagnostic]:
+    """Run all lint passes on a single .dg file."""
     try:
         with open(filepath, encoding="utf-8") as f:
             raw_lines = f.readlines()
@@ -985,30 +927,6 @@ def main() -> None:
         "--fix", action="store_true",
         help=f"Auto-fix fixable rules ({', '.join(sorted(FIXABLE_RULES))}), then re-lint",
     )
-    parser.add_argument(
-        "--legacy", action="store_true",
-        help="Use regex-based linter instead of AST-based engine",
-    )
-    parser.add_argument(
-        "--rich", action="store_true", default=True,
-        help="Rich formatted output with AI prompts (default)",
-    )
-    parser.add_argument(
-        "--plain", action="store_true",
-        help="Plain single-line output (legacy format)",
-    )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="Show technical details for each diagnostic",
-    )
-    parser.add_argument(
-        "--json", action="store_true",
-        help="Output diagnostics as JSON (for IDE integration)",
-    )
-    parser.add_argument(
-        "--no-ai", action="store_true",
-        help="Hide AI prompt sections",
-    )
     args = parser.parse_args()
 
     files = resolve_files(args.paths)
@@ -1030,7 +948,7 @@ def main() -> None:
     all_diags: list[Diagnostic] = []
     try:
         for filepath in files:
-            all_diags.extend(lint_file(db, filepath, legacy=args.legacy))
+            all_diags.extend(lint_file(db, filepath))
     finally:
         db.close()
 
@@ -1040,40 +958,23 @@ def main() -> None:
     elif args.quiet:
         all_diags = [d for d in all_diags if d.severity != Severity.INFO]
 
-    # Sort
+    # Sort and output
     severity_order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
     all_diags.sort(key=lambda d: (d.file, d.line, severity_order[d.severity]))
+    for diag in all_diags:
+        print(diag)
 
-    # Output
-    if args.json:
-        import json as json_mod
-        print(json_mod.dumps([d.to_dict() for d in all_diags], indent=2))
-    elif args.plain:
-        for diag in all_diags:
-            print(diag)
-        errors = sum(1 for d in all_diags if d.severity == Severity.ERROR)
-        warnings = sum(1 for d in all_diags if d.severity == Severity.WARNING)
-        infos = sum(1 for d in all_diags if d.severity == Severity.INFO)
-        print(
-            f"\n--- Linted {len(files)} file(s): "
-            f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
-        )
-    else:
-        # Rich formatted output
-        from forgeds._shared.diagnostics import format_diagnostic, format_summary
-        use_color = sys.stdout.isatty()
-        print()
-        for i, diag in enumerate(all_diags, 1):
-            print(format_diagnostic(
-                diag, i,
-                use_color=use_color,
-                show_technical=args.verbose,
-                show_ai_prompt=not args.no_ai,
-            ))
-        print(format_summary(all_diags, len(files), use_color=use_color))
-
+    # Summary
     errors = sum(1 for d in all_diags if d.severity == Severity.ERROR)
-    sys.exit(2 if errors > 0 else 1 if any(d.severity == Severity.WARNING for d in all_diags) else 0)
+    warnings = sum(1 for d in all_diags if d.severity == Severity.WARNING)
+    infos = sum(1 for d in all_diags if d.severity == Severity.INFO)
+
+    print(
+        f"\n--- Linted {len(files)} file(s): "
+        f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
+    )
+
+    sys.exit(2 if errors > 0 else 1 if warnings > 0 else 0)
 
 
 if __name__ == "__main__":

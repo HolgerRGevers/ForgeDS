@@ -46,8 +46,6 @@ export interface EditorTab {
   content: string;
   language: string;
   isDirty: boolean;
-  /** The content as of the last save (for diff view) */
-  originalContent?: string;
   /** Cursor position */
   cursorLine?: number;
   cursorColumn?: number;
@@ -146,9 +144,6 @@ export interface IdeStore {
   setActiveTab: (tabId: string) => void;
   updateTabContent: (tabId: string, content: string) => void;
   setDiagnostics: (diagnostics: LintDiagnostic[]) => void;
-
-  saveFile: (tabId: string) => Promise<boolean>;
-  hasDirtyTabs: () => boolean;
 
   setInspectorData: (data: InspectorData | null) => void;
 

@@ -8,31 +8,16 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const STREAM_IDLE_TIMEOUT_MS = 60_000;
-const HEARTBEAT_INTERVAL_MS = 30_000;
-const HEARTBEAT_STALE_MS = 45_000;
-
 function generateId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
+  // Fallback for environments without crypto.randomUUID
   return (
     Date.now().toString(36) +
     "-" +
     Math.random().toString(36).substring(2, 10)
   );
-}
-
-// ---------------------------------------------------------------------------
-// Errors
-// ---------------------------------------------------------------------------
-
-export class BridgeTimeoutError extends Error {
-  constructor(type: string) {
-    super(`Bridge request timed out: ${type}`);
-    this.name = "BridgeTimeoutError";
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -43,18 +28,13 @@ interface PendingRequest {
   resolve: (data: Record<string, unknown>) => void;
   reject: (err: Error) => void;
   onChunk?: (chunk: Record<string, unknown>) => void;
-  timer?: ReturnType<typeof setTimeout>;
 }
 
 // ---------------------------------------------------------------------------
 // BridgeClient
 // ---------------------------------------------------------------------------
 
-const BRIDGE_URL =
-  (typeof import.meta !== "undefined" &&
-    (import.meta as unknown as Record<string, Record<string, string>>).env
-      ?.VITE_BRIDGE_URL) ||
-  "ws://localhost:9876";
+const BRIDGE_URL = "ws://localhost:9876";
 const MAX_BACKOFF_MS = 30_000;
 
 export class BridgeClient {
@@ -65,8 +45,6 @@ export class BridgeClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private backoff = 1000;
   private intentionalClose = false;
-  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-  private lastPong = 0;
 
   // -- Connection state -----------------------------------------------------
 
@@ -101,7 +79,6 @@ export class BridgeClient {
   disconnect(): void {
     this.intentionalClose = true;
     this.clearReconnect();
-    this.stopHeartbeat();
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -114,12 +91,10 @@ export class BridgeClient {
 
   /**
    * Send a single request and wait for the matching `response` or `error`.
-   * Times out after `timeoutMs` (default 30s).
    */
   send(
     type: string,
     data: Record<string, unknown>,
-    timeoutMs: number = DEFAULT_TIMEOUT_MS,
   ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
       if (this._status !== "connected" || !this.ws) {
@@ -128,13 +103,7 @@ export class BridgeClient {
       }
 
       const id = generateId();
-
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new BridgeTimeoutError(type));
-      }, timeoutMs);
-
-      this.pending.set(id, { resolve, reject, timer });
+      this.pending.set(id, { resolve, reject });
 
       this.ws.send(JSON.stringify({ id, type, data }));
     });
@@ -144,13 +113,11 @@ export class BridgeClient {
    * Send a request that returns streaming chunks.
    * `onChunk` is called for every `stream` message.
    * The returned promise resolves with the `stream_end` data.
-   * Idle timeout resets on each chunk (default 60s).
    */
   sendStream(
     type: string,
     data: Record<string, unknown>,
     onChunk: (chunk: Record<string, unknown>) => void,
-    idleTimeoutMs: number = STREAM_IDLE_TIMEOUT_MS,
   ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
       if (this._status !== "connected" || !this.ws) {
@@ -159,31 +126,7 @@ export class BridgeClient {
       }
 
       const id = generateId();
-
-      const resetTimer = () => {
-        const req = this.pending.get(id);
-        if (req?.timer) clearTimeout(req.timer);
-        const newTimer = setTimeout(() => {
-          this.pending.delete(id);
-          reject(new BridgeTimeoutError(`${type} (stream idle)`));
-        }, idleTimeoutMs);
-        if (req) req.timer = newTimer;
-      };
-
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new BridgeTimeoutError(`${type} (stream idle)`));
-      }, idleTimeoutMs);
-
-      this.pending.set(id, {
-        resolve,
-        reject,
-        onChunk: (chunk) => {
-          resetTimer();
-          onChunk(chunk);
-        },
-        timer,
-      });
+      this.pending.set(id, { resolve, reject, onChunk });
 
       this.ws.send(JSON.stringify({ id, type, data }));
     });
@@ -198,9 +141,7 @@ export class BridgeClient {
 
     ws.addEventListener("open", () => {
       this.backoff = 1000;
-      this.lastPong = Date.now();
       this.setStatus("connected");
-      this.startHeartbeat();
     });
 
     ws.addEventListener("message", (event) => {
@@ -209,7 +150,6 @@ export class BridgeClient {
 
     ws.addEventListener("close", () => {
       this.ws = null;
-      this.stopHeartbeat();
       this.setStatus("disconnected");
       if (!this.intentionalClose) {
         this.scheduleReconnect();
@@ -228,14 +168,7 @@ export class BridgeClient {
     try {
       msg = JSON.parse(raw) as BridgeResponse;
     } catch {
-      console.warn("[bridge] Received malformed JSON frame");
-      return;
-    }
-
-    // Handle pong responses to our pings
-    if (msg.type === "pong" || msg.type === "error" && msg.id === "__ping__") {
-      this.lastPong = Date.now();
-      return;
+      return; // ignore malformed frames
     }
 
     const req = this.pending.get(msg.id);
@@ -243,7 +176,6 @@ export class BridgeClient {
 
     switch (msg.type) {
       case "response":
-        if (req.timer) clearTimeout(req.timer);
         this.pending.delete(msg.id);
         req.resolve(msg.data);
         break;
@@ -255,14 +187,11 @@ export class BridgeClient {
         break;
 
       case "stream_end":
-        if (req.timer) clearTimeout(req.timer);
         this.pending.delete(msg.id);
         req.resolve(msg.data);
         break;
 
       case "error":
-        // This correctly handles errors during streaming too
-        if (req.timer) clearTimeout(req.timer);
         this.pending.delete(msg.id);
         req.reject(
           new Error(
@@ -272,33 +201,6 @@ export class BridgeClient {
         break;
     }
   }
-
-  // -- Heartbeat --------------------------------------------------------------
-
-  private startHeartbeat(): void {
-    this.stopHeartbeat();
-    this.heartbeatInterval = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        // Send a ping; bridge will reply with error (unknown type) which we treat as pong
-        this.ws.send(JSON.stringify({ id: "__ping__", type: "ping", data: {} }));
-
-        // Check for stale connection
-        if (Date.now() - this.lastPong > HEARTBEAT_STALE_MS) {
-          console.warn("[bridge] Connection appears stale, reconnecting");
-          this.ws?.close();
-        }
-      }
-    }, HEARTBEAT_INTERVAL_MS);
-  }
-
-  private stopHeartbeat(): void {
-    if (this.heartbeatInterval !== null) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-  }
-
-  // -- Reconnect --------------------------------------------------------------
 
   private scheduleReconnect(): void {
     this.clearReconnect();
@@ -316,10 +218,7 @@ export class BridgeClient {
   }
 
   private rejectAll(reason: string): void {
-    this.pending.forEach((req) => {
-      if (req.timer) clearTimeout(req.timer);
-      req.reject(new Error(reason));
-    });
+    this.pending.forEach((req) => req.reject(new Error(reason)));
     this.pending.clear();
   }
 }

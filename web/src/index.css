@@ -10,25 +10,3 @@
     transform: translateX(400%);
   }
 }
-
-/* Responsive scrollbar styling */
-@layer base {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #374151 transparent;
-  }
-}
-
-/* Touch-friendly tap targets on mobile */
-@media (pointer: coarse) {
-  button, a, [role="button"] {
-    min-height: 32px;
-  }
-}
-
-/* Safe area insets for notched devices */
-@supports (padding: env(safe-area-inset-bottom)) {
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}

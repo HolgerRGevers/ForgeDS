@@ -1,8 +1,6 @@
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useDatabaseStore } from "../../stores/databaseStore";
 import { useBridgeStore } from "../../stores/bridgeStore";
-import { useIdeStore } from "../../stores/ideStore";
 import type { ValidationResult, ValidationDetail } from "../../types/database";
 
 // --- Severity icon ---
@@ -50,13 +48,7 @@ function StatusBadge({ status }: { status: ValidationResult["status"] }) {
 
 // --- Result card ---
 
-function ResultCard({
-  result,
-  onOpenFile,
-}: {
-  result: ValidationResult;
-  onOpenFile: (source: string, line?: number) => void;
-}) {
+function ResultCard({ result }: { result: ValidationResult }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -96,15 +88,10 @@ function ResultCard({
                 )}
                 <span className="flex-1 text-gray-300">{detail.message}</span>
                 {detail.source && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenFile(detail.source!, detail.line ?? undefined)}
-                    className="flex-shrink-0 font-mono text-[10px] text-blue-400 hover:text-blue-300 hover:underline"
-                    title="Open in IDE"
-                  >
+                  <span className="flex-shrink-0 font-mono text-[10px] text-gray-500">
                     {detail.source}
                     {detail.line != null && `:${detail.line}`}
-                  </button>
+                  </span>
                 )}
               </div>
             ))}
@@ -131,31 +118,7 @@ export function ValidationConsole() {
   );
   const send = useBridgeStore((s) => s.send);
 
-  const navigate = useNavigate();
-
   const [running, setRunning] = useState<string | null>(null);
-
-  /** Open a source file reference in the IDE editor. */
-  const handleOpenFile = useCallback(
-    (source: string, line?: number) => {
-      const name = source.split("/").pop() ?? source;
-      const ext = name.split(".").pop() ?? "";
-      const langMap: Record<string, string> = {
-        dg: "deluge", sql: "sql", json: "json", yaml: "yaml", py: "python",
-      };
-      useIdeStore.getState().openTab({
-        id: source,
-        name,
-        path: source,
-        content: "", // will be loaded by IdePage's read_file effect
-        language: langMap[ext] ?? "plaintext",
-        isDirty: false,
-        cursorLine: line,
-      });
-      navigate("/ide");
-    },
-    [navigate],
-  );
 
   const runValidation = useCallback(
     async (tool: "lint-hybrid" | "validate") => {
@@ -241,7 +204,7 @@ export function ValidationConsole() {
         )}
         <div className="space-y-2">
           {validationResults.map((result) => (
-            <ResultCard key={result.id} result={result} onOpenFile={handleOpenFile} />
+            <ResultCard key={result.id} result={result} />
           ))}
         </div>
       </div>

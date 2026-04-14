@@ -25,9 +25,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from forgeds._shared.config import get_db_dir
+from forgeds._shared.config import load_config, get_db_dir
 from forgeds._shared.diagnostics import Severity, Diagnostic
-from forgeds.schema.registry import get_registry
 
 
 # ============================================================
@@ -40,6 +39,39 @@ DELUGE_DB_PATH = get_db_dir() / "deluge_lang.db"
 # Zoho Creator field size limits
 ZOHO_TEXT_MAX = 255
 ZOHO_TEXTAREA_MAX = 50000
+
+# Config-driven table/form mapping and FK relationships
+_config = load_config()
+_schema = _config.get("schema", {})
+
+TABLE_TO_FORM = _schema.get("table_to_form", {
+    "Departments": "departments",
+    "Clients": "clients",
+    "GL_Accounts": "gl_accounts",
+    "Approval_Thresholds": "approval_thresholds",
+    "Expense_Claims": "expense_claims",
+    "Approval_History": "approval_history",
+})
+
+# Convert list-of-dicts config format to the internal tuple-dict format
+_fk_raw = _schema.get("fk_relationships", [])
+if _fk_raw and isinstance(_fk_raw, list):
+    FK_RELATIONSHIPS: dict[tuple[str, str], tuple[str, str]] = {}
+    for entry in _fk_raw:
+        if isinstance(entry, dict):
+            child_table = entry.get("child_table", "")
+            child_field = entry.get("child_field", "")
+            parent_table = entry.get("parent_table", "")
+            parent_pk = entry.get("parent_pk", "")
+            if child_table and child_field and parent_table and parent_pk:
+                FK_RELATIONSHIPS[(child_table, child_field)] = (parent_table, parent_pk)
+else:
+    FK_RELATIONSHIPS = {
+        ("Expense_Claims", "Department_ID"): ("Departments", "ID"),
+        ("Expense_Claims", "Client_ID"): ("Clients", "ID"),
+        ("Expense_Claims", "GL_Code_ID"): ("GL_Accounts", "ID"),
+        ("Approval_History", "Claim_ID"): ("Expense_Claims", "ID"),
+    }
 
 
 # ============================================================
@@ -65,8 +97,6 @@ class ValidatorDB:
         self.valid_actions: set[str] = set()
         self.zoho_fields: dict[tuple[str, str], str] = {}  # (form, field) -> type
         self.access_fields: dict[tuple[str, str], str] = {}  # (table, field) -> type
-        self.table_to_form: dict[str, str] = {}
-        self.fk_relationships: dict[tuple[str, str], tuple[str, str]] = {}
 
         self._load_access_db()
         self._load_deluge_db()
@@ -108,41 +138,33 @@ class ValidatorDB:
         conn.close()
 
     def _load_deluge_db(self) -> None:
-        # Schema data — delegated to SchemaRegistry (single source of truth)
-        reg = get_registry()
-        self.valid_statuses = set(reg.valid_statuses())
-        self.valid_actions = set(reg.valid_actions())
-        self.zoho_fields = {
-            (name, f.link_name): f.field_type_raw
-            for name, schema in reg.all_forms().items()
-            for f in schema.fields.values()
-        }
+        if not DELUGE_DB_PATH.exists():
+            return
+        conn = sqlite3.connect(str(DELUGE_DB_PATH))
+        cur = conn.cursor()
 
-        # Table-to-form mapping
-        t2f = reg.table_to_form()
-        self.table_to_form = t2f if t2f else {
-            "Departments": "departments",
-            "Clients": "clients",
-            "GL_Accounts": "gl_accounts",
-            "Approval_Thresholds": "approval_thresholds",
-            "Expense_Claims": "expense_claims",
-            "Approval_History": "approval_history",
-        }
+        # Valid statuses
+        try:
+            for (val,) in cur.execute("SELECT value FROM valid_statuses"):
+                self.valid_statuses.add(val)
+        except sqlite3.OperationalError:
+            pass
 
-        # FK relationships
-        edges = reg.get_relations().all_edges()
-        if edges:
-            self.fk_relationships = {
-                (fk.child_form, fk.child_field): (fk.parent_form, fk.parent_field)
-                for fk in edges
-            }
-        else:
-            self.fk_relationships = {
-                ("Expense_Claims", "Department_ID"): ("Departments", "ID"),
-                ("Expense_Claims", "Client_ID"): ("Clients", "ID"),
-                ("Expense_Claims", "GL_Code_ID"): ("GL_Accounts", "ID"),
-                ("Approval_History", "Claim_ID"): ("Expense_Claims", "ID"),
-            }
+        # Valid actions
+        try:
+            for (val,) in cur.execute("SELECT value FROM valid_actions"):
+                self.valid_actions.add(val)
+        except sqlite3.OperationalError:
+            pass
+
+        # Zoho form fields
+        try:
+            for row in cur.execute("SELECT form_name, field_link, field_type FROM form_fields"):
+                self.zoho_fields[(row[0], row[1])] = row[2]
+        except sqlite3.OperationalError:
+            pass
+
+        conn.close()
 
 
 # ============================================================
@@ -161,7 +183,7 @@ def validate_csv_file(
     filename = os.path.basename(filepath)
     table_name = Path(filename).stem  # e.g., "Departments" from "Departments.csv"
 
-    if table_name not in db.table_to_form:
+    if table_name not in TABLE_TO_FORM:
         diagnostics.append(_diag(
             filename, 0, Severity.INFO, "VD001",
             f"Table '{table_name}' not in known tables -- skipping validation",
@@ -256,7 +278,7 @@ def validate_csv_file(
 
             # VD030: Check referential integrity
             if check_refs and parent_data:
-                for (child_table, child_field), (parent_table, parent_pk) in db.fk_relationships.items():
+                for (child_table, child_field), (parent_table, parent_pk) in FK_RELATIONSHIPS.items():
                     if table_name != child_table:
                         continue
                     fk_val = row.get(child_field, "")
@@ -271,10 +293,10 @@ def validate_csv_file(
     return diagnostics
 
 
-def load_parent_pk_values(csv_dir: str, table_to_form: dict[str, str]) -> dict[str, set[str]]:
+def load_parent_pk_values(csv_dir: str) -> dict[str, set[str]]:
     """Load primary key values from all parent tables for FK validation."""
     pk_values: dict[str, set[str]] = {}
-    for table_name in table_to_form:
+    for table_name in TABLE_TO_FORM:
         csv_path = os.path.join(csv_dir, f"{table_name}.csv")
         if not os.path.exists(csv_path):
             continue
@@ -327,7 +349,7 @@ def main() -> None:
     # Load parent PKs for FK validation
     parent_data = None
     if args.check_refs:
-        parent_data = load_parent_pk_values(args.csv_dir, db.table_to_form)
+        parent_data = load_parent_pk_values(args.csv_dir)
 
     # Validate each CSV file
     all_diagnostics: list[Diagnostic] = []

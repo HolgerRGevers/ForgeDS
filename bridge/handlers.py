@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -23,41 +22,157 @@ SendFn = Callable[[dict], Coroutine[Any, Any, None]]
 
 
 # ---------------------------------------------------------------------------
-# Secure path resolution — confine file operations to the project root
+# Security: path validation to prevent traversal attacks
 # ---------------------------------------------------------------------------
+_PROJECT_ROOT: Path | None = None
+
+
 def _get_project_root() -> Path:
-    """Return the resolved project root, falling back to cwd."""
-    try:
-        from forgeds._shared.config import find_project_root
-        return find_project_root().resolve()
-    except Exception:
-        return Path.cwd().resolve()
+    """Return the project root, caching on first call."""
+    global _PROJECT_ROOT
+    if _PROJECT_ROOT is None:
+        try:
+            from forgeds._shared.config import find_project_root
+            _PROJECT_ROOT = find_project_root().resolve()
+        except Exception:
+            _PROJECT_ROOT = Path.cwd().resolve()
+    return _PROJECT_ROOT
 
 
-def _resolve_safe_path(file_path: str) -> tuple[Path | None, str | None]:
-    """Resolve *file_path* and ensure it stays within the project root.
-
-    Returns ``(resolved_path, None)`` on success or ``(None, error_msg)``
-    if the path is unsafe.
-    """
+def _is_safe_path(file_path: str) -> bool:
+    """Return True if *file_path* resolves inside the project root."""
     if not file_path:
-        return None, "No file_path specified."
+        return False
+    try:
+        resolved = Path(file_path).resolve()
+        root = _get_project_root()
+        # Path.is_relative_to added in 3.9
+        return resolved == root or str(resolved).startswith(str(root) + os.sep)
+    except (OSError, ValueError):
+        return False
 
-    # Reject explicit traversal segments
-    if ".." in Path(file_path).parts:
-        return None, "Path traversal (..) is not allowed."
 
-    root = _get_project_root()
-    resolved = Path(file_path).resolve()
+# ---------------------------------------------------------------------------
+# refine_prompt -- mock implementation
+# ---------------------------------------------------------------------------
+async def handle_refine_prompt(data: dict) -> dict:
+    """Take raw prompt text and return a structured refinement.
 
-    # Also accept paths supplied relative to the project root
-    if not resolved.is_absolute():
-        resolved = (root / file_path).resolve()
+    This is a mock that returns a realistic response shaped like a Zoho
+    Creator project specification.  A future version will invoke Claude Code
+    CLI with ForgeDS context.
+    """
+    raw_prompt = data.get("prompt", "")
 
-    if not resolved.is_relative_to(root):
-        return None, "Path is outside the project root."
+    # Simulate some processing time
+    await asyncio.sleep(0.3)
 
-    return resolved, None
+    return {
+        "sections": [
+            {
+                "id": "forms",
+                "title": "Forms",
+                "icon": "[F]",
+                "content": "The following forms will be created for the expense reimbursement workflow",
+                "items": ["Expense_Claims", "GL_Accounts", "Approval_History"],
+                "isEditable": True,
+            },
+            {
+                "id": "workflows",
+                "title": "Workflows",
+                "icon": "[W]",
+                "content": "Event-driven scripts for form actions",
+                "items": ["on_submit_validate", "on_approval_update", "auto_populate_esg"],
+                "isEditable": True,
+            },
+            {
+                "id": "reports",
+                "title": "Reports & Dashboards",
+                "icon": "[R]",
+                "content": "Reporting views for claims and audit trails",
+                "items": ["All_Claims", "Pending_Approvals", "Approval_Audit_Trail"],
+                "isEditable": True,
+            },
+            {
+                "id": "approvals",
+                "title": "Approval Processes",
+                "icon": "[A]",
+                "content": "Multi-level approval workflow with segregation of duties",
+                "items": ["Line Manager Approval", "HoD Approval"],
+                "isEditable": True,
+            },
+            {
+                "id": "apis",
+                "title": "API Endpoints",
+                "icon": "[API]",
+                "content": "Custom API endpoints for external integrations",
+                "items": ["Get_Dashboard_Summary", "Get_Claim_Status"],
+                "isEditable": True,
+            },
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# build_project -- mock streaming implementation
+# ---------------------------------------------------------------------------
+async def handle_build_project(data: dict, send_fn: SendFn) -> dict:
+    """Simulate generating project files with streaming progress.
+
+    Sends incremental stream messages via send_fn, then returns a
+    final summary.
+    """
+    sections = data.get("sections", [])
+    # Derive project name from first section title or fallback
+    project_name = sections[0].get("title", "Untitled_App") if sections else "Untitled_App"
+
+    steps = [
+        {"step": 1, "total": 5, "message": "Creating project scaffold for %s..." % project_name},
+        {"step": 2, "total": 5, "message": "Generating form definitions (.ds schema)..."},
+        {"step": 3, "total": 5, "message": "Generating Deluge workflows (.dg scripts)..."},
+        {"step": 4, "total": 5, "message": "Running forgeds-lint on generated scripts..."},
+        {"step": 5, "total": 5, "message": "Build complete."},
+    ]
+
+    generated_files: list[dict[str, str]] = []
+
+    for step in steps:
+        await send_fn({"chunk": step})
+        await asyncio.sleep(0.4)
+
+        # Simulate file generation on step 3
+        if step["step"] == 3:
+            generated_files = [
+                {
+                    "name": "on_submit_validate.dg",
+                    "path": "src/deluge/form-workflows/on_submit_validate.dg",
+                    "content": "// On Submit Validate workflow\nclaimAmt = input.Amount_ZAR;\nthreshold = ifnull(Compliance_Config[Config_Key == \"CLAIM_THRESHOLD\" && Active == true].Threshold_Value, 999.99);",
+                    "language": "deluge",
+                },
+                {
+                    "name": "on_approval_update.dg",
+                    "path": "src/deluge/approval-scripts/on_approval_update.dg",
+                    "content": "// On Approval Update\nglRec = GL_Accounts[ID == input.GL_Account];\nif (glRec != null && glRec.count() > 0)\n{\n    input.ESG_Category = glRec.ESG_Category;\n    carbonFactor = ifnull(glRec.Carbon_Factor, 0);\n    input.Estimated_Carbon_KG = input.Amount_ZAR * carbonFactor;\n}",
+                    "language": "deluge",
+                },
+                {
+                    "name": "forgeds.yaml",
+                    "path": "forgeds.yaml",
+                    "content": "project:\n  name: \"%s\"\n  platform: zoho-creator" % project_name,
+                    "language": "yaml",
+                },
+            ]
+
+    return {
+        "status": "success",
+        "project_name": project_name,
+        "files": generated_files,
+        "lint_result": {
+            "errors": 0,
+            "warnings": 1,
+            "details": ["W: on_submit_validate.dg:14 -- consider adding GL null guard"],
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -74,17 +189,28 @@ async def handle_lint_check(data: dict) -> dict:
     """
     files = data.get("files", [])
     directory = data.get("directory", "")
-    target = directory if directory else " ".join(files)
 
-    if not target:
+    # Security: validate all paths resolve within the project root
+    targets: list[str] = []
+    if directory:
+        if not _is_safe_path(directory):
+            return {"error": "Directory path is outside the project root."}
+        targets = [directory]
+    else:
+        for f in files:
+            if not _is_safe_path(f):
+                return {"error": f"File path is outside the project root: {Path(f).name}"}
+            targets.append(f)
+
+    if not targets:
         return {"error": "No files or directory specified for lint check."}
 
-    # Determine how to call the linter
+    # Determine how to call the linter — pass each target as a separate arg
     lint_cmd = shutil.which("forgeds-lint")
     if lint_cmd:
-        cmd = [lint_cmd, target]
+        cmd = [lint_cmd] + targets
     else:
-        cmd = [sys.executable, "-m", "forgeds.core.lint_deluge", target]
+        cmd = [sys.executable, "-m", "forgeds.core.lint_deluge"] + targets
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -205,369 +331,127 @@ async def handle_get_status() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# parse_ds -- parse a .ds export or project directory to return app structure
+# parse_ds -- parse a .ds export and return app structure (mock)
 # ---------------------------------------------------------------------------
+async def handle_parse_ds(data: dict) -> dict:
+    """Parse a .ds export and return app structure. Mock implementation."""
+    file_path = data.get("file_path", "")
+    await asyncio.sleep(0.2)
 
-
-def _slugify(name: str) -> str:
-    """Convert a name to a lowercase slug suitable for element IDs."""
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-
-
-def _parse_ds_file(ds_path: str) -> dict | None:
-    """Parse a .ds export file and extract the application tree structure.
-
-    Returns a dict with ``name``, ``displayName``, and ``tree`` or None if
-    the file cannot be parsed.
-    """
-    try:
-        content = Path(ds_path).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return None
-
-    lines = content.split("\n")
-    app_name = Path(ds_path).stem
-
-    forms: list[dict] = []
-    reports: list[dict] = []
-    pages: list[dict] = []
-
-    current_form = ""
-    current_fields: list[dict] = []
-    # Regex patterns for .ds structure
-    form_pat = re.compile(r"^\t{2,3}form\s+(\w+)\s*$")
-    field_pat = re.compile(r"^\t{3,4}(?:must have\s+)?(\w+)\s*$")
-    field_type_pat = re.compile(r"type\s*=\s*(\w+)")
-    report_pat = re.compile(r"^\t+(?:list|kanban)\s+(\w+)\s*$")
-    page_pat = re.compile(r"^\t+page\s+(\w+)\s*$")
-    schedule_pat = re.compile(r"^\t+schedule\s+(\w+)\s*$")
-
-    skip_fields = {
-        "Section", "actions", "submit", "reset", "update", "cancel",
-        "prefix", "first_name", "last_name", "suffix",
-    }
-
-    schedules: list[dict] = []
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-
-        # Detect forms
-        m = form_pat.match(line)
-        if m:
-            if current_form and current_fields:
-                forms.append({"name": current_form, "fields": list(current_fields)})
-            current_form = m.group(1)
-            current_fields = []
-            i += 1
-            continue
-
-        # Detect fields within a form
-        if current_form:
-            fm = field_pat.match(line)
-            if fm:
-                fname = fm.group(1)
-                if fname not in skip_fields and i + 1 < len(lines) and lines[i + 1].strip() == "(":
-                    # Try to detect field type from the block
-                    ftype = "Text"
-                    j = i + 2
-                    depth = 1
-                    while j < len(lines) and depth > 0:
-                        depth += lines[j].count("(") - lines[j].count(")")
-                        tm = field_type_pat.search(lines[j])
-                        if tm and depth == 1:
-                            ftype = tm.group(1)
-                        j += 1
-                    current_fields.append({"name": fname, "type": ftype})
-
-        # Detect reports
-        rm = report_pat.match(line)
-        if rm:
-            reports.append({"name": rm.group(1), "kind": "list" if "list" in line else "kanban"})
-
-        # Detect pages
-        pm = page_pat.match(line)
-        if pm:
-            pages.append({"name": pm.group(1)})
-
-        # Detect schedules
-        sm = schedule_pat.match(line)
-        if sm:
-            schedules.append({"name": sm.group(1)})
-
-        i += 1
-
-    # Flush last form
-    if current_form and current_fields:
-        forms.append({"name": current_form, "fields": list(current_fields)})
-
-    # Build tree
-    display_name = app_name.replace("_", " ").title()
-    children = []
-
-    # Forms section
-    if forms:
-        form_children = []
-        for form in forms:
-            slug = _slugify(form["name"])
-            field_nodes = [
-                {
-                    "id": f"field-{slug}-{_slugify(f['name'])}",
-                    "label": f["name"],
-                    "type": "field",
-                    "fieldType": f["type"],
-                }
-                for f in form["fields"]
-            ]
-            form_children.append({
-                "id": f"form-{slug}",
-                "label": form["name"].replace("_", " "),
-                "type": "form",
-                "isExpanded": False,
+    return {
+        "name": "expense_reimbursement",
+        "displayName": "Expense Reimbursement Management",
+        "tree": [
+            {
+                "id": "app-root",
+                "label": "Expense Reimbursement Management",
+                "type": "application",
+                "isExpanded": True,
                 "children": [
                     {
-                        "id": f"field-section-{slug}",
-                        "label": "Fields",
+                        "id": "forms-section",
+                        "label": "Forms",
+                        "type": "section",
+                        "isExpanded": True,
+                        "children": [
+                            {
+                                "id": "form-expense-claims",
+                                "label": "Expense Claims",
+                                "type": "form",
+                                "isExpanded": False,
+                                "children": [
+                                    {"id": "field-section", "label": "Fields", "type": "section", "isExpanded": False, "children": [
+                                        {"id": "field-claim-id", "label": "Claim_ID", "type": "field", "fieldType": "Auto Number"},
+                                        {"id": "field-employee", "label": "Employee_Name", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-amount", "label": "Amount_ZAR", "type": "field", "fieldType": "Decimal"},
+                                        {"id": "field-department", "label": "Department", "type": "field", "fieldType": "Lookup"},
+                                        {"id": "field-gl-account", "label": "GL_Account", "type": "field", "fieldType": "Lookup"},
+                                        {"id": "field-status", "label": "Status", "type": "field", "fieldType": "Picklist"},
+                                        {"id": "field-esg-category", "label": "ESG_Category", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-carbon-kg", "label": "Estimated_Carbon_KG", "type": "field", "fieldType": "Decimal"},
+                                    ]},
+                                    {"id": "wf-section-ec", "label": "Workflows", "type": "section", "isExpanded": False, "children": [
+                                        {"id": "wf-on-validate", "label": "On Validate (hard stops)", "type": "workflow", "trigger": "on_validate", "filePath": "src/deluge/form-workflows/expense_claim.on_validate.dg"},
+                                        {"id": "wf-on-success", "label": "Self-approval prevention + routing", "type": "workflow", "trigger": "on_success", "filePath": "src/deluge/form-workflows/expense_claim.on_success.dg"},
+                                        {"id": "wf-on-load", "label": "Employee Name auto-populate", "type": "workflow", "trigger": "on_load", "filePath": "src/deluge/form-workflows/expense_claim.on_load.auto_populate.dg"},
+                                    ]},
+                                ],
+                            },
+                            {
+                                "id": "form-approval-history",
+                                "label": "Approval History",
+                                "type": "form",
+                                "isExpanded": False,
+                                "children": [
+                                    {"id": "field-section-ah", "label": "Fields", "type": "section", "children": [
+                                        {"id": "field-ah-claim", "label": "Claim", "type": "field", "fieldType": "Lookup"},
+                                        {"id": "field-ah-action", "label": "action_1", "type": "field", "fieldType": "Picklist"},
+                                        {"id": "field-ah-actor", "label": "Actor", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-ah-added-user", "label": "Added_User", "type": "field", "fieldType": "Text"},
+                                    ]},
+                                ],
+                            },
+                            {
+                                "id": "form-gl-accounts",
+                                "label": "GL Accounts",
+                                "type": "form",
+                                "isExpanded": False,
+                                "children": [
+                                    {"id": "field-section-gl", "label": "Fields", "type": "section", "children": [
+                                        {"id": "field-gl-code", "label": "GL_Code", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-gl-name", "label": "Account_Name", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-gl-esg", "label": "ESG_Category", "type": "field", "fieldType": "Text"},
+                                        {"id": "field-gl-carbon", "label": "Carbon_Factor", "type": "field", "fieldType": "Decimal"},
+                                    ]},
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "id": "reports-section",
+                        "label": "Reports",
                         "type": "section",
                         "isExpanded": False,
-                        "children": field_nodes,
+                        "children": [
+                            {"id": "report-all-claims", "label": "All Expense Claims", "type": "report"},
+                            {"id": "report-my-claims", "label": "My Claims", "type": "report"},
+                            {"id": "report-pending", "label": "Pending Approvals Manager", "type": "report"},
+                            {"id": "report-audit", "label": "AuditTrail", "type": "report"},
+                        ],
+                    },
+                    {
+                        "id": "pages-section",
+                        "label": "Pages",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "page-mgmt-dash", "label": "Management Dashboard", "type": "page"},
+                            {"id": "page-emp-dash", "label": "Employee Dashboard", "type": "page"},
+                        ],
+                    },
+                    {
+                        "id": "schedules-section",
+                        "label": "Schedules",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "schedule-sla", "label": "SLA Enforcement Daily", "type": "schedule", "trigger": "daily", "filePath": "src/deluge/scheduled/sla_enforcement_daily.dg"},
+                        ],
+                    },
+                    {
+                        "id": "apis-section",
+                        "label": "Custom APIs",
+                        "type": "section",
+                        "isExpanded": False,
+                        "children": [
+                            {"id": "api-dashboard", "label": "Get_Dashboard_Summary", "type": "api", "filePath": "src/deluge/custom-api/get_dashboard_summary.dg"},
+                            {"id": "api-claim-status", "label": "Get_Claim_Status", "type": "api", "filePath": "src/deluge/custom-api/get_claim_status.dg"},
+                        ],
                     },
                 ],
-            })
-        children.append({
-            "id": "forms-section",
-            "label": "Forms",
-            "type": "section",
-            "isExpanded": True,
-            "children": form_children,
-        })
-
-    # Reports section
-    if reports:
-        children.append({
-            "id": "reports-section",
-            "label": "Reports",
-            "type": "section",
-            "isExpanded": False,
-            "children": [
-                {"id": f"report-{_slugify(r['name'])}", "label": r["name"].replace("_", " "), "type": "report"}
-                for r in reports
-            ],
-        })
-
-    # Pages section
-    if pages:
-        children.append({
-            "id": "pages-section",
-            "label": "Pages",
-            "type": "section",
-            "isExpanded": False,
-            "children": [
-                {"id": f"page-{_slugify(p['name'])}", "label": p["name"].replace("_", " "), "type": "page"}
-                for p in pages
-            ],
-        })
-
-    # Schedules section
-    if schedules:
-        children.append({
-            "id": "schedules-section",
-            "label": "Schedules",
-            "type": "section",
-            "isExpanded": False,
-            "children": [
-                {"id": f"schedule-{_slugify(s['name'])}", "label": s["name"].replace("_", " "), "type": "schedule"}
-                for s in schedules
-            ],
-        })
-
-    return {
-        "name": app_name,
-        "displayName": display_name,
-        "tree": [{
-            "id": "app-root",
-            "label": display_name,
-            "type": "application",
-            "isExpanded": True,
-            "children": children,
-        }],
+            },
+        ],
     }
-
-
-def _build_tree_from_project() -> dict:
-    """Build an app tree by scanning the project directory and ForgeDS databases.
-
-    Reads form/field data from deluge_lang.db and scans the filesystem for
-    .dg script files to populate workflow, schedule, and API sections.
-    """
-    import sqlite3
-
-    from forgeds._shared.config import load_config, get_db_dir, find_project_root
-
-    config = load_config()
-    project_name = config.get("project", {}).get("name", "Untitled")
-    display_name = project_name.replace("_", " ").title()
-
-    children = []
-
-    # --- Forms from deluge_lang.db ---
-    db_dir = get_db_dir()
-    deluge_db = db_dir / "deluge_lang.db"
-    if deluge_db.is_file():
-        conn = sqlite3.connect(str(deluge_db))
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-
-        form_fields: dict[str, list[dict]] = {}
-        for row in cur.execute(
-            "SELECT form_name, field_link, display, field_type "
-            "FROM form_fields ORDER BY form_name, field_link"
-        ):
-            form_fields.setdefault(row["form_name"], []).append({
-                "name": row["field_link"],
-                "type": row["field_type"],
-                "display": row["display"] or row["field_link"],
-            })
-        conn.close()
-
-        if form_fields:
-            form_children = []
-            for fname, fields in sorted(form_fields.items()):
-                slug = _slugify(fname)
-                field_nodes = [
-                    {
-                        "id": f"field-{slug}-{_slugify(f['name'])}",
-                        "label": f["name"],
-                        "type": "field",
-                        "fieldType": f["type"],
-                    }
-                    for f in fields
-                ]
-                form_children.append({
-                    "id": f"form-{slug}",
-                    "label": fname.replace("_", " "),
-                    "type": "form",
-                    "isExpanded": False,
-                    "children": [{
-                        "id": f"field-section-{slug}",
-                        "label": "Fields",
-                        "type": "section",
-                        "isExpanded": False,
-                        "children": field_nodes,
-                    }],
-                })
-            children.append({
-                "id": "forms-section",
-                "label": "Forms",
-                "type": "section",
-                "isExpanded": True,
-                "children": form_children,
-            })
-
-    # --- Scan project dir for .dg files ---
-    try:
-        project_root = find_project_root()
-    except Exception:
-        project_root = Path.cwd()
-
-    workflow_nodes = []
-    schedule_nodes = []
-    api_nodes = []
-
-    for dg_file in sorted(project_root.rglob("*.dg")):
-        rel = str(dg_file.relative_to(project_root))
-        name = dg_file.stem
-        slug = _slugify(name)
-        parts = rel.replace("\\", "/").lower()
-
-        node = {
-            "id": f"script-{slug}",
-            "label": name.replace("_", " "),
-            "filePath": rel.replace("\\", "/"),
-        }
-
-        if "scheduled" in parts or "schedule" in parts:
-            node["id"] = f"schedule-{slug}"
-            node["type"] = "schedule"
-            schedule_nodes.append(node)
-        elif "custom-api" in parts or "api" in parts:
-            node["id"] = f"api-{slug}"
-            node["type"] = "api"
-            api_nodes.append(node)
-        else:
-            node["id"] = f"wf-{slug}"
-            node["type"] = "workflow"
-            # Detect trigger from filename convention: form.trigger.dg
-            if "." in name:
-                trigger = name.rsplit(".", 1)[-1]
-                node["trigger"] = trigger
-            workflow_nodes.append(node)
-
-    # Attach workflows to forms if possible, or add as top-level section
-    if workflow_nodes:
-        children.append({
-            "id": "workflows-section",
-            "label": "Workflows",
-            "type": "section",
-            "isExpanded": False,
-            "children": workflow_nodes,
-        })
-
-    if schedule_nodes:
-        children.append({
-            "id": "schedules-section",
-            "label": "Schedules",
-            "type": "section",
-            "isExpanded": False,
-            "children": schedule_nodes,
-        })
-
-    if api_nodes:
-        children.append({
-            "id": "apis-section",
-            "label": "Custom APIs",
-            "type": "section",
-            "isExpanded": False,
-            "children": api_nodes,
-        })
-
-    return {
-        "name": project_name,
-        "displayName": display_name,
-        "tree": [{
-            "id": "app-root",
-            "label": display_name,
-            "type": "application",
-            "isExpanded": True,
-            "children": children,
-        }],
-    }
-
-
-async def handle_parse_ds(data: dict) -> dict:
-    """Parse a .ds export or scan the project to return the app tree structure.
-
-    If ``file_path`` points to a real .ds file, parse it directly.
-    Otherwise, build the tree from ForgeDS databases and project .dg files.
-    """
-    file_path = data.get("file_path", "")
-
-    # Try parsing a real .ds file first
-    if file_path and os.path.isfile(file_path) and file_path.endswith(".ds"):
-        result = _parse_ds_file(file_path)
-        if result:
-            return result
-
-    # Fall back to project-level tree building
-    try:
-        return _build_tree_from_project()
-    except Exception as exc:
-        return {
-            "name": "error",
-            "displayName": "Error",
-            "error": f"Failed to build project tree: {exc}",
-            "tree": [],
-        }
 
 
 # ---------------------------------------------------------------------------
@@ -585,342 +469,138 @@ _EXTENSION_LANGUAGE_MAP = {
     ".txt": "text",
 }
 
+_MOCK_CONTENT = {
+    "deluge": (
+        "// Deluge workflow script\n"
+        "claimAmt = input.Amount_ZAR;\n"
+        "threshold = ifnull(Compliance_Config[Config_Key == \"CLAIM_THRESHOLD\" && Active == true].Threshold_Value, 999.99);\n"
+        "if (claimAmt > threshold)\n"
+        "{\n"
+        "    alert \"Amount exceeds approval threshold\";\n"
+        "    cancel submit;\n"
+        "}\n"
+    ),
+    "json": '{\n  "project": "expense_reimbursement",\n  "version": "0.1"\n}\n',
+    "yaml": "project:\n  name: expense_reimbursement\n  platform: zoho-creator\n",
+}
+
+
 async def handle_read_file(data: dict) -> dict:
     """Read a file from disk and return its content with detected language.
 
-    The path is resolved and confined to the project root directory to
-    prevent arbitrary file reads.
+    If the file does not exist, returns mock content for demo purposes.
     """
-    resolved, err = _resolve_safe_path(data.get("file_path", ""))
-    if err:
-        return {"error": err, "content": "", "language": "text"}
+    file_path = data.get("file_path", "")
 
-    ext = resolved.suffix.lower()
+    ext = Path(file_path).suffix.lower() if file_path else ""
     language = _EXTENSION_LANGUAGE_MAP.get(ext, "text")
 
-    if not resolved.is_file():
-        return {"error": f"File not found: {resolved}", "content": "", "language": language}
+    # Security: reject paths outside the project root
+    if file_path and not _is_safe_path(file_path):
+        return {"error": "File path is outside the project root.", "content": "", "language": language}
 
-    try:
-        content = resolved.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        return {"error": f"Failed to read file: {exc}", "content": "", "language": language}
+    if file_path and os.path.isfile(file_path):
+        try:
+            content = Path(file_path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            return {"error": f"Failed to read file: {exc}", "content": "", "language": language}
+    else:
+        # Return mock content for demo purposes
+        content = _MOCK_CONTENT.get(language, "// File not found — mock content\n")
 
     return {"content": content, "language": language}
 
 
 # ---------------------------------------------------------------------------
-# write_file -- save content to disk
+# inspect_element -- return inspector data for an element (mock)
 # ---------------------------------------------------------------------------
-async def handle_write_file(data: dict) -> dict:
-    """Write content to a file on disk.
-
-    Accepts ``file_path`` and ``content``.  The path is resolved and confined
-    to the project root directory to prevent arbitrary filesystem writes.
-
-    Returns ``{"success": True, "bytes": <int>}`` on success or an error dict.
-    """
-    content = data.get("content")
-    if content is None:
-        return {"error": "No content specified."}
-
-    resolved, err = _resolve_safe_path(data.get("file_path", ""))
-    if err:
-        return {"error": err}
-
-    try:
-        # Create parent directories if needed
-        resolved.parent.mkdir(parents=True, exist_ok=True)
-        resolved.write_text(content, encoding="utf-8")
-        return {"success": True, "bytes": len(content.encode("utf-8"))}
-    except (OSError, UnicodeEncodeError) as exc:
-        return {"error": f"Failed to write file: {exc}"}
-
-
-# ---------------------------------------------------------------------------
-# search_files -- search for text across project files
-# ---------------------------------------------------------------------------
-
-_SEARCHABLE_EXTENSIONS = {
-    ".dg", ".ds", ".json", ".yaml", ".yml", ".py", ".md", ".sql", ".txt",
-    ".csv", ".js", ".ts", ".tsx", ".jsx", ".html", ".css",
+_FIELD_INSPECTOR_DEFAULTS = {
+    "field-claim-id": {
+        "properties": {"type": "Auto Number", "form": "Expense Claims", "displayName": "Claim ID", "required": True, "unique": True},
+        "relationships": [{"target": "Approval History.Claim", "type": "lookup_target"}],
+        "usages": [{"script": "expense_claim.on_success.dg", "line": 3, "context": "claimId = input.Claim_ID;"}],
+    },
+    "field-amount": {
+        "properties": {"type": "Decimal", "form": "Expense Claims", "displayName": "Amount (ZAR)", "required": True, "unique": False},
+        "relationships": [{"target": "GL_Accounts.Carbon_Factor", "type": "calculation_input"}],
+        "usages": [
+            {"script": "expense_claim.on_validate.dg", "line": 2, "context": "claimAmt = input.Amount_ZAR;"},
+            {"script": "expense_claim.on_success.dg", "line": 12, "context": "input.Estimated_Carbon_KG = input.Amount_ZAR * carbonFactor;"},
+        ],
+    },
+    "field-status": {
+        "properties": {"type": "Picklist", "form": "Expense Claims", "displayName": "Status", "required": True, "unique": False,
+                        "values": ["Draft", "Submitted", "Approved", "Rejected", "Paid"]},
+        "relationships": [],
+        "usages": [{"script": "expense_claim.on_success.dg", "line": 5, "context": "input.Status = \"Submitted\";"}],
+    },
 }
-
-_MAX_SEARCH_RESULTS = 200
-_MAX_LINE_LENGTH = 300
-
-
-async def handle_search_files(data: dict) -> dict:
-    """Search for a text pattern across all project files.
-
-    Accepts ``query`` (plain text or regex), optional ``regex`` (bool),
-    optional ``case_sensitive`` (bool, default False), and optional
-    ``glob`` (file pattern like ``*.dg``).
-
-    Returns ``{"results": [{"file": str, "line": int, "text": str, "col": int}], "truncated": bool}``.
-    """
-    query = data.get("query", "").strip()
-    if not query:
-        return {"results": [], "truncated": False}
-
-    use_regex = data.get("regex", False)
-    case_sensitive = data.get("case_sensitive", False)
-    file_glob = data.get("glob", "")
-
-    root = _get_project_root()
-
-    # Compile the search pattern
-    flags = 0 if case_sensitive else re.IGNORECASE
-    try:
-        if use_regex:
-            pattern = re.compile(query, flags)
-        else:
-            pattern = re.compile(re.escape(query), flags)
-    except re.error as exc:
-        return {"error": f"Invalid search pattern: {exc}", "results": [], "truncated": False}
-
-    results: list[dict] = []
-    truncated = False
-
-    # Walk the project tree
-    for dirpath, _dirnames, filenames in os.walk(root):
-        rel_dir = Path(dirpath).relative_to(root)
-
-        # Skip hidden dirs and common non-source dirs
-        parts = rel_dir.parts
-        if any(p.startswith(".") or p in ("node_modules", "__pycache__", "dist", "build", ".git") for p in parts):
-            continue
-
-        for fname in filenames:
-            fpath = Path(dirpath) / fname
-
-            # Filter by extension
-            if fpath.suffix.lower() not in _SEARCHABLE_EXTENSIONS:
-                continue
-
-            # Filter by glob if specified
-            if file_glob:
-                import fnmatch
-                if not fnmatch.fnmatch(fname, file_glob):
-                    continue
-
-            rel_path = str(fpath.relative_to(root)).replace("\\", "/")
-
-            try:
-                text = fpath.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-
-            for line_no, line in enumerate(text.splitlines(), start=1):
-                match = pattern.search(line)
-                if match:
-                    results.append({
-                        "file": rel_path,
-                        "line": line_no,
-                        "col": match.start(),
-                        "text": line[:_MAX_LINE_LENGTH],
-                    })
-                    if len(results) >= _MAX_SEARCH_RESULTS:
-                        truncated = True
-                        break
-
-            if truncated:
-                break
-        if truncated:
-            break
-
-    return {"results": results, "truncated": truncated}
-
-
-# ---------------------------------------------------------------------------
-# inspect_element -- real implementation using ForgeDS DB and AST
-# ---------------------------------------------------------------------------
-
-
-def _find_field_usages(field_name: str, project_root: Path) -> list[dict]:
-    """Scan .dg files for references to a field name using the Deluge AST.
-
-    Falls back to simple text search if the parser is unavailable.
-    """
-    usages = []
-    for dg_file in sorted(project_root.rglob("*.dg")):
-        try:
-            source = dg_file.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
-
-        # Use simple grep for field references (input.Field, Form[Field ==], etc.)
-        for lineno, line in enumerate(source.splitlines(), 1):
-            if field_name in line:
-                usages.append({
-                    "script": str(dg_file.relative_to(project_root)).replace("\\", "/"),
-                    "line": lineno,
-                    "context": line.strip(),
-                })
-    return usages
-
-
-def _find_form_references_in_script(script_path: str) -> list[dict]:
-    """Parse a .dg script and find form/field references using the AST."""
-    try:
-        from forgeds.lang.parser import parse_source
-        from forgeds.lang import ast_nodes as ast
-
-        source = Path(script_path).read_text(encoding="utf-8")
-        tree = parse_source(source)
-
-        relationships = []
-        seen = set()
-
-        class RefFinder(ast.Visitor):
-            def visit_FormQuery(self, node: ast.FormQuery) -> None:
-                if node.form not in seen:
-                    seen.add(node.form)
-                    relationships.append({"target": node.form, "type": "queries"})
-                self.generic_visit(node)
-
-            def visit_InsertStmt(self, node: ast.InsertStmt) -> None:
-                if node.table not in seen:
-                    seen.add(node.table)
-                    relationships.append({"target": node.table, "type": "inserts_into"})
-                self.generic_visit(node)
-
-            def visit_DeleteStmt(self, node: ast.DeleteStmt) -> None:
-                if node.table not in seen:
-                    seen.add(node.table)
-                    relationships.append({"target": node.table, "type": "deletes_from"})
-                self.generic_visit(node)
-
-        RefFinder().visit(tree)
-        return relationships
-    except Exception:
-        return []
 
 
 async def handle_inspect_element(data: dict) -> dict:
-    """Return inspector data for a tree element.
+    """Return inspector data for a tree element. Mock implementation.
 
-    Uses ForgeDS databases for field/form metadata and the Deluge AST
-    for script cross-reference analysis.
+    Returns properties, relationships, and code usages appropriate for
+    the element type.
     """
     element_id = data.get("element_id", "")
     element_type = data.get("element_type", "")
-    # Optional extra data the frontend may pass
-    field_name = data.get("label", element_id.split("-")[-1] if "-" in element_id else element_id)
-    file_path = data.get("filePath", "")
 
-    try:
-        from forgeds._shared.config import get_db_dir, find_project_root
-        project_root = find_project_root()
-    except Exception:
-        project_root = Path.cwd()
+    # Field-level inspection
+    if element_type == "field" and element_id in _FIELD_INSPECTOR_DEFAULTS:
+        return _FIELD_INSPECTOR_DEFAULTS[element_id]
 
-    # --- Field inspection ---
     if element_type == "field":
-        properties: dict[str, Any] = {
-            "displayName": field_name,
-            "type": data.get("fieldType", "Text"),
-        }
-        relationships: list[dict] = []
-        usages: list[dict] = []
-
-        # Enrich from deluge_lang.db
-        try:
-            import sqlite3
-            db_path = get_db_dir() / "deluge_lang.db"
-            if db_path.is_file():
-                conn = sqlite3.connect(str(db_path))
-                conn.row_factory = sqlite3.Row
-                row = conn.execute(
-                    "SELECT form_name, field_link, display, field_type, notes "
-                    "FROM form_fields WHERE field_link = ? LIMIT 1",
-                    (field_name,),
-                ).fetchone()
-                if row:
-                    properties["form"] = row["form_name"]
-                    properties["type"] = row["field_type"]
-                    if row["display"]:
-                        properties["displayName"] = row["display"]
-                    if row["notes"]:
-                        properties["notes"] = row["notes"]
-                conn.close()
-        except Exception:
-            pass
-
-        # Find usages in .dg files
-        usages = _find_field_usages(field_name, project_root)
-
-        return {"properties": properties, "relationships": relationships, "usages": usages}
-
-    # --- Workflow / Schedule / API inspection (script-backed) ---
-    if element_type in ("workflow", "schedule", "api"):
-        properties = {"type": element_type, "displayName": field_name}
-        if file_path:
-            properties["scriptFile"] = file_path
-        if data.get("trigger"):
-            properties["trigger"] = data["trigger"]
-
-        # Parse the script for form references
-        relationships = []
-        if file_path:
-            abs_path = project_root / file_path if not os.path.isabs(file_path) else Path(file_path)
-            if abs_path.is_file():
-                relationships = _find_form_references_in_script(str(abs_path))
-                # Get line count
-                try:
-                    line_count = len(abs_path.read_text(encoding="utf-8").splitlines())
-                    properties["lineCount"] = line_count
-                except Exception:
-                    pass
-
-        return {"properties": properties, "relationships": relationships, "usages": []}
-
-    # --- Form inspection ---
-    if element_type == "form":
-        properties = {"displayName": field_name.replace("_", " ")}
-        relationships = []
-
-        try:
-            import sqlite3
-            db_path = get_db_dir() / "deluge_lang.db"
-            if db_path.is_file():
-                conn = sqlite3.connect(str(db_path))
-                form_name = field_name.replace(" ", "_")
-                rows = conn.execute(
-                    "SELECT COUNT(*) FROM form_fields WHERE form_name = ?",
-                    (form_name,),
-                ).fetchone()
-                properties["fieldCount"] = rows[0] if rows else 0
-
-                # Check for workflow scripts
-                wf_count = sum(
-                    1 for _ in project_root.rglob(f"*{form_name.lower()}*.dg")
-                )
-                properties["hasWorkflows"] = wf_count > 0
-                conn.close()
-        except Exception:
-            pass
-
-        return {"properties": properties, "relationships": relationships, "usages": []}
-
-    # --- Report / Page / other ---
-    if element_type == "report":
         return {
-            "properties": {"displayName": field_name.replace("_", " "), "type": "report"},
+            "properties": {"type": "Text", "form": "Unknown", "displayName": element_id, "required": False, "unique": False},
             "relationships": [],
             "usages": [],
         }
 
-    if element_type == "page":
+    if element_type == "workflow":
         return {
-            "properties": {"displayName": field_name.replace("_", " "), "type": "page"},
-            "relationships": [],
+            "properties": {"trigger": "on_success", "form": "Expense Claims", "scriptFile": f"src/deluge/form-workflows/{element_id}.dg"},
+            "relationships": [
+                {"target": "Expense Claims", "type": "form_event"},
+                {"target": "Approval History", "type": "inserts_into"},
+            ],
+            "usages": [],
+        }
+
+    if element_type == "form":
+        return {
+            "properties": {"fieldCount": 8, "hasWorkflows": True, "displayName": element_id},
+            "relationships": [
+                {"target": "GL Accounts", "type": "lookup_source"},
+                {"target": "Approval History", "type": "lookup_target"},
+            ],
+            "usages": [],
+        }
+
+    if element_type == "report":
+        return {
+            "properties": {"sourceForm": "Expense Claims", "displayName": element_id},
+            "relationships": [{"target": "Expense Claims", "type": "data_source"}],
+            "usages": [],
+        }
+
+    if element_type == "schedule":
+        return {
+            "properties": {"trigger": "daily", "scriptFile": "src/deluge/scheduled/sla_enforcement_daily.dg"},
+            "relationships": [{"target": "Expense Claims", "type": "queries"}],
+            "usages": [],
+        }
+
+    if element_type == "api":
+        return {
+            "properties": {"method": "GET", "scriptFile": f"src/deluge/custom-api/{element_id}.dg"},
+            "relationships": [{"target": "Expense Claims", "type": "queries"}],
             "usages": [],
         }
 
     # Fallback
     return {
-        "properties": {"displayName": field_name, "type": element_type},
+        "properties": {"displayName": element_id, "type": element_type},
         "relationships": [],
         "usages": [],
     }
@@ -932,11 +612,9 @@ async def handle_inspect_element(data: dict) -> dict:
 async def handle_ai_chat(data: dict) -> dict:
     """Process an AI chat message and return a mock response.
 
-    Accepts ``message`` and optional ``system_prompt`` (from skillStore).
     A future version will route to Claude Code CLI with ForgeDS context.
     """
     message = data.get("message", "")
-    system_prompt = data.get("system_prompt", "")  # noqa: F841 — reserved for Phase 5.5
     await asyncio.sleep(0.3)
 
     # Generate a contextual mock response based on keywords
@@ -984,207 +662,240 @@ async def handle_ai_chat(data: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# get_schema -- read real schema from ForgeDS SQLite databases
+# get_schema -- return Access tables and Zoho forms (mock)
 # ---------------------------------------------------------------------------
 
-# Type mismatches worth flagging in the mapping UI
+_ACCESS_TABLES = [
+    {
+        "name": "tblExpenseClaims",
+        "columns": [
+            {"name": "ClaimID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "EmployeeName", "type": "TEXT", "length": 100},
+            {"name": "AmountZAR", "type": "CURRENCY"},
+            {"name": "DepartmentID", "type": "LONG", "foreignKey": "tblDepartments.DeptID"},
+            {"name": "GLAccountID", "type": "LONG", "foreignKey": "tblGLAccounts.GLID"},
+            {"name": "ClaimDate", "type": "DATETIME"},
+            {"name": "Status", "type": "TEXT", "length": 20},
+            {"name": "IsApproved", "type": "BOOLEAN"},
+        ],
+    },
+    {
+        "name": "tblDepartments",
+        "columns": [
+            {"name": "DeptID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "DeptName", "type": "TEXT", "length": 50},
+            {"name": "ApprovingManager", "type": "TEXT", "length": 100},
+        ],
+    },
+    {
+        "name": "tblGLAccounts",
+        "columns": [
+            {"name": "GLID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "GLCode", "type": "TEXT", "length": 10},
+            {"name": "AccountName", "type": "TEXT", "length": 100},
+            {"name": "ESGCategory", "type": "TEXT", "length": 50},
+            {"name": "CarbonFactor", "type": "DOUBLE"},
+        ],
+    },
+    {
+        "name": "tblClients",
+        "columns": [
+            {"name": "ClientID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "ClientName", "type": "TEXT", "length": 100},
+            {"name": "ContactEmail", "type": "TEXT", "length": 100},
+            {"name": "IsActive", "type": "BOOLEAN"},
+        ],
+    },
+    {
+        "name": "tblApprovalHistory",
+        "columns": [
+            {"name": "HistoryID", "type": "AUTONUMBER", "primaryKey": True},
+            {"name": "ClaimID", "type": "LONG", "foreignKey": "tblExpenseClaims.ClaimID"},
+            {"name": "ActionType", "type": "TEXT", "length": 20},
+            {"name": "Actor", "type": "TEXT", "length": 100},
+            {"name": "ActionDate", "type": "DATETIME"},
+            {"name": "Comments", "type": "TEXT", "length": 255},
+        ],
+    },
+]
+
+_ZOHO_FORMS = [
+    {
+        "name": "Expense_Claims",
+        "fields": [
+            {"name": "Claim_ID", "type": "Auto Number"},
+            {"name": "Employee_Name", "type": "Text"},
+            {"name": "Amount_ZAR", "type": "Decimal"},
+            {"name": "Department", "type": "Lookup"},
+            {"name": "GL_Account", "type": "Lookup"},
+            {"name": "Claim_Date", "type": "DateTime"},
+            {"name": "Status", "type": "Picklist"},
+            {"name": "Is_Approved", "type": "Checkbox"},
+        ],
+    },
+    {
+        "name": "Departments",
+        "fields": [
+            {"name": "Dept_Name", "type": "Text"},
+            {"name": "Approving_Manager", "type": "Text"},
+            {"name": "ID", "type": "Auto Number"},
+        ],
+    },
+    {
+        "name": "GL_Accounts",
+        "fields": [
+            {"name": "GL_Code", "type": "Text"},
+            {"name": "Account_Name", "type": "Text"},
+            {"name": "ESG_Category", "type": "Text"},
+            {"name": "Carbon_Factor", "type": "Decimal"},
+            {"name": "ID", "type": "Auto Number"},
+        ],
+    },
+    {
+        "name": "Clients",
+        "fields": [
+            {"name": "Client_Name", "type": "Text"},
+            {"name": "Contact_Email", "type": "Text"},
+            {"name": "Is_Active", "type": "Checkbox"},
+            {"name": "ID", "type": "Auto Number"},
+        ],
+    },
+    {
+        "name": "Approval_History",
+        "fields": [
+            {"name": "Claim", "type": "Lookup"},
+            {"name": "action_1", "type": "Picklist"},
+            {"name": "Actor", "type": "Text"},
+            {"name": "Action_Date", "type": "DateTime"},
+            {"name": "Comments", "type": "Text"},
+            {"name": "Added_User", "type": "Text"},
+        ],
+    },
+]
+
+# Pre-computed table name mapping (Access -> Zoho)
+_TABLE_NAME_MAP = {
+    "tblExpenseClaims": "Expense_Claims",
+    "tblDepartments": "Departments",
+    "tblGLAccounts": "GL_Accounts",
+    "tblClients": "Clients",
+    "tblApprovalHistory": "Approval_History",
+}
+
+# Type mismatches worth flagging
 _TYPE_MISMATCHES = {
     ("CURRENCY", "Decimal"): "CURRENCY (4dp fixed-point) -> Decimal (2dp) — precision loss possible",
     ("BOOLEAN", "Checkbox"): "Access BOOLEAN (-1/0) -> Zoho Checkbox (true/false) — value mapping required",
     ("DATETIME", "DateTime"): "Access DATETIME (no timezone) -> Zoho DateTime (UTC) — timezone awareness gap",
-    ("MEMO", "Text"): "MEMO (unlimited) -> Text (255 chars) — truncation risk; use Textarea",
 }
 
 
-def _read_schema_from_dbs() -> dict:
-    """Read Access tables, Zoho forms, and mappings from the SQLite databases."""
-    import sqlite3
+def _build_table_mappings() -> list[dict]:
+    """Generate field-level mappings between Access tables and Zoho forms."""
+    mappings = []
+    for access_tbl in _ACCESS_TABLES:
+        zoho_name = _TABLE_NAME_MAP.get(access_tbl["name"])
+        if not zoho_name:
+            continue
+        zoho_form = next((f for f in _ZOHO_FORMS if f["name"] == zoho_name), None)
+        if not zoho_form:
+            continue
 
-    from forgeds._shared.config import get_db_dir
-
-    db_dir = get_db_dir()
-    access_db = db_dir / "access_vba_lang.db"
-    deluge_db = db_dir / "deluge_lang.db"
-
-    if not access_db.is_file() and not deluge_db.is_file():
-        raise FileNotFoundError(
-            f"No ForgeDS databases found in {db_dir}. "
-            "Run 'forgeds-build-db' and 'forgeds-build-access-db' first."
-        )
-
-    access_tables: list[dict] = []
-    zoho_forms: list[dict] = []
-    field_mappings_raw: list[dict] = []  # from field_name_mappings table
-    constraints: list[dict] = []
-
-    # --- Read Access schema ---
-    if access_db.is_file():
-        conn = sqlite3.connect(str(access_db))
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-
-        # Group fields by table
-        table_fields: dict[str, list[dict]] = {}
-        for row in cur.execute(
-            "SELECT table_name, field_name, access_type, zoho_form, zoho_field, notes "
-            "FROM access_table_fields ORDER BY table_name, field_name"
-        ):
-            tname = row["table_name"]
-            if tname not in table_fields:
-                table_fields[tname] = []
-            table_fields[tname].append({
-                "name": row["field_name"],
-                "type": row["access_type"],
-            })
-
-        # Read constraints for PK / FK enrichment
-        pk_fields: dict[str, set[str]] = {}
-        fk_fields: dict[tuple[str, str], str] = {}
-        for row in cur.execute(
-            "SELECT table_name, constraint_type, field_name, reference_table, reference_field "
-            "FROM access_constraints"
-        ):
-            if row["constraint_type"] == "pk":
-                pk_fields.setdefault(row["table_name"], set()).add(row["field_name"])
-            elif row["constraint_type"] == "fk":
-                fk_fields[(row["table_name"], row["field_name"])] = (
-                    f"{row['reference_table']}.{row['reference_field']}"
-                )
-
-        for tname, fields in table_fields.items():
-            columns = []
-            for f in fields:
-                col: dict[str, Any] = {"name": f["name"], "type": f["type"]}
-                if tname in pk_fields and f["name"] in pk_fields[tname]:
-                    col["primaryKey"] = True
-                fk_key = (tname, f["name"])
-                if fk_key in fk_fields:
-                    col["foreignKey"] = fk_fields[fk_key]
-                columns.append(col)
-            access_tables.append({"name": tname, "columns": columns})
-
-        # Read field_name_mappings for the table mapping view
-        for row in cur.execute(
-            "SELECT access_table, access_field, zoho_form, zoho_field, transform_notes "
-            "FROM field_name_mappings"
-        ):
-            field_mappings_raw.append(dict(row))
-
-        # Read type_mappings for mismatch detection
-        type_map: dict[str, str] = {}
-        for row in cur.execute("SELECT access_type, zoho_type FROM type_mappings"):
-            type_map[row["access_type"]] = row["zoho_type"]
-
-        conn.close()
-
-    # --- Read Zoho form schema ---
-    if deluge_db.is_file():
-        conn = sqlite3.connect(str(deluge_db))
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-
-        form_fields: dict[str, list[dict]] = {}
-        for row in cur.execute(
-            "SELECT form_name, field_link, display, field_type, notes "
-            "FROM form_fields ORDER BY form_name, field_link"
-        ):
-            fname = row["form_name"]
-            if fname not in form_fields:
-                form_fields[fname] = []
-            form_fields[fname].append({
-                "name": row["field_link"],
-                "type": row["field_type"],
-                "display": row["display"] or row["field_link"],
-            })
-
-        for fname, fields in form_fields.items():
-            zoho_forms.append({"name": fname, "fields": fields})
-
-        conn.close()
-
-    # --- Build table mappings ---
-    # Group field_name_mappings by (access_table, zoho_form)
-    mapping_groups: dict[tuple[str, str], list[dict]] = {}
-    for fm in field_mappings_raw:
-        key = (fm["access_table"], fm["zoho_form"])
-        mapping_groups.setdefault(key, []).append(fm)
-
-    # Build a quick lookup of zoho field types
-    zoho_field_types: dict[tuple[str, str], str] = {}
-    for form in zoho_forms:
-        for f in form["fields"]:
-            zoho_field_types[(form["name"], f["name"])] = f["type"]
-
-    # Build a quick lookup of access field types
-    access_field_types: dict[tuple[str, str], str] = {}
-    for tbl in access_tables:
-        for c in tbl["columns"]:
-            access_field_types[(tbl["name"], c["name"])] = c["type"]
-
-    table_mappings = []
-    for (atbl, zform), fmaps in mapping_groups.items():
         field_maps = []
-        for fm in fmaps:
-            access_type = access_field_types.get((atbl, fm["access_field"]), "")
-            zoho_type = zoho_field_types.get((zform, fm["zoho_field"]), "")
-            mismatch = _TYPE_MISMATCHES.get((access_type, zoho_type))
+        zoho_fields = {f["name"]: f for f in zoho_form["fields"]}
+        for col in access_tbl["columns"]:
+            # Simple heuristic: match by similar name
+            best_match = None
+            for zf_name in zoho_fields:
+                if col["name"].replace("ID", "").replace("_", "").lower() in zf_name.replace("_", "").lower():
+                    best_match = zf_name
+                    break
+            mismatch = None
+            if best_match:
+                zoho_type = zoho_fields[best_match]["type"]
+                key = (col["type"], zoho_type)
+                mismatch = _TYPE_MISMATCHES.get(key)
             field_maps.append({
-                "accessColumn": fm["access_field"],
-                "zohoField": fm["zoho_field"],
-                "accessType": access_type,
-                "zohoType": zoho_type,
+                "accessColumn": col["name"],
+                "zohoField": best_match,
+                "accessType": col["type"],
+                "zohoType": zoho_fields[best_match]["type"] if best_match else None,
                 "mismatch": mismatch,
             })
-        table_mappings.append({
-            "accessTable": atbl,
-            "zohoForm": zform,
+
+        mappings.append({
+            "accessTable": access_tbl["name"],
+            "zohoForm": zoho_name,
             "status": "mapped",
             "fieldMappings": field_maps,
         })
-
-    return {
-        "accessTables": access_tables,
-        "zohoForms": zoho_forms,
-        "tableMappings": table_mappings,
-    }
+    return mappings
 
 
 async def handle_get_schema(data: dict) -> dict:
-    """Return Access tables, Zoho forms, and mappings from ForgeDS databases."""
-    try:
-        return _read_schema_from_dbs()
-    except Exception as exc:
-        return {
-            "error": f"Failed to read schema: {exc}",
-            "accessTables": [],
-            "zohoForms": [],
-            "tableMappings": [],
-        }
+    """Return Access tables, Zoho forms, and auto-generated mappings.
+
+    Mock implementation returning realistic ERM schema data.
+    """
+    await asyncio.sleep(0.2)
+    return {
+        "accessTables": _ACCESS_TABLES,
+        "zohoForms": _ZOHO_FORMS,
+        "tableMappings": _build_table_mappings(),
+    }
 
 
 # ---------------------------------------------------------------------------
-# run_validation -- real implementation using ForgeDS linters
+# run_validation -- run validation checks (mock)
 # ---------------------------------------------------------------------------
 
+_LINT_HYBRID_DETAILS = [
+    {"severity": "info", "rule": "HY001", "message": "Schema alignment: tblExpenseClaims -> Expense_Claims OK"},
+    {"severity": "info", "rule": "HY001", "message": "Schema alignment: tblDepartments -> Departments OK"},
+    {"severity": "info", "rule": "HY001", "message": "Schema alignment: tblGLAccounts -> GL_Accounts OK"},
+    {"severity": "warning", "rule": "HY003", "message": "Type mismatch: CURRENCY (4dp) -> Decimal (2dp) for Amount field in tblExpenseClaims"},
+    {"severity": "warning", "rule": "HY004", "message": "Access BOOLEAN (-1/0) requires value mapping to Zoho Checkbox (true/false) in tblClients.IsActive"},
+]
 
-def _diagnostics_to_details(diagnostics: list) -> list[dict]:
-    """Convert a list of Diagnostic objects to the JSON shape the frontend expects."""
-    details = []
-    for d in diagnostics:
-        details.append({
-            "severity": d.severity.value.lower(),
-            "rule": d.rule,
-            "message": d.message,
-            "file": d.file,
-            "line": d.line,
-        })
-    return details
+_VALIDATE_DETAILS = [
+    {"severity": "info", "rule": "DV001", "message": "Picklist values for Status match seed data: Draft, Submitted, Approved, Rejected, Paid"},
+    {"severity": "info", "rule": "DV002", "message": "Foreign key integrity: tblExpenseClaims.DepartmentID -> tblDepartments.DeptID OK (10/10 valid)"},
+    {"severity": "warning", "rule": "DV003", "message": "3 records in tblExpenseClaims have NULL GLAccountID — will import as empty Lookup"},
+    {"severity": "info", "rule": "DV004", "message": "Date range check: ClaimDate values span 2024-01-15 to 2026-03-28 — all valid"},
+    {"severity": "error", "rule": "DV005", "message": "Duplicate EmployeeName+ClaimDate found in 2 records — possible duplicate claims"},
+]
 
 
-def _validation_response(tool: str, details: list[dict]) -> dict:
-    """Build the standard validation response envelope."""
+async def handle_run_validation(data: dict) -> dict:
+    """Run validation checks. Mock implementation.
+
+    Args:
+        data: Dict with ``tool`` ("lint-hybrid" or "validate") and
+              ``tables`` (list of table names to validate).
+    """
     import datetime
     import uuid
+
+    tool = data.get("tool", "lint-hybrid")
+    tables = data.get("tables", [])
+
+    await asyncio.sleep(0.4)
+
+    if tool == "lint-hybrid":
+        details = _LINT_HYBRID_DETAILS
+    else:
+        details = _VALIDATE_DETAILS
+
+    # Filter details to requested tables if specified
+    if tables:
+        filtered = []
+        for d in details:
+            if any(t in d["message"] for t in tables) or not any(
+                tbl in d["message"] for tbl in _TABLE_NAME_MAP
+            ):
+                filtered.append(d)
+        if filtered:
+            details = filtered
 
     info_count = sum(1 for d in details if d["severity"] == "info")
     warn_count = sum(1 for d in details if d["severity"] == "warning")
@@ -1204,7 +915,7 @@ def _validation_response(tool: str, details: list[dict]) -> dict:
         parts.append(f"{warn_count} warnings")
     if err_count:
         parts.append(f"{err_count} errors")
-    summary = ", ".join(parts) if parts else "No issues found"
+    summary = ", ".join(parts) if parts else "No checks run"
 
     return {
         "id": f"val-{uuid.uuid4().hex[:8]}",
@@ -1214,93 +925,6 @@ def _validation_response(tool: str, details: list[dict]) -> dict:
         "summary": summary,
         "details": details,
     }
-
-
-async def handle_run_validation(data: dict) -> dict:
-    """Run validation checks using the real ForgeDS linters.
-
-    Args:
-        data: Dict with ``tool`` ("lint-hybrid" or "validate"),
-              optional ``csv_dir``, ``scripts_dir``, and ``data`` flag.
-    """
-    tool = data.get("tool", "lint-hybrid")
-
-    try:
-        if tool == "lint-hybrid":
-            from forgeds.hybrid.lint_hybrid import (
-                HybridDB,
-                run_schema_rules,
-                run_data_rules,
-                run_script_rules,
-            )
-
-            db = HybridDB()
-            diagnostics = run_schema_rules(db)
-
-            csv_dir = data.get("csv_dir", "")
-            if csv_dir:
-                diagnostics.extend(run_data_rules(db, csv_dir))
-
-            scripts_dir = data.get("scripts_dir", "")
-            if scripts_dir:
-                diagnostics.extend(run_script_rules(db, scripts_dir))
-
-            details = _diagnostics_to_details(diagnostics)
-            return _validation_response(tool, details)
-
-        else:
-            # "validate" tool — pre-flight data validation
-            from forgeds.hybrid.validate_import import (
-                ValidatorDB,
-                validate_csv_file,
-                load_parent_pk_values,
-            )
-
-            csv_dir = data.get("csv_dir", "")
-            if not csv_dir:
-                return _validation_response(tool, [{
-                    "severity": "error",
-                    "rule": "VD000",
-                    "message": "No csv_dir specified for validate tool.",
-                    "file": "",
-                    "line": 0,
-                }])
-
-            vdb = ValidatorDB()
-            check_picklists = data.get("check_picklists", False)
-            check_refs = data.get("check_refs", False)
-            parent_data = load_parent_pk_values(csv_dir) if check_refs else None
-
-            all_diags = []
-            for fname in sorted(os.listdir(csv_dir)):
-                if fname.lower().endswith(".csv"):
-                    filepath = os.path.join(csv_dir, fname)
-                    all_diags.extend(validate_csv_file(
-                        filepath, vdb,
-                        check_picklists=check_picklists,
-                        check_refs=check_refs,
-                        parent_data=parent_data,
-                    ))
-
-            details = _diagnostics_to_details(all_diags)
-            return _validation_response(tool, details)
-
-    except ImportError as exc:
-        return _validation_response(tool, [{
-            "severity": "error",
-            "rule": "BRIDGE",
-            "message": f"ForgeDS tools not available: {exc}",
-            "file": "",
-            "line": 0,
-        }])
-    except Exception as exc:
-        return _validation_response(tool, [{
-            "severity": "error",
-            "rule": "BRIDGE",
-            "message": f"Validation failed: {exc}",
-            "file": "",
-            "line": 0,
-        }])
 
 
 # ---------------------------------------------------------------------------
@@ -1329,7 +953,7 @@ async def handle_mock_upload(data: dict, send_fn: SendFn) -> dict:
     simulating batch upload (50 records at a time), then returns a
     final summary.
     """
-    tables = data.get("tables", [])
+    tables = data.get("tables", list(_TABLE_NAME_MAP.values()))
     batch_size = 50
     total_records = 0
     errors: list[str] = []
@@ -1565,80 +1189,15 @@ def _generate_deluge_code(prompt: str, api_config: dict) -> str:
     return f"{sig}\n{{\n{body}\n}}"
 
 
-_DELUGE_SYSTEM_PROMPT = """\
-You are a Zoho Creator Deluge scripting expert. Generate a Deluge custom API \
-function based on the user's requirements.
-
-Rules:
-- Output ONLY the Deluge function code, no markdown fences or explanation.
-- Use ifnull() guards for all field lookups to prevent null pointer errors.
-- Use zoho.loginuser for audit trails (Added_User fields).
-- Return a Map with "status" key and relevant data.
-- Form queries use bracket syntax: FormName[criteria].
-- Use proper Deluge types: Map(), List(), insert into Form [...].
-- Follow Zoho Creator conventions for field naming (underscores, Title_Case).
-"""
-
-
-async def _generate_code_with_claude(prompt: str, api_config: dict) -> str | None:
-    """Try to generate code using Claude API. Returns None if unavailable."""
-    try:
-        import anthropic
-    except ImportError:
-        return None
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return None
-
-    func_name = api_config.get("functionName", "custom_api_function")
-    method = api_config.get("method", "GET").upper()
-    params = api_config.get("parameters", [])
-    param_desc = ", ".join(
-        f"{p.get('name', 'param')} ({p.get('type', 'string')})"
-        for p in params
-    ) if params else "none"
-
-    user_msg = (
-        f"Generate a Deluge custom API function.\n"
-        f"Function name: {func_name}\n"
-        f"HTTP method: {method}\n"
-        f"Parameters: {param_desc}\n"
-        f"Requirements: {prompt}"
-    )
-
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            system=_DELUGE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_msg}],
-        )
-        return response.content[0].text
-    except Exception:
-        return None
-
-
 async def handle_generate_api_code(data: dict) -> dict:
-    """Generate Deluge function code based on prompt and API config.
-
-    Tries Claude API first (if anthropic package and ANTHROPIC_API_KEY are
-    available), falls back to template-based generation.
-    """
+    """Generate Deluge function code based on prompt and API config. Mock implementation."""
     prompt = data.get("prompt", "")
     api_config = data.get("apiConfig", {})
 
-    # Try Claude API
-    code = await _generate_code_with_claude(prompt, api_config)
-    source = "claude"
+    await asyncio.sleep(0.3)
 
-    # Fall back to template generator
-    if code is None:
-        code = _generate_deluge_code(prompt, api_config)
-        source = "template"
-
-    return {"code": code, "source": source}
+    code = _generate_deluge_code(prompt, api_config)
+    return {"code": code}
 
 
 # ---------------------------------------------------------------------------

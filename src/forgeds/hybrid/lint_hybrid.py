@@ -34,7 +34,6 @@ from pathlib import Path
 
 from forgeds._shared.config import load_config, get_db_dir
 from forgeds._shared.diagnostics import Severity, Diagnostic
-from forgeds.schema.registry import get_registry
 
 
 # ============================================================
@@ -74,28 +73,23 @@ class HybridDB:
 
     def __init__(
         self,
+        deluge_db_path: Path = DELUGE_DB_PATH,
         access_db_path: Path = ACCESS_DB_PATH,
     ) -> None:
         # Access DB data
         self.access_table_fields: dict[tuple[str, str], str] = {}  # (table, field) -> access_type
-        self._fields_by_table: dict[str, dict[str, str]] = {}  # pre-indexed: table -> {field: type}
         self.type_mappings: dict[str, dict[str, str]] = {}  # access_type -> {zoho_type, notes, risk}
         self.field_name_mappings: dict[tuple[str, str], dict[str, str]] = {}  # (access_table, access_field) -> {zoho_form, zoho_field}
         self.access_constraints: list[dict[str, str]] = []  # list of FK constraint dicts
 
-        # Deluge DB data (delegated to SchemaRegistry)
+        # Deluge DB data
         self.form_fields: dict[str, set[str]] = {}  # form_name -> {field_link, ...}
         self.form_field_types: dict[tuple[str, str], str] = {}  # (form_name, field_link) -> field_type
         self.valid_statuses: set[str] = set()
         self.valid_actions: set[str] = set()
 
         self._load_access_db(access_db_path)
-        self._load_deluge_db()
-
-        # Pre-compute cached sets (avoids re-deriving on every call)
-        self._access_tables: set[str] = {table for table, _ in self.access_table_fields}
-        self._mapped_access_tables: set[str] = {table for table, _ in self.field_name_mappings}
-        self._mapped_zoho_forms: set[str] = {m["zoho_form"] for m in self.field_name_mappings.values()}
+        self._load_deluge_db(deluge_db_path)
 
     def _load_access_db(self, db_path: Path) -> None:
         if not db_path.exists():
@@ -103,12 +97,10 @@ class HybridDB:
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
 
-        # access_table_fields (+ pre-indexed by-table lookup)
+        # access_table_fields
         try:
             for row in conn.execute("SELECT table_name, field_name, access_type FROM access_table_fields"):
-                tname, fname, atype = row["table_name"], row["field_name"], row["access_type"]
-                self.access_table_fields[(tname, fname)] = atype
-                self._fields_by_table.setdefault(tname, {})[fname] = atype
+                self.access_table_fields[(row["table_name"], row["field_name"])] = row["access_type"]
         except sqlite3.OperationalError:
             pass
 
@@ -152,23 +144,52 @@ class HybridDB:
 
         conn.close()
 
-    def _load_deluge_db(self) -> None:
-        # Schema data — delegated to SchemaRegistry (single source of truth)
-        reg = get_registry()
-        for name, schema in reg.all_forms().items():
-            self.form_fields[name] = schema.field_names()
-            for f in schema.fields.values():
-                self.form_field_types[(name, f.link_name)] = f.field_type_raw
-        self.valid_statuses = set(reg.valid_statuses())
-        self.valid_actions = set(reg.valid_actions())
+    def _load_deluge_db(self, db_path: Path) -> None:
+        if not db_path.exists():
+            return
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+
+        # form_fields
+        try:
+            for row in conn.execute("SELECT form_name, field_link, field_type FROM form_fields"):
+                form = row["form_name"]
+                field = row["field_link"]
+                ftype = row["field_type"]
+                if form not in self.form_fields:
+                    self.form_fields[form] = set()
+                self.form_fields[form].add(field)
+                self.form_field_types[(form, field)] = ftype
+        except sqlite3.OperationalError:
+            pass
+
+        # valid_statuses
+        try:
+            for row in conn.execute("SELECT value FROM valid_statuses"):
+                self.valid_statuses.add(row["value"])
+        except sqlite3.OperationalError:
+            pass
+
+        # valid_actions
+        try:
+            for row in conn.execute("SELECT value FROM valid_actions"):
+                self.valid_actions.add(row["value"])
+        except sqlite3.OperationalError:
+            pass
+
+        conn.close()
 
     def get_access_tables(self) -> set[str]:
         """Return set of distinct Access table names."""
-        return self._access_tables
+        return {table for table, _ in self.access_table_fields}
 
     def get_access_fields_for_table(self, table: str) -> dict[str, str]:
         """Return {field_name: access_type} for a given Access table."""
-        return self._fields_by_table.get(table, {})
+        result: dict[str, str] = {}
+        for (t, f), atype in self.access_table_fields.items():
+            if t == table:
+                result[f] = atype
+        return result
 
     def get_zoho_forms(self) -> set[str]:
         """Return set of distinct Zoho form names."""
@@ -176,11 +197,11 @@ class HybridDB:
 
     def get_mapped_access_tables(self) -> set[str]:
         """Return Access tables that have at least one field_name_mapping."""
-        return self._mapped_access_tables
+        return {table for table, _ in self.field_name_mappings}
 
     def get_mapped_zoho_forms(self) -> set[str]:
         """Return Zoho forms that have at least one field_name_mapping target."""
-        return self._mapped_zoho_forms
+        return {m["zoho_form"] for m in self.field_name_mappings.values()}
 
     def get_fk_constraints(self) -> list[dict[str, str]]:
         """Return FK constraints only."""

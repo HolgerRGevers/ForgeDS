@@ -31,6 +31,17 @@ forgeds-ds-editor = "forgeds.core.ds_editor:main"
 forgeds-build-ds = "forgeds.core.build_ds:main"
 forgeds-validate = "forgeds.hybrid.validate_import:main"
 forgeds-upload = "forgeds.hybrid.upload_to_creator:main"
+forgeds-kb-scrape   = "forgeds.knowledge.cli:scrape_main"
+forgeds-kb-parse    = "forgeds.knowledge.cli:parse_main"
+forgeds-kb-build    = "forgeds.knowledge.cli:build_main"
+forgeds-kb-validate = "forgeds.knowledge.cli:validate_main"
+forgeds-kb-query    = "forgeds.knowledge.cli:query_main"
+forgeds-kb-retrieve = "forgeds.knowledge.retriever:retrieve_main"
+forgeds-kb-ingest   = "forgeds.knowledge.app_ingest:ingest_main"
+forgeds-kb-project  = "forgeds.knowledge.app_projection:project_main"
+
+[project.optional-dependencies]
+knowledge = ["beautifulsoup4>=4.12", "markdownify>=0.13"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

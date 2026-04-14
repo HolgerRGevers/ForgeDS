@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
   ApiParameter,
   ApiStore,
@@ -39,8 +38,7 @@ function createEmptyDraft(): CustomApiDefinition {
   };
 }
 
-export const useApiStore = create<ApiStore>()(persist(
-  (set, get) => ({
+export const useApiStore = create<ApiStore>((set, get) => ({
   // --- State ---
   apis: [],
   selectedApiId: null,
@@ -193,12 +191,4 @@ export const useApiStore = create<ApiStore>()(persist(
       selectedApiId: get().selectedApiId === id ? null : get().selectedApiId,
     });
   },
-}),
-  {
-    name: "forgeds-api-definitions",
-    partialize: (state) => ({
-      apis: state.apis,
-      selectedApiId: state.selectedApiId,
-    }),
-  },
-));
+}));
