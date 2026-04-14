@@ -279,16 +279,26 @@ def _build_function_edges(conn: sqlite3.Connection, batch: _EdgeBatch) -> int:
 # Main build entry point
 # ---------------------------------------------------------------------------
 
-def build_graph(db_path: Path) -> int:
-    """Run all relation inference passes and write edges to knowledge.db.
+def build_graph(librarian_or_path) -> int:
+    """Run all relation inference passes and write edges to the RB.
+
+    Accepts either a LibrarianHandle (preferred) or a Path for
+    backward compatibility.
 
     Returns total number of edges created.
     """
-    conn = sqlite3.connect(str(db_path))
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
-    conn.execute("PRAGMA cache_size=-64000")
-    conn.execute("PRAGMA temp_store=MEMORY")
+    from forgeds.knowledge.librarian_io import LibrarianHandle
+
+    if isinstance(librarian_or_path, LibrarianHandle):
+        conn = librarian_or_path.rb_conn
+        _close_conn = False
+    else:
+        conn = sqlite3.connect(str(librarian_or_path))
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=-64000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        _close_conn = True
 
     # Fix #14: clear stale edges before rebuilding
     conn.execute("DELETE FROM edges")
@@ -323,6 +333,7 @@ def build_graph(db_path: Path) -> int:
         batch.flush(conn)
         conn.commit()
     finally:
-        conn.close()
+        if _close_conn:
+            conn.close()
 
     return total

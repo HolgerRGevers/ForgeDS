@@ -4,14 +4,18 @@ A "hologram" in HRC terms is the gap between what an app IS and what
 the knowledge base says it SHOULD be.  The residual R(app) > 0 means
 the app is incomplete; each violation tells you exactly what is missing.
 
+Projections are run against the Reality Database (RB) via the Librarian's
+read-only connection.  The gaps discovered here become HologramTokens
+in the Holographic Database (HB), created by the Librarian in api.py.
+
 Projections performed:
+    π_structural_completeness — App must have blueprints, pages, dashboards
     π_form_validation  — Every form with user input needs on_validate scripts
     π_transition_logic — Every Blueprint transition needs before/after logic
     π_audit_trail      — State changes should create audit history records
     π_notification     — State changes should trigger email/push notifications
     π_error_handling   — Scripts should guard nulls, validate inputs
     π_compliance       — POPIA consent, SARS substantiation, King IV patterns
-    π_api_patterns     — Integration patterns matching KB documented APIs
 
 Each gap is a violation with a severity weight.  The total residual
 R(app) = Σ severity tells you how far the app is from being grounded
@@ -19,10 +23,7 @@ to the knowledge base.
 
 Usage:
     from forgeds.knowledge.app_projection import project_kb_onto_app
-    report = project_kb_onto_app("app:Expense_Claim_Approval", "knowledge/knowledge.db")
-    print(f"Residual: {report['residual']}")
-    for gap in report['gaps']:
-        print(f"  [{gap['severity']}] {gap['projection']}: {gap['message']}")
+    report = project_kb_onto_app("app:Expense_Claim_Approval", librarian)
 
 CLI:
     forgeds-kb-project app:Expense_Claim_Approval
@@ -34,8 +35,10 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from forgeds.knowledge.retriever import retrieve_context
+if TYPE_CHECKING:
+    from forgeds.knowledge.librarian_io import LibrarianHandle
 
 
 # ---------------------------------------------------------------------------
@@ -575,7 +578,7 @@ def _get_app_name(conn: sqlite3.Connection, module: str) -> str:
 
 def project_kb_onto_app(
     module: str,
-    db_path: str | Path,
+    librarian_or_path: LibrarianHandle | str | Path,
 ) -> ProjectionReport:
     """Project the knowledge base onto an ingested app.
 
@@ -585,14 +588,21 @@ def project_kb_onto_app(
 
     Each gap is a hologram — a place where the KB says something
     should exist but the app has nothing.
+
+    Accepts either a LibrarianHandle (preferred) or a db_path for
+    backward compatibility.
     """
-    db_path = str(db_path)
-    conn = sqlite3.connect(db_path)
+    if isinstance(librarian_or_path, (str, Path)):
+        # Legacy path: open read-only connection
+        conn = sqlite3.connect(str(librarian_or_path))
+        _close_conn = True
+    else:
+        conn = librarian_or_path.rb_conn
+        _close_conn = False
 
     try:
         app_name = _get_app_name(conn, module)
 
-        # Run all projections
         all_gaps: list[AppGap] = []
         all_gaps.extend(_pi_structural_completeness(conn, module))
         all_gaps.extend(_pi_form_validation(conn, module))
@@ -602,15 +612,12 @@ def project_kb_onto_app(
         all_gaps.extend(_pi_error_handling(conn, module))
         all_gaps.extend(_pi_compliance(conn, module))
 
-        # Compute residual
         residual = sum(g.severity for g in all_gaps)
 
-        # Compute per-entity residuals
         entity_residuals: dict[str, float] = {}
         for g in all_gaps:
             entity_residuals[g.entity] = entity_residuals.get(g.entity, 0) + g.severity
 
-        # Count what we analyzed
         forms = conn.execute(
             "SELECT COUNT(*) FROM tokens WHERE module = ? AND page_url LIKE '%/forms/%'",
             (module,),
@@ -633,7 +640,8 @@ def project_kb_onto_app(
             entity_residuals=entity_residuals,
         )
     finally:
-        conn.close()
+        if _close_conn:
+            conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -672,17 +680,24 @@ def project_main() -> None:
     args = parser.parse_args()
 
     db_path = _db_path()
-    if not db_path.exists():
-        print(f"Database not found at {db_path}.", file=sys.stderr)
+    rb_path = db_path.parent / "reality.db"
+    hb_path = db_path.parent / "holographic.db"
+
+    if not rb_path.exists() and not db_path.exists():
+        print(f"Database not found at {rb_path}.", file=sys.stderr)
         sys.exit(1)
+
+    from forgeds.knowledge.librarian_io import open_librarian
+    # Use reality.db if it exists, otherwise fall back to knowledge.db
+    actual_rb = rb_path if rb_path.exists() else db_path
+    lib = open_librarian(actual_rb, hb_path)
 
     # Resolve modules
     if args.module == "all":
-        conn = sqlite3.connect(str(db_path))
+        conn = lib.rb_conn
         modules = [r[0] for r in conn.execute(
             "SELECT name FROM modules WHERE name LIKE 'app:%' ORDER BY name"
         ).fetchall()]
-        conn.close()
     else:
         modules = [args.module]
 
@@ -692,7 +707,7 @@ def project_main() -> None:
 
     all_reports: list[ProjectionReport] = []
     for mod in modules:
-        report = project_kb_onto_app(mod, db_path)
+        report = project_kb_onto_app(mod, lib)
         all_reports.append(report)
 
         if not args.as_json:

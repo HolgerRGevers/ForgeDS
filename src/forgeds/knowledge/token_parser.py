@@ -1,8 +1,8 @@
 """Markdown-to-token parser for the ForgeDS knowledge base.
 
 Reads raw_md/*.md files (with YAML frontmatter), splits them into
-sections and paragraphs, classifies each block, computes SHA identities,
-and writes tokens to the knowledge.db SQLite database.
+sections and paragraphs, classifies each block, and creates tokens
+via the Librarian (sole authority for token lifecycle).
 """
 
 from __future__ import annotations
@@ -12,14 +12,17 @@ import sqlite3
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from forgeds.knowledge._callout_patterns import classify_block
 from forgeds.knowledge._types import (
     SCHEMA_DDL,
     ContentType,
     KnowledgeToken,
-    compute_token_sha,
 )
+
+if TYPE_CHECKING:
+    from forgeds.knowledge.librarian_io import LibrarianHandle
 
 
 # ---------------------------------------------------------------------------
@@ -220,44 +223,47 @@ def parse_single_file(
     return tokens, meta, rel_path
 
 
-def _upsert_tokens(conn: sqlite3.Connection, tokens: list[KnowledgeToken]) -> int:
-    """Insert or update tokens in the database. Returns count of rows affected."""
+def _create_tokens_via_librarian(
+    librarian: LibrarianHandle,
+    tokens: list[KnowledgeToken],
+) -> int:
+    """Create tokens via the Librarian (sole authority).
+
+    Tokens whose SHA already exists are silently skipped (immutability).
+    Returns count of tokens successfully created.
+    """
+    from forgeds.knowledge.librarian_io import LIB_RB, LibrarianError
+
     if not tokens:
         return 0
 
-    params = [
-        (
-            t.token_sha, t.revision, t.content, t.content_type.value,
-            t.module, t.page_url, t.page_title, t.section,
-            t.paragraph_num, t.page_last_updated,
-            t.token_created_at, t.token_updated_at,
-            t.forgeds_git_sha, t.source_md_path,
-        )
-        for t in tokens
-    ]
-    conn.executemany(
-        """INSERT INTO tokens
-            (token_sha, revision, content, content_type, module,
-             page_url, page_title, section, paragraph, page_updated,
-             created_at, updated_at, git_sha, source_md)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(token_sha) DO UPDATE SET
-            revision = revision + 1,
-            content = excluded.content,
-            content_type = excluded.content_type,
-            module = excluded.module,
-            page_url = excluded.page_url,
-            page_title = excluded.page_title,
-            section = excluded.section,
-            paragraph = excluded.paragraph,
-            page_updated = excluded.page_updated,
-            updated_at = excluded.updated_at,
-            git_sha = excluded.git_sha,
-            source_md = excluded.source_md""",
-        params,
-    )
+    created = 0
+    for t in tokens:
+        try:
+            librarian.create(
+                db=LIB_RB,
+                content=t.content,
+                page_url=t.page_url,
+                paragraph_num=t.paragraph_num,
+                module=t.module,
+                content_type=t.content_type.value,
+                weight=1.0,
+                metadata={
+                    "page_title": t.page_title,
+                    "section": t.section,
+                    "page_updated": t.page_last_updated,
+                    "created_at": t.token_created_at,
+                    "updated_at": t.token_updated_at,
+                    "git_sha": t.forgeds_git_sha,
+                    "source_md": t.source_md_path,
+                },
+            )
+            created += 1
+        except LibrarianError:
+            # SHA collision — token already exists (immutable, skip)
+            pass
 
-    return len(tokens)
+    return created
 
 
 def _upsert_module(conn: sqlite3.Connection, meta: dict) -> None:
@@ -300,35 +306,30 @@ def _upsert_page(conn: sqlite3.Connection, meta: dict, md_rel_path: str) -> None
 
 def parse_md_files(
     md_files: list[Path],
-    db_path: Path,
+    librarian: LibrarianHandle,
     raw_md_dir: Path,
 ) -> int:
-    """Parse multiple .md files and write tokens to knowledge.db.
+    """Parse multiple .md files and create tokens via the Librarian.
 
-    Returns total number of tokens stored.
+    The Librarian is the sole authority for token creation.  Module and
+    page metadata is written to the RB's metadata tables via the
+    Librarian's read-write RB connection.
+
+    Returns total number of tokens created.
     """
     git_sha = _git_sha()
-    conn = sqlite3.connect(str(db_path))
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
-    conn.execute("PRAGMA cache_size=-64000")
-    conn.execute("PRAGMA temp_store=MEMORY")
+    conn = librarian.rb_conn
     total = 0
 
-    try:
-        for md_path in md_files:
-            if md_path.name.startswith("_"):
-                continue
+    for md_path in md_files:
+        if md_path.name.startswith("_"):
+            continue
 
-            tokens, meta, rel_path = parse_single_file(md_path, raw_md_dir, git_sha)
-            if tokens:
-                # Insert module before page to respect FK order
-                _upsert_module(conn, meta)
-                _upsert_page(conn, meta, rel_path)
-                total += _upsert_tokens(conn, tokens)
-
-        conn.commit()
-    finally:
-        conn.close()
+        tokens, meta, rel_path = parse_single_file(md_path, raw_md_dir, git_sha)
+        if tokens:
+            _upsert_module(conn, meta)
+            _upsert_page(conn, meta, rel_path)
+            conn.commit()
+            total += _create_tokens_via_librarian(librarian, tokens)
 
     return total

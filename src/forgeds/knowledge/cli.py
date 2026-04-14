@@ -24,10 +24,20 @@ def _raw_md_dir() -> Path:
 
 
 def _db_path() -> Path:
+    """Return the knowledge directory path.
+
+    Returns the directory's ``reality.db`` path (new convention).
+    Falls back to ``knowledge.db`` if it exists for backward compat.
+    """
     root = find_project_root()
     kb_dir = root / _kb_config().get("knowledge_dir", "knowledge")
     kb_dir.mkdir(parents=True, exist_ok=True)
-    return kb_dir / "knowledge.db"
+    # Prefer reality.db; fall back to knowledge.db for migration
+    rb = kb_dir / "reality.db"
+    legacy = kb_dir / "knowledge.db"
+    if not rb.exists() and legacy.exists():
+        return legacy
+    return rb
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +141,7 @@ def scrape_main() -> None:
 # ---------------------------------------------------------------------------
 
 def parse_main() -> None:
-    """Parse raw_md/ files into knowledge tokens in knowledge.db."""
+    """Parse raw_md/ files into knowledge tokens via the Librarian."""
     parser = argparse.ArgumentParser(
         prog="forgeds-kb-parse",
         description="Parse raw markdown into knowledge tokens.",
@@ -142,12 +152,15 @@ def parse_main() -> None:
     )
     args = parser.parse_args()
 
-    from forgeds.knowledge.token_parser import parse_md_files, init_db
+    from forgeds.knowledge.token_parser import parse_md_files
+    from forgeds.knowledge.librarian_io import open_librarian
 
     raw_md_dir = _raw_md_dir()
     db_path = _db_path()
+    rb_path = db_path if db_path.name == "reality.db" else db_path.parent / "reality.db"
+    hb_path = rb_path.parent / "holographic.db"
 
-    init_db(db_path)
+    lib = open_librarian(rb_path, hb_path)
 
     if args.files:
         md_files = [Path(f) for f in args.files]
@@ -159,9 +172,10 @@ def parse_main() -> None:
         print(f"No .md files found in {raw_md_dir}/", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Parsing {len(md_files)} file(s) into {db_path}")
-    count = parse_md_files(md_files, db_path, raw_md_dir)
-    print(f"Stored {count} token(s).")
+    print(f"Parsing {len(md_files)} file(s) into {rb_path}")
+    count = parse_md_files(md_files, lib, raw_md_dir)
+    print(f"Stored {count} token(s) via Librarian.")
+    lib.close()
     sys.exit(0)
 
 
@@ -178,14 +192,21 @@ def build_main() -> None:
     parser.parse_args()
 
     from forgeds.knowledge.graph_builder import build_graph
+    from forgeds.knowledge.librarian_io import open_librarian
 
     db_path = _db_path()
-    if not db_path.exists():
-        print(f"Database not found at {db_path}. Run forgeds-kb-parse first.", file=sys.stderr)
+    rb_path = db_path if db_path.name == "reality.db" else db_path.parent / "reality.db"
+    hb_path = rb_path.parent / "holographic.db"
+
+    actual_rb = rb_path if rb_path.exists() else db_path
+    if not actual_rb.exists():
+        print(f"Database not found at {actual_rb}. Run forgeds-kb-parse first.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Building graph edges in {db_path}")
-    edge_count = build_graph(db_path)
+    lib = open_librarian(actual_rb, hb_path)
+
+    print(f"Building graph edges in {actual_rb}")
+    edge_count = build_graph(lib)
     print(f"Created {edge_count} edge(s).")
     sys.exit(0)
 
@@ -263,13 +284,19 @@ def query_main() -> None:
     args = parser.parse_args()
 
     import sqlite3
+    from forgeds.knowledge.librarian_io import open_librarian
 
     db_path = _db_path()
-    if not db_path.exists():
-        print(f"Database not found at {db_path}. Run forgeds-kb-parse first.", file=sys.stderr)
+    rb_path = db_path if db_path.name == "reality.db" else db_path.parent / "reality.db"
+    hb_path = rb_path.parent / "holographic.db"
+
+    if not rb_path.exists() and not db_path.exists():
+        print(f"Database not found at {rb_path}. Run forgeds-kb-parse first.", file=sys.stderr)
         sys.exit(1)
 
-    conn = sqlite3.connect(str(db_path))
+    actual_rb = rb_path if rb_path.exists() else db_path
+    lib = open_librarian(actual_rb, hb_path)
+    conn = lib.rb_conn
     conn.row_factory = sqlite3.Row
 
     # Try FTS5 first for fast full-text search (Fix #13), fall back to LIKE
@@ -335,5 +362,83 @@ def query_main() -> None:
     sys.exit(0)
 
 
+# ---------------------------------------------------------------------------
+# forgeds-kb-init — one-command pipeline: scrape + parse + build + validate
+# ---------------------------------------------------------------------------
+
+def init_main() -> None:
+    """Initialise a complete knowledge base in one step.
+
+    Runs: scrape -> parse -> build -> validate.
+    This is the CLI equivalent of ``KnowledgeBase.init()``.
+    """
+    parser = argparse.ArgumentParser(
+        prog="forgeds-kb-init",
+        description="Initialise the knowledge base (scrape + parse + build + validate).",
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Force re-scrape all pages.",
+    )
+    parser.add_argument(
+        "--follow-links", action="store_true",
+        help="Crawl index pages and discover leaf pages.",
+    )
+    parser.add_argument(
+        "--parallel", action="store_true",
+        help="Scrape modules in parallel.",
+    )
+    parser.add_argument(
+        "--skip-validate", action="store_true",
+        help="Skip the validation step.",
+    )
+    args = parser.parse_args()
+
+    from forgeds.knowledge.api import KnowledgeBase
+
+    db_path = _db_path()
+    rb_path = db_path if db_path.name == "reality.db" else db_path.parent / "reality.db"
+    kb = KnowledgeBase(rb_path)
+
+    print("Step 1/4: Scraping documentation sources...")
+    result = kb.init(
+        force_scrape=args.force,
+        follow_links=args.follow_links,
+        parallel=args.parallel,
+    )
+
+    print(f"  Pages scraped:  {result['pages_scraped']}")
+    print(f"  Files parsed:   {result['files_parsed']}")
+    print(f"  Tokens created: {result['tokens_created']}")
+    print(f"  Edges created:  {result['edges_created']}")
+
+    if result["tokens_created"] == 0:
+        print("\nNo tokens created. Check forgeds.yaml knowledge.sources config.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    if args.skip_validate:
+        print("\nKnowledge base initialised (validation skipped).")
+        sys.exit(0)
+
+    print("\nStep 4/4: Validating knowledge base consistency...")
+    report = kb.validate()
+    residual = report.get("residual", 0)
+    n_violations = len(report.get("violations", []))
+    n_shadows = len(report.get("shadow_fields", []))
+
+    if residual > 0:
+        print(f"  Residual: {residual:.4f} ({n_violations} violation(s), "
+              f"{n_shadows} shadow field(s))")
+    else:
+        print("  Knowledge base is internally consistent.")
+
+    stats = kb.stats
+    print(f"\nKB ready: {stats['tokens']} tokens, {stats['edges']} edges, "
+          f"{stats['modules']} modules")
+    sys.exit(0)
+
+
 if __name__ == "__main__":
-    print("Use one of: forgeds-kb-scrape, forgeds-kb-parse, forgeds-kb-build, forgeds-kb-validate, forgeds-kb-query")
+    print("Use one of: forgeds-kb-init, forgeds-kb-scrape, forgeds-kb-parse, "
+          "forgeds-kb-build, forgeds-kb-validate, forgeds-kb-query")

@@ -1,19 +1,18 @@
 """Ingest Zoho Creator .ds application exports into the knowledge graph.
 
 Parses .ds files using the existing DSParser, then creates knowledge
-tokens for:
+tokens via the Librarian for:
   - Application structure (forms, fields, relationships)
   - Blueprint definitions (stages, transitions, state machines)
   - Embedded Deluge scripts (workflows, scheduled tasks, approvals)
   - Cross-references to documentation tokens (function calls, API patterns)
 
-The tokens go into knowledge.db alongside documentation tokens, using
-module names like "app:Expense_Claim_Approval" so they can be queried
-and cross-referenced via the graph.
+The tokens go into the Reality Database (RB) alongside documentation
+tokens, using module names like "app:Expense_Claim_Approval".
 
 Usage:
     from forgeds.knowledge.app_ingest import ingest_ds_app
-    stats = ingest_ds_app("path/to/App.ds", "knowledge/knowledge.db")
+    stats = ingest_ds_app("path/to/App.ds", librarian_handle)
 
 CLI:
     forgeds-kb-ingest path/to/App.ds [path/to/Other.ds ...]
@@ -21,15 +20,18 @@ CLI:
 
 from __future__ import annotations
 
-import hashlib
 import re
 import sqlite3
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from forgeds.core.parse_ds_export import DSParser, FormDef, ScriptDef
+
+if TYPE_CHECKING:
+    from forgeds.knowledge.librarian_io import LibrarianHandle
 
 
 # ---------------------------------------------------------------------------
@@ -49,11 +51,6 @@ def _git_sha() -> str:
         return result.stdout.strip() if result.returncode == 0 else "unknown"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return "unknown"
-
-
-def _token_sha(content: str, page_url: str, paragraph_num: int) -> str:
-    raw = f"{content}\x00{page_url}\x00{paragraph_num}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 @dataclass
@@ -233,7 +230,7 @@ def _make_app_overview_token(
     content = "\n".join(lines)
     page_url = f"app://{module}/overview"
     return {
-        "token_sha": _token_sha(content, page_url, 0),
+        "token_sha": "",  # Librarian computes SHA
         "content": content,
         "content_type": "PROSE",
         "module": module,
@@ -263,7 +260,7 @@ def _make_form_tokens(
 
     content = "\n".join(lines)
     tokens.append({
-        "token_sha": _token_sha(content, page_url, para_offset),
+        "token_sha": "",  # Librarian computes SHA
         "content": content,
         "content_type": "TABLE_ROW",
         "module": module,
@@ -316,7 +313,7 @@ def _make_blueprint_tokens(
 
     content = "\n".join(lines)
     tokens.append({
-        "token_sha": _token_sha(content, page_url, para_offset),
+        "token_sha": "",  # Librarian computes SHA
         "content": content,
         "content_type": "PROSE",
         "module": module,
@@ -344,7 +341,7 @@ def _make_script_tokens(
             f"- **Event:** {script.event}\n"
             f"- **Context:** {script.context}")
     tokens.append({
-        "token_sha": _token_sha(meta, page_url, para_offset),
+        "token_sha": "",  # Librarian computes SHA
         "content": meta,
         "content_type": "PROSE",
         "module": module,
@@ -358,7 +355,7 @@ def _make_script_tokens(
     # Script code
     code_content = f"```deluge\n{script.code}\n```"
     tokens.append({
-        "token_sha": _token_sha(code_content, page_url, para_offset + 1),
+        "token_sha": "",  # Librarian computes SHA
         "content": code_content,
         "content_type": "CODE_EXAMPLE",
         "module": module,
@@ -472,36 +469,35 @@ def _build_cross_references(
 
 def ingest_ds_app(
     ds_path: str | Path,
-    db_path: str | Path,
+    librarian: LibrarianHandle,
 ) -> IngestStats:
-    """Ingest a single .ds application export into knowledge.db.
+    """Ingest a single .ds application export via the Librarian.
 
-    Parses the .ds file, creates tokens and edges, and inserts them
-    into the existing knowledge.db alongside documentation tokens.
+    Parses the .ds file, creates tokens and edges through the Librarian
+    (sole authority for token lifecycle), and inserts metadata into the
+    Reality Database alongside documentation tokens.
     """
+    from forgeds.knowledge.librarian_io import LIB_RB, LibrarianError
+
     ds_path = Path(ds_path)
-    db_path = str(db_path)
 
     # Read and parse .ds
     content = ds_path.read_text(encoding="utf-8")
     parser = DSParser(content)
     parser.parse()
 
-    # Extract app name from the file
     app_name_match = re.search(r'application\s+"([^"]+)"', content)
     app_name = app_name_match.group(1) if app_name_match else ds_path.stem
     module = f"app:{ds_path.stem}"
 
-    # Parse blueprints (not handled by DSParser)
     blueprints = _parse_blueprints(content)
 
-    # Generate tokens
+    # Generate token dicts (SHAs will be computed by Librarian)
     now = _now_iso()
     git = _git_sha()
     all_tokens: list[dict] = []
     para = 0
 
-    # Overview token
     overview = _make_app_overview_token(
         app_name, module, parser.forms, blueprints, parser.scripts,
         str(ds_path),
@@ -510,7 +506,6 @@ def ingest_ds_app(
     all_tokens.append(overview)
     para += 1
 
-    # Form tokens
     for form in parser.forms:
         form_tokens = _make_form_tokens(form, module, str(ds_path), para)
         for t in form_tokens:
@@ -518,7 +513,6 @@ def ingest_ds_app(
         all_tokens.extend(form_tokens)
         para += len(form_tokens)
 
-    # Blueprint tokens
     for bp in blueprints:
         bp_tokens = _make_blueprint_tokens(bp, module, str(ds_path), para)
         for t in bp_tokens:
@@ -526,7 +520,6 @@ def ingest_ds_app(
         all_tokens.extend(bp_tokens)
         para += len(bp_tokens)
 
-    # Script tokens
     for script in parser.scripts:
         script_tokens = _make_script_tokens(script, module, str(ds_path), para)
         for t in script_tokens:
@@ -534,83 +527,100 @@ def ingest_ds_app(
         all_tokens.extend(script_tokens)
         para += len(script_tokens)
 
-    # Build edges
-    app_edges = _build_app_edges(all_tokens, module)
+    # Clear previous ingest of this module via RB connection
+    conn = librarian.rb_conn
+    conn.execute("DELETE FROM edges WHERE source_sha IN "
+                 "(SELECT token_sha FROM tokens WHERE module = ?)", (module,))
+    conn.execute("DELETE FROM edges WHERE target_sha IN "
+                 "(SELECT token_sha FROM tokens WHERE module = ?)", (module,))
+    # Destroy existing tokens for this module via Librarian
+    existing_shas = [r[0] for r in conn.execute(
+        "SELECT token_sha FROM tokens WHERE module = ?", (module,)
+    ).fetchall()]
+    for sha in existing_shas:
+        try:
+            librarian.destroy(sha)
+        except LibrarianError:
+            pass
 
-    # Write to DB
-    conn = sqlite3.connect(db_path)
-    try:
-        # Clear any previous ingest of this module
-        conn.execute("DELETE FROM edges WHERE source_sha IN "
-                     "(SELECT token_sha FROM tokens WHERE module = ?)", (module,))
-        conn.execute("DELETE FROM edges WHERE target_sha IN "
-                     "(SELECT token_sha FROM tokens WHERE module = ?)", (module,))
-        conn.execute("DELETE FROM tokens WHERE module = ?", (module,))
-        conn.execute("DELETE FROM pages WHERE module = ?", (module,))
-        conn.execute("DELETE FROM modules WHERE name = ?", (module,))
+    conn.execute("DELETE FROM pages WHERE module = ?", (module,))
+    conn.execute("DELETE FROM modules WHERE name = ?", (module,))
 
-        # Insert module
-        page_urls = set(t["page_url"] for t in all_tokens)
+    # Insert module metadata
+    page_urls = set(t["page_url"] for t in all_tokens)
+    conn.execute(
+        "INSERT INTO modules (name, base_url, page_count) VALUES (?, ?, ?)",
+        (module, f"app://{module}", len(page_urls)),
+    )
+
+    for url in page_urls:
+        title = next(t["page_title"] for t in all_tokens if t["page_url"] == url)
         conn.execute(
-            "INSERT INTO modules (name, base_url, page_count) VALUES (?, ?, ?)",
-            (module, f"app://{module}", len(page_urls)),
+            "INSERT INTO pages (url, title, module, md_path, scraped_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (url, title, module, str(ds_path), now),
         )
+    conn.commit()
 
-        # Insert pages
-        for url in page_urls:
-            title = next(t["page_title"] for t in all_tokens if t["page_url"] == url)
-            conn.execute(
-                "INSERT INTO pages (url, title, module, md_path, scraped_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (url, title, module, str(ds_path), now),
+    # Create tokens via Librarian (sole authority)
+    created_count = 0
+    for t in all_tokens:
+        try:
+            sha = librarian.create(
+                db=LIB_RB,
+                content=t["content"],
+                page_url=t["page_url"],
+                paragraph_num=t["paragraph"],
+                module=t["module"],
+                content_type=t["content_type"],
+                weight=1.0,
+                metadata={
+                    "page_title": t["page_title"],
+                    "section": t["section"],
+                    "page_updated": now,
+                    "created_at": t["created_at"],
+                    "updated_at": t["updated_at"],
+                    "git_sha": t["git_sha"],
+                    "source_md": t["source_md"],
+                },
             )
+            t["token_sha"] = sha  # Update dict with Librarian-assigned SHA
+            created_count += 1
+        except LibrarianError:
+            pass  # SHA collision — skip
 
-        # Insert tokens
-        for t in all_tokens:
-            conn.execute(
-                """INSERT OR REPLACE INTO tokens
-                   (token_sha, revision, content, content_type, module,
-                    page_url, page_title, section, paragraph,
-                    page_updated, created_at, updated_at, git_sha, source_md)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (t["token_sha"], t["revision"], t["content"], t["content_type"],
-                 t["module"], t["page_url"], t["page_title"], t["section"],
-                 t["paragraph"], now, t["created_at"], t["updated_at"],
-                 t["git_sha"], t["source_md"]),
-            )
+    # Build edges (only between tokens that have SHAs)
+    tokens_with_sha = [t for t in all_tokens if t["token_sha"]]
+    app_edges = _build_app_edges(tokens_with_sha, module)
 
-        # Insert app-internal edges
-        for src, tgt, rel, weight in app_edges:
-            conn.execute(
-                "INSERT OR IGNORE INTO edges (source_sha, target_sha, rel_type, weight) "
-                "VALUES (?, ?, ?, ?)",
-                (src, tgt, rel, weight),
-            )
+    edge_count = 0
+    for src, tgt, rel, weight in app_edges:
+        try:
+            librarian.create_edge(src, tgt, rel, weight)
+            edge_count += 1
+        except LibrarianError:
+            pass
 
-        # Build cross-references to documentation
-        xref_edges = _build_cross_references(all_tokens, conn, module)
-        for src, tgt, rel, weight in xref_edges:
-            conn.execute(
-                "INSERT OR IGNORE INTO edges (source_sha, target_sha, rel_type, weight) "
-                "VALUES (?, ?, ?, ?)",
-                (src, tgt, rel, weight),
-            )
+    # Build cross-references to documentation
+    xref_edges = _build_cross_references(tokens_with_sha, conn, module)
+    for src, tgt, rel, weight in xref_edges:
+        try:
+            librarian.create_edge(src, tgt, rel, weight)
+            edge_count += 1
+        except LibrarianError:
+            pass
 
-        conn.commit()
-
-        return IngestStats(
-            app_name=app_name,
-            module=module,
-            forms=len(parser.forms),
-            fields=sum(len(f.fields) for f in parser.forms),
-            scripts=len(parser.scripts),
-            blueprints=len(blueprints),
-            transitions=sum(len(bp.transitions) for bp in blueprints),
-            tokens_created=len(all_tokens),
-            edges_created=len(app_edges) + len(xref_edges),
-        )
-    finally:
-        conn.close()
+    return IngestStats(
+        app_name=app_name,
+        module=module,
+        forms=len(parser.forms),
+        fields=sum(len(f.fields) for f in parser.forms),
+        scripts=len(parser.scripts),
+        blueprints=len(blueprints),
+        transitions=sum(len(bp.transitions) for bp in blueprints),
+        tokens_created=created_count,
+        edges_created=edge_count,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -623,6 +633,7 @@ def ingest_main() -> None:
     import sys
 
     from forgeds.knowledge.cli import _db_path
+    from forgeds.knowledge.librarian_io import open_librarian
 
     parser = argparse.ArgumentParser(
         prog="forgeds-kb-ingest",
@@ -639,10 +650,10 @@ def ingest_main() -> None:
     args = parser.parse_args()
 
     db_path = _db_path()
-    if not db_path.exists():
-        print(f"Database not found at {db_path}. Run forgeds-kb-parse first.",
-              file=sys.stderr)
-        sys.exit(1)
+    rb_path = db_path.parent / "reality.db"
+    hb_path = db_path.parent / "holographic.db"
+
+    lib = open_librarian(rb_path, hb_path)
 
     all_stats: list[IngestStats] = []
     for ds_file in args.ds_files:
@@ -651,7 +662,7 @@ def ingest_main() -> None:
             print(f"File not found: {ds_file}", file=sys.stderr)
             continue
 
-        stats = ingest_ds_app(path, db_path)
+        stats = ingest_ds_app(path, lib)
         all_stats.append(stats)
 
         if not args.as_json:

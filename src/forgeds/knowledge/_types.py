@@ -86,10 +86,26 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def compute_token_sha(content: str, page_url: str, paragraph_num: int) -> str:
-    """Deterministic SHA-256 identity for a knowledge token."""
+def _compute_token_sha(content: str, page_url: str, paragraph_num: int) -> str:
+    """Deterministic SHA-256 identity for a knowledge token.
+
+    INTERNAL — used only by the Python-fallback Librarian and legacy
+    compatibility shim.  The canonical SHA computation lives in
+    librarian.c.  External code should NEVER call this directly;
+    token creation goes through the Librarian.
+    """
     raw = f"{content}\x00{page_url}\x00{paragraph_num}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def compute_token_sha(content: str, page_url: str, paragraph_num: int) -> str:
+    """Public shim — delegates to internal implementation.
+
+    .. deprecated::
+        Token creation should go through the Librarian.  This function
+        exists only for backward compatibility during the transition.
+    """
+    return _compute_token_sha(content, page_url, paragraph_num)
 
 
 @dataclass

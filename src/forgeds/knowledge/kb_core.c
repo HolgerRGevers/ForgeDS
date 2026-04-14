@@ -1,7 +1,7 @@
 /*
  * kb_core.c — In-memory graph compute layer for ForgeDS knowledge base.
  *
- * Reads tokens + edges from knowledge.db via SQLite's C API, loads them
+ * Reads tokens + edges from reality.db via SQLite's C API, loads them
  * into a Compressed Sparse Row (CSR) format for O(1) neighbor access,
  * then exposes BFS, subgraph extraction, and PageRank to Python via ctypes.
  *
@@ -20,111 +20,16 @@
 /* --------------------------------------------------------------------------
  * Hash map for SHA -> node index (Fix #10 & #11)
  *
- * Open-addressing hash table with FNV-1a hash. Replaces O(n) linear
- * scans in _find_or_add_node and kb_find_node with O(1) amortized.
+ * Uses the shared sha_hashmap.h header which is also used by librarian.c.
  * -------------------------------------------------------------------------- */
 
-#define HASH_LOAD_FACTOR 0.7
+#include "sha_hashmap.h"
 
-typedef struct {
-    char  *sha;     /* NULL = empty slot */
-    int    idx;
-} HashEntry;
-
-typedef struct {
-    HashEntry *entries;
-    int        capacity;
-    int        count;
-} ShaHashMap;
-
-static unsigned int _fnv1a(const char *s) {
-    unsigned int h = 2166136261u;
-    for (; *s; s++) {
-        h ^= (unsigned char)*s;
-        h *= 16777619u;
-    }
-    return h;
-}
-
-static int _hashmap_init(ShaHashMap *m, int capacity) {
-    m->capacity = capacity;
-    m->count = 0;
-    m->entries = calloc(capacity, sizeof(HashEntry));
-    if (!m->entries) {
-        m->capacity = 0;
-        return -1;
-    }
-    return 0;
-}
-
-static void _hashmap_free(ShaHashMap *m) {
-    if (!m->entries) return;
-    for (int i = 0; i < m->capacity; i++)
-        free(m->entries[i].sha);
-    free(m->entries);
-    m->entries = NULL;
-}
-
-static void _hashmap_grow(ShaHashMap *m);
-
-static int _hashmap_get(const ShaHashMap *m, const char *sha) {
-    unsigned int h = _fnv1a(sha) % (unsigned int)m->capacity;
-    for (int i = 0; i < m->capacity; i++) {
-        int slot = (h + i) % m->capacity;
-        if (!m->entries[slot].sha)
-            return -1;  /* empty slot — not found */
-        if (strcmp(m->entries[slot].sha, sha) == 0)
-            return m->entries[slot].idx;
-    }
-    return -1;
-}
-
-static int _hashmap_put(ShaHashMap *m, const char *sha, int idx) {
-    if (!m->entries) return -1;
-    if (m->count >= (int)(m->capacity * HASH_LOAD_FACTOR))
-        _hashmap_grow(m);
-    if (!m->entries) return -1;  /* grow may have failed */
-
-    unsigned int h = _fnv1a(sha) % (unsigned int)m->capacity;
-    for (int i = 0; i < m->capacity; i++) {
-        int slot = (h + i) % m->capacity;
-        if (!m->entries[slot].sha) {
-            m->entries[slot].sha = strdup(sha);
-            if (!m->entries[slot].sha) return -1;  /* OOM */
-            m->entries[slot].idx = idx;
-            m->count++;
-            return 0;
-        }
-        if (strcmp(m->entries[slot].sha, sha) == 0) {
-            m->entries[slot].idx = idx;  /* update existing */
-            return 0;
-        }
-    }
-    return -1;  /* table full (should not happen with load factor check) */
-}
-
-static void _hashmap_grow(ShaHashMap *m) {
-    int old_cap = m->capacity;
-    HashEntry *old = m->entries;
-
-    int new_cap = old_cap * 2;
-    HashEntry *new_entries = calloc(new_cap, sizeof(HashEntry));
-    if (!new_entries) {
-        /* OOM — leave map unchanged; _hashmap_put will detect via entries check */
-        return;
-    }
-    m->entries = new_entries;
-    m->capacity = new_cap;
-    m->count = 0;
-
-    for (int i = 0; i < old_cap; i++) {
-        if (old[i].sha) {
-            _hashmap_put(m, old[i].sha, old[i].idx);
-            free(old[i].sha);
-        }
-    }
-    free(old);
-}
+/* Compatibility aliases — existing code uses _hashmap_* names */
+#define _hashmap_init(m, cap)    sha_map_init(m, cap)
+#define _hashmap_free(m)         sha_map_free(m)
+#define _hashmap_get(m, sha)     sha_map_get(m, sha)
+#define _hashmap_put(m, sha, v)  sha_map_put(m, sha, v)
 
 
 /* --------------------------------------------------------------------------

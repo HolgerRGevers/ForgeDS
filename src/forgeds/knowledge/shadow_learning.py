@@ -42,6 +42,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from forgeds.knowledge._types import (
     CONTENT_WEIGHTS,
@@ -49,8 +50,10 @@ from forgeds.knowledge._types import (
     ContentType,
     KnowledgeToken,
     RelationType,
-    compute_token_sha,
 )
+
+if TYPE_CHECKING:
+    from forgeds.knowledge.librarian_io import LibrarianHandle
 
 
 # ---------------------------------------------------------------------------
@@ -283,25 +286,32 @@ def record_shadow_case(
     *,
     related_queries: list[str] | None = None,
     severity: float = 1.5,
+    librarian: LibrarianHandle | None = None,
     db_path: str | Path | None = None,
 ) -> dict:
-    """Record a runtime shadow case as a validated KB token.
+    """Record a runtime shadow case as a validated RB token via the Librarian.
 
     The full lifecycle:
     1. Build the ShadowCase record with Git SHA provenance
     2. Validate against existing KB (no duplicates, no contradictions)
-    3. Create the token with content_type=LEARNED
-    4. Initialise all relations with relevant existing tokens
+    3. Create the token via Librarian with content_type=LEARNED
+    4. Initialise all relations via Librarian
     5. Assign weight based on severity and content type
 
     Returns a dict with: token_sha, valid, reason, relation_count
     """
-    if db_path is None:
-        from forgeds._shared.kb_accessor import get_kb
-        kb = get_kb()
-        db_path = str(kb.db_path)
+    from forgeds.knowledge.librarian_io import LIB_RB, LibrarianError, open_librarian
 
-    db_path = str(db_path)
+    if librarian is None:
+        if db_path is None:
+            from forgeds._shared.kb_accessor import get_kb
+            kb = get_kb()
+            db_path = str(kb.db_path)
+        rb_path = Path(str(db_path))
+        if rb_path.name == "knowledge.db":
+            rb_path = rb_path.parent / "reality.db"
+        hb_path = rb_path.parent / "holographic.db"
+        librarian = open_librarian(rb_path, hb_path)
 
     case = ShadowCase(
         description=description,
@@ -313,12 +323,11 @@ def record_shadow_case(
         related_queries=related_queries,
     )
 
-    conn = sqlite3.connect(db_path)
+    conn = librarian.rb_conn
 
     # Step 1: Validate
     result = validate_shadow_case(case, conn)
     if not result.valid:
-        conn.close()
         return {
             "token_sha": "",
             "valid": False,
@@ -326,40 +335,53 @@ def record_shadow_case(
             "relation_count": 0,
         }
 
-    # Step 2: Build token
+    # Step 2: Build token content
     content = _build_token_content(case)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    token_sha = compute_token_sha(content, f"shadow://{context}", 0)
+    page_url = f"shadow://{context}"
 
-    # Step 3: Insert token
-    conn.execute(
-        """INSERT OR REPLACE INTO tokens
-           (token_sha, revision, content, content_type, module, page_url,
-            page_title, section, paragraph, created_at, updated_at,
-            git_sha, source_md)
-           VALUES (?, 1, ?, 'LEARNED', 'shadow_cases', ?, ?, 'Shadow Cases', 0,
-                   ?, ?, ?, '')""",
-        (token_sha, content, f"shadow://{context}",
-         f"Shadow: {context}", now, now, case.git_sha),
-    )
-
-    # Step 4: Initialise relations
-    relations = _find_related_tokens(case, conn)
-    for target_sha, rel_type, weight in relations:
-        conn.execute(
-            """INSERT OR IGNORE INTO edges (source_sha, target_sha, rel_type, weight)
-               VALUES (?, ?, ?, ?)""",
-            (token_sha, target_sha, rel_type.value, weight),
+    # Step 3: Create token via Librarian (sole authority)
+    try:
+        token_sha = librarian.create(
+            db=LIB_RB,
+            content=content,
+            page_url=page_url,
+            paragraph_num=0,
+            module="shadow_cases",
+            content_type="LEARNED",
+            weight=CONTENT_WEIGHTS.get("LEARNED", 1.5),
+            metadata={
+                "page_title": f"Shadow: {context}",
+                "section": "Shadow Cases",
+                "created_at": now,
+                "updated_at": now,
+                "git_sha": case.git_sha,
+                "source_md": "",
+            },
         )
+    except LibrarianError as e:
+        return {
+            "token_sha": "",
+            "valid": False,
+            "reason": str(e),
+            "relation_count": 0,
+        }
 
-    conn.commit()
-    conn.close()
+    # Step 4: Initialise relations via Librarian
+    relations = _find_related_tokens(case, conn)
+    relation_count = 0
+    for target_sha, rel_type, weight in relations:
+        try:
+            librarian.create_edge(token_sha, target_sha, rel_type.value, weight)
+            relation_count += 1
+        except LibrarianError:
+            pass  # target may not be in registry (edge of graph)
 
     return {
         "token_sha": token_sha,
         "valid": True,
         "reason": "Recorded and validated.",
-        "relation_count": len(relations),
+        "relation_count": relation_count,
         "severity": severity,
         "content_weight": CONTENT_WEIGHTS.get("LEARNED", 1.5),
     }
