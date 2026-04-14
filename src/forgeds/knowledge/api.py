@@ -399,20 +399,17 @@ class KnowledgeBase:
         lib = self._get_librarian()
 
         # Ensure module/page exist in RB
-        conn = lib.rb_conn
-        try:
-            conn.execute(
-                "INSERT OR IGNORE INTO modules (name, base_url, page_count) VALUES (?, ?, 0)",
-                (module, page_url),
-            )
-            conn.execute(
-                "INSERT OR IGNORE INTO pages (url, title, module, md_path, scraped_at) "
-                "VALUES (?, ?, ?, '', ?)",
-                (page_url, section, module, now),
-            )
-            conn.commit()
-        except sqlite3.OperationalError:
-            pass  # read-only conn in C mode — modules/pages managed elsewhere
+        conn = lib.rb_metadata_conn
+        conn.execute(
+            "INSERT OR IGNORE INTO modules (name, base_url, page_count) VALUES (?, ?, 0)",
+            (module, page_url),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO pages (url, title, module, md_path, scraped_at) "
+            "VALUES (?, ?, ?, '', ?)",
+            (page_url, section, module, now),
+        )
+        conn.commit()
 
         sha = lib.create(
             db=LIB_RB,

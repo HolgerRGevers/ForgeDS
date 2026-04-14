@@ -290,7 +290,7 @@ def build_graph(librarian_or_path) -> int:
     from forgeds.knowledge.librarian_io import LibrarianHandle
 
     if isinstance(librarian_or_path, LibrarianHandle):
-        conn = librarian_or_path.rb_conn
+        conn = librarian_or_path.rb_metadata_conn
         _close_conn = False
     else:
         conn = sqlite3.connect(str(librarian_or_path))

@@ -417,6 +417,16 @@ class _PyLibrarian:
         return self._rb
 
     @property
+    def rb_metadata_conn(self) -> sqlite3.Connection:
+        """Writable RB connection for module/page/edge metadata.
+
+        Use this for INSERT/UPDATE/DELETE on modules, pages, and edges
+        tables.  NEVER write tokens through this connection — use the
+        Librarian create/destroy methods instead.
+        """
+        return self._rb
+
+    @property
     def hb_conn(self) -> sqlite3.Connection:
         """Direct HB connection for read-only queries."""
         return self._hb
@@ -639,6 +649,26 @@ class LibrarianHandle:
         return self._rb_readonly
 
     @property
+    def rb_metadata_conn(self) -> sqlite3.Connection:
+        """Writable RB connection for module/page/edge metadata.
+
+        Use this for INSERT/UPDATE/DELETE on modules, pages, and edges
+        tables.  NEVER write tokens through this connection — use the
+        Librarian create/destroy methods instead.
+        """
+        if self._py:
+            return self._py.rb_metadata_conn
+        if not hasattr(self, "_rb_writable"):
+            self._rb_writable = sqlite3.connect(
+                self._rb_path,
+                check_same_thread=False,
+            )
+            self._rb_writable.execute("PRAGMA journal_mode=WAL")
+            self._rb_writable.execute("PRAGMA synchronous=NORMAL")
+            self._rb_writable.execute("PRAGMA foreign_keys=ON")
+        return self._rb_writable
+
+    @property
     def hb_conn(self) -> sqlite3.Connection:
         """Direct HB connection for read-only queries."""
         if self._py:
@@ -661,6 +691,8 @@ class LibrarianHandle:
             self._c_handle = None
             if hasattr(self, "_rb_readonly"):
                 self._rb_readonly.close()
+            if hasattr(self, "_rb_writable"):
+                self._rb_writable.close()
             if hasattr(self, "_hb_readonly"):
                 self._hb_readonly.close()
         elif self._py:

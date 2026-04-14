@@ -318,7 +318,7 @@ def parse_md_files(
     Returns total number of tokens created.
     """
     git_sha = _git_sha()
-    conn = librarian.rb_conn
+    conn = librarian.rb_metadata_conn
     total = 0
 
     for md_path in md_files:

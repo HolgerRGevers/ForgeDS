@@ -527,8 +527,8 @@ def ingest_ds_app(
         all_tokens.extend(script_tokens)
         para += len(script_tokens)
 
-    # Clear previous ingest of this module via RB connection
-    conn = librarian.rb_conn
+    # Clear previous ingest of this module via writable RB connection
+    conn = librarian.rb_metadata_conn
     conn.execute("DELETE FROM edges WHERE source_sha IN "
                  "(SELECT token_sha FROM tokens WHERE module = ?)", (module,))
     conn.execute("DELETE FROM edges WHERE target_sha IN "
