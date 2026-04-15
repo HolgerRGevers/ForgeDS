@@ -1299,6 +1299,21 @@ def emit_application(
         form_reports.setdefault(rpt.form, []).append(rpt)
 
     section_num = 0
+
+    # Dashboard page section (required: maps DashBoard to web menu)
+    if pages:
+        section_num += 1
+        lines.append(f"")
+        lines.append(f"\t\t\t\tsection Section_{section_num}")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f'\t\t\t\t\tdisplayname = "Dashboard"')
+        lines.append(f'\t\t\t\t\ticon = "ui-1-dashboard-half"')
+        lines.append(f"\t\t\t\t\tpage DashBoard")
+        lines.append(f"\t\t\t\t\t{{")
+        lines.append(f'\t\t\t\t\t\ticon = "ui-1-dashboard-half"')
+        lines.append(f"\t\t\t\t\t}}")
+        lines.append(f"\t\t\t\t}}")
+
     for form in forms:
         section_num += 1
         lines.append(f"")
