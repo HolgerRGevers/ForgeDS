@@ -480,7 +480,7 @@ def _format_choices(choices_str: str) -> str:
     return "{" + ",".join(f'"{i}"' for i in items) + "}"
 
 
-def emit_forms(forms: list[FormSpec]) -> list[str]:
+def emit_forms(forms: list[FormSpec], blueprint_forms: dict[str, list[str]] | None = None) -> list[str]:
     """Generate the forms { ... } block matching real Zoho .ds export format."""
     lines = []
     lines.append(f" {T}forms")
@@ -560,6 +560,15 @@ def emit_forms(forms: list[FormSpec]) -> list[str]:
         lines.append(f"\t\t\t\t}}")
         lines.append(f"\t\t\t}}")
 
+        # Blueprint components (required for forms with blueprints)
+        if blueprint_forms and form.link_name in blueprint_forms:
+            bp_stages = blueprint_forms[form.link_name]
+            lines.append(f"\t\t\tblueprint components")
+            lines.append(f"\t\t\t{{")
+            stage_str = ",".join(f'"{s}"' for s in bp_stages)
+            lines.append(f"\t\t\t\tstages = {{{stage_str}}}")
+            lines.append(f"\t\t\t}}")
+
         lines.append(f"\t\t}}")
 
     lines.append(f"\t}}")
@@ -567,58 +576,409 @@ def emit_forms(forms: list[FormSpec]) -> list[str]:
 
 
 def emit_blueprints(blueprints: list[BlueprintSpec]) -> list[str]:
-    """Generate blueprint blocks in .ds format.
+    """Generate blueprint block in .ds format (nested inside workflow block).
 
-    Blueprints define state machines on forms — stages (states) and
-    transitions (edges).  The KB requires every form with a Status field
-    to have a blueprint; the builder now generates them from config.
+    Uses the same syntax as real Zoho Creator .ds exports:
+    type = Blueprint, quoted stage names, from/to stage, before/after blocks.
     """
     if not blueprints:
         return []
 
     lines: list[str] = []
-    lines.append(f"\tblueprints")
-    lines.append(f"\t{{")
+    lines.append(f"\t\tblueprint")
+    lines.append(f"\t\t{{")
 
     for bp in blueprints:
-        lines.append(f'\t\tblueprint {bp.link_name} as "{bp.display_name}"')
-        lines.append(f"\t\t{{")
-        lines.append(f"\t\t\tform = {bp.form}")
-        lines.append(f"\t\t\tstatus field = {bp.status_field}")
-        lines.append(f"")
+        # Build stage name -> display name mapping for transitions
+        stage_display = {s.name: s.display_name for s in bp.stages}
 
-        # Stages
-        lines.append(f"\t\t\tstages")
-        lines.append(f"\t\t\t{{")
+        lines.append(f'    \t\t\t{bp.link_name} as "{bp.display_name}"')
+        lines.append(f"    \t\t\t{{")
+        lines.append(f"        \t\t\ttype = Blueprint")
+        lines.append(f"        \t\t\tform = {bp.form}")
+        lines.append(f"        \t\t\tstart")
+        lines.append(f"        \t\t\t{{")
+        if bp.stages:
+            lines.append(f'            \t\t\tstart stage = "{bp.stages[0].display_name}"')
+        lines.append(f"        \t\t\t}}")
+        lines.append(f"        \t\t\tstages")
+        lines.append(f"        \t\t\t{{")
         for stage in bp.stages:
-            lines.append(f'\t\t\t\tstage {stage.name} as "{stage.display_name}"')
-            lines.append(f"\t\t\t\t{{")
-            lines.append(f"\t\t\t\t}}")
-        lines.append(f"\t\t\t}}")
-        lines.append(f"")
-
-        # Transitions
-        lines.append(f"\t\t\ttransitions")
-        lines.append(f"\t\t\t{{")
+            lines.append(f'           \t\t\t"{stage.display_name}"')
+            lines.append(f"           \t\t\t{{")
+            lines.append(f"           \t\t\t}}")
+        lines.append(f"        \t\t\t}}")
+        lines.append(f"        \t\t\ttransitions")
+        lines.append(f"        \t\t\t{{")
         for t in bp.transitions:
-            lines.append(f'\t\t\t\ttransition {t.link_name} as "{t.display_name}"')
-            lines.append(f"\t\t\t\t{{")
-            lines.append(f"\t\t\t\t\tfrom = {t.from_stage}")
-            lines.append(f"\t\t\t\t\tto = {t.to_stage}")
-            lines.append(f"\t\t\t\t}}")
-        lines.append(f"\t\t\t}}")
-
-        lines.append(f"\t\t}}")
-    lines.append(f"\t}}")
+            from_display = stage_display.get(t.from_stage, t.from_stage)
+            to_display = stage_display.get(t.to_stage, t.to_stage)
+            lines.append(f'    \t\t\t\t{t.link_name} as "{t.display_name}"')
+            lines.append(f"    \t\t\t\t{{")
+            lines.append(f'         \t\t\t\ttype = normal')
+            lines.append(f'         \t\t\t\tfrom stage = "{from_display}"')
+            lines.append(f'         \t\t\t\tto stage = "{to_display}"')
+            lines.append(f"         \t\t\t\tbefore")
+            lines.append(f"         \t\t\t\t{{")
+            lines.append(f"         \t\t\t\t}}")
+            lines.append(f"         \t\t\t\tafter")
+            lines.append(f"         \t\t\t\t{{")
+            lines.append(f"         \t\t\t\t}}")
+            lines.append(f"  \t\t\t\t}}")
+        lines.append(f"        \t\t\t}}")
+        lines.append(f"    \t\t\t}}")
+    lines.append(f"\t\t}}")
     return lines
 
 
-def emit_pages(pages: list[PageSpec]) -> list[str]:
-    """Generate page/dashboard blocks in .ds format.
+def _build_dashboard_zml(
+    forms: list[FormSpec],
+    reports: list[ReportSpec],
+) -> str:
+    """Build ZML dashboard content matching Zoho Creator page format.
 
-    The KB documents that Creator apps require at least one page with a
-    dashboard for the app to load in the browser.  Without pages, the
-    import succeeds but the app shows a blank screen.
+    Generates:
+    - Row 1: Stat panels (up to 4) from numeric fields of the primary form
+    - Row 2: Chart + Quick Links panel
+    - Row 3: Embedded report view
+    """
+    # Find primary form (one with Status field, or first with most fields)
+    primary_form = forms[0]
+    for f in forms:
+        if any(fld.name.lower() == "status" for fld in f.fields):
+            primary_form = f
+            break
+
+    # Find numeric fields for stat panels
+    numeric_fields: list[FieldSpec] = []
+    for fld in primary_form.fields:
+        if fld.field_type in ("Decimal", "Number", "Currency", "Percent"):
+            numeric_fields.append(fld)
+    stat_fields = numeric_fields[:4]  # max 4 stat panels
+
+    # Find a picklist field for chart x-axis (prefer non-Status)
+    chart_field = None
+    for fld in primary_form.fields:
+        if fld.field_type == "Dropdown" and fld.name.lower() != "status":
+            chart_field = fld
+            break
+    if not chart_field:
+        for fld in primary_form.fields:
+            if fld.field_type == "Dropdown":
+                chart_field = fld
+                break
+
+    # Find chart y-axis (first numeric field)
+    chart_y_field = numeric_fields[0] if numeric_fields else None
+
+    # Pick the first report for embedding
+    embed_report = reports[0].link_name if reports else None
+
+    # Theme colors
+    panel_colors = ["#5A3D9B", "#734AD0", "#9366F9", "#734AD0"]
+    accent_colors = ["#9B69FB", "#9B69FB", "#AF8CFF", "#9B69FB"]
+    icons = [
+        "business-percentage-39",
+        "business-percentage-39",
+        "shopping-cash-register",
+        "media-1-volume-up",
+    ]
+
+    z: list[str] = []
+    z.append("<zml    \\t\\t")
+    z.append("\\t\\t")
+    z.append("\\t\\t")
+    z.append("\\t\\t")
+    z.append("\\t\\t")
+    z.append(">")
+    z.append("\\t<layout>")
+
+    # ---- Row 1: Stat Panels ----
+    if stat_fields:
+        z.append("\\t<row>")
+        widths = ["25%"] * len(stat_fields)
+        if len(stat_fields) <= 3:
+            widths = ["33%"] * len(stat_fields)
+        for i, fld in enumerate(stat_fields):
+            color = panel_colors[i % len(panel_colors)]
+            accent = accent_colors[i % len(accent_colors)]
+            icon = icons[i % len(icons)]
+            w = widths[i]
+            z.append(f"\\t<column")
+            z.append(f"   \\t\\t width='{w}'")
+            z.append(f"   \\t>")
+            z.append(f"\\t<panel elementName='Panel {i+1}'")
+            z.append(f" ")
+            z.append(f" >")
+            z.append(f"\\t<pr ")
+            z.append(f"\\t\\t\\twidth='fill'")
+            z.append(f"\\t\\theight='fill'")
+            z.append(f">")
+            z.append(f"\\t<pc ")
+            z.append(f"\\t\\t\\tpadding = '20px'")
+            z.append(f"\\tbgColor = '{color}'")
+            z.append(f"")
+            z.append(f"\\t\\twidth = '100%'")
+            z.append(f"\\t\\thAlign = 'left'")
+            z.append(f"\\t\\tvAlign = 'middle'")
+            z.append(f">")
+            z.append(f"\\t<pr ")
+            z.append(f"\\t\\t\\twidth='auto'")
+            z.append(f"\\t\\theight='auto'")
+            z.append(f">")
+            z.append(f"\\t<pc ")
+            z.append(f"\\t\\tpadding = '0px'")
+            z.append(f"")
+            z.append(f"\\t\\thAlign = 'left'")
+            z.append(f">")
+            z.append(f"\\t<pr ")
+            z.append(f"\\t>")
+            z.append(f"\\t<pc ")
+            z.append(f"\\t")
+            z.append(f">")
+            z.append(f"\\t<image  ")
+            z.append(f"\\t\\tmarginLeft = '0px'")
+            z.append(f"\\tmarginRight = '0px' ")
+            z.append(f"")
+            z.append(f"\\tcolor = '#FFFFFF'")
+            z.append(f"\\tbgColor = '{accent}'")
+            z.append(f"\\twidth = '52px'")
+            z.append(f"\\theight = '52px'")
+            z.append(f"\\ttype = 'icon'")
+            z.append(f"\\tvalue = '{icon}'")
+            z.append(f"\\tsize = '22px'")
+            z.append(f"\\tcornerRadius = '10px'")
+            z.append(f"\\ticonType = 'outline'")
+            z.append(f"/>")
+            z.append(f"</pc>")
+            z.append(f"</pr><pr ")
+            z.append(f"\\t>")
+            z.append(f"\\t<pc ")
+            z.append(f"\\t")
+            z.append(f">")
+            form_ln = primary_form.link_name
+            fld_ln = fld.name
+            z.append(f"\\t<text ")
+            z.append(f"")
+            z.append(f"\\tmarginTop = '12px'")
+            z.append(f"\\tcolor = '#FFFFFF'")
+            z.append(f"\\tsize = '24px'")
+            z.append(f"\\tbold = 'true' ")
+            z.append(f"\\ttype = 'Form Data'")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"\\tdisplayType = 'actual'")
+            z.append(f"\\tdecimalPlaces = '2'")
+            z.append(f"\\tthousandsSeperator = 'LOCALE'")
+            z.append(f"\\tdecimalSeperator = 'DOT'")
+            z.append(f"\\tnumberScale = 'none'")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"\\t  value = 'thisapp.{form_ln}.{fld_ln}.sum'")
+            z.append(f">")
+            z.append(f"</text>")
+            z.append(f"")
+            z.append(f"</pc>")
+            z.append(f"</pr><pr ")
+            z.append(f"\\t>")
+            z.append(f"\\t<pc ")
+            z.append(f"\\t")
+            z.append(f">")
+            z.append(f"\\t<text ")
+            z.append(f"")
+            z.append(f"\\tmarginTop = '5px'")
+            z.append(f"\\tcolor = '#FFFFFF'")
+            z.append(f"\\tsize = '15px'")
+            z.append(f"\\ttype = 'Text'")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"")
+            z.append(f"\\t  value = 'Total {fld.display_name}'")
+            z.append(f">")
+            z.append(f"</text>")
+            z.append(f"")
+            z.append(f"</pc>")
+            z.append(f"</pr>")
+            z.append(f"</pc>")
+            z.append(f"</pr>")
+            z.append(f"</pc>")
+            z.append(f"</pr>")
+            z.append(f"</panel>")
+            z.append(f"</column>")
+        z.append("</row>")
+
+    # ---- Row 2: Chart + Quick Links ----
+    z.append("<row>")
+
+    # Chart
+    if chart_field and chart_y_field:
+        z.append("<column")
+        z.append("   \\t\\t width='75%'")
+        z.append("   \\t>")
+        z.append("\\t<chart ")
+        z.append(f"\\telementName='Chart 1'")
+        z.append(f"")
+        z.append(f"\\t")
+        z.append(f"\\ttitle = '{chart_y_field.display_name} by {chart_field.display_name}'")
+        z.append(f"\\t")
+        z.append(f"\\ttype = 'Bar'")
+        z.append(f"\\txtitle = '{chart_field.display_name}'")
+        z.append(f"\\tytitle = '{chart_y_field.display_name}'")
+        z.append(f"\\tbgColor = '#FFFFFF'")
+        z.append(f"\\ttheme = 'theme'")
+        z.append(f"\\tlegendPos = 'none'")
+        z.append(f"\\theightType = 'auto'")
+        z.append(f"\\theightValue = '300px'")
+        z.append(f"\\tappLinkName = 'thisapp'")
+        z.append(f"\\tformLinkName = '{primary_form.link_name}'")
+        z.append(f"\\txfield = '{chart_field.name}'")
+        z.append(f"\\tyfields = 'sum:{chart_y_field.name}'")
+        z.append(f"\\tgroupBy = '{chart_field.name}'")
+        z.append(f"\\t\\tDelugeCriteria = '{chart_field.name} is not null &amp;&amp; {chart_field.name} != &quot;&quot;'")
+        z.append("/>")
+        z.append("")
+        z.append("</column>")
+    else:
+        z.append("<column")
+        z.append("   \\t\\t width='75%'")
+        z.append("   \\t>")
+        z.append("</column>")
+
+    # Quick Links panel
+    z.append("<column")
+    z.append("   \\t\\t width='25%'")
+    z.append("   \\t>")
+    z.append("\\t<panel elementName='Panel_Button 1'")
+    z.append(" ")
+    z.append("\\t")
+    z.append("\\ttitle = 'Quick Links'")
+    z.append("\\t")
+    z.append("\\t\\ttitleSize = '15px'")
+    z.append(" >")
+    z.append("\\t<pr ")
+    z.append("\\t\\t\\twidth='fill'")
+    z.append("\\t\\theight='fill'")
+    z.append(">")
+    z.append("\\t<pc ")
+    z.append("\\t\\tpaddingTop = '10px'")
+    z.append("\\tpaddingLeft = '10px'")
+    z.append("\\tpaddingRight = '0px'")
+    z.append("\\tpaddingBottom = '10px'")
+    z.append("\\tbgColor = '#FFFFFF'")
+    z.append("")
+    z.append("\\t\\twidth = '100%'")
+    z.append("\\t\\thAlign = 'left'")
+    z.append("\\t\\tvAlign = 'middle'")
+    z.append(">")
+
+    for fi, form in enumerate(forms[:6]):
+        z.append("\\t<pr ")
+        z.append("\\t\\t\\twidth='auto'")
+        z.append("\\t\\theight='auto'")
+        z.append(">")
+        z.append("\\t<pc ")
+        z.append("\\t")
+        z.append(">")
+        z.append("\\t<image  ")
+        z.append("\\t\\tmarginRight = '10px' ")
+        z.append("\\tmarginBottom = '0px'")
+        z.append("\\tmarginTop = '0px'")
+        z.append("")
+        z.append("\\tcolor = '#2C0D4A'")
+        z.append("\\tbgColor = '#F4F0FF'")
+        z.append("\\twidth = '36px'")
+        z.append("\\theight = '36px'")
+        z.append("\\ttype = 'icon'")
+        z.append("\\tvalue = 'ui-2-square-add-08'")
+        z.append("\\tsize = '16px'")
+        z.append("\\tcornerRadius = '18px'")
+        z.append("\\ticonType = 'outline'")
+        z.append("/>")
+        z.append("</pc><pc ")
+        z.append("\\t")
+        z.append("\\t\\thAlign = 'left'")
+        z.append(">")
+        z.append("\\t<text ")
+        z.append(f"    action = 'OpenForm'")
+        z.append(f"\\t\\tcomponentLinkName = '{form.link_name}'")
+        z.append(f"\\t\\ttarget = 'new-window'")
+        z.append("")
+        z.append("\\tcolor = '#6733AB'")
+        z.append("\\tsize = '15px'")
+        z.append("\\ttype = 'Text'")
+        z.append("")
+        z.append("")
+        z.append("")
+        z.append("")
+        z.append("")
+        z.append("")
+        z.append("")
+        disp = form.display_name
+        z.append(f"\\t  value = 'Add New {disp}'")
+        z.append(">")
+        z.append("</text>")
+        z.append("")
+        z.append("</pc>")
+        z.append("</pr>")
+
+    z.append("</pc>")
+    z.append("</pr>")
+    z.append("</panel>")
+    z.append("</column>")
+    z.append("</row>")
+
+    # ---- Row 3: Report Embed ----
+    if embed_report:
+        z.append("<row>")
+        z.append("\\t<column")
+        z.append("   \\t\\t width='100%'")
+        z.append("   \\t>")
+        z.append("\\t<report ")
+        z.append("\\telementName='Report'")
+        z.append("")
+        z.append(f"\\t\\tappLinkName = 'thisapp'")
+        z.append(f"\\t\\tlinkName = '{embed_report}'")
+        z.append("\\t")
+        z.append("\\t\\tiszreport = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_AddRec = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_EditRec = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_Print = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_Export = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_DelRec = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_DuplRec = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_Search = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_EditBulkRec = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_BulkDelete = 'false'")
+        z.append("\\t\\t\\t\\t\\tzc_BulkDuplicate = 'false'")
+        z.append("\\theightType = 'custom'")
+        z.append("\\theightValue = '500'")
+        z.append("")
+        z.append("/>")
+        z.append("</column>")
+        z.append("</row>")
+
+    z.append("</layout>")
+    z.append("</zml>")
+
+    return "\\n".join(z)
+
+
+def emit_pages(
+    pages: list[PageSpec],
+    forms: list[FormSpec],
+    reports: list[ReportSpec],
+) -> list[str]:
+    """Generate pages block with ZML Content matching real Zoho .ds export format.
+
+    The ZML dashboard includes stat panels, charts, quick-link buttons,
+    and an embedded report view — same as Zoho Creator's own page builder.
     """
     if not pages:
         return []
@@ -628,15 +988,11 @@ def emit_pages(pages: list[PageSpec]) -> list[str]:
     lines.append(f"\t{{")
 
     for page in pages:
-        lines.append(f'\t\tpage {page.link_name} as "{page.display_name}"')
+        zml = _build_dashboard_zml(forms, reports)
+        lines.append(f"\t\tpage DashBoard")
         lines.append(f"\t\t{{")
-        lines.append(f'\t\t\ttype = "dashboard"')
-        for comp in page.components:
-            lines.append(f"\t\t\tcomponent {comp}")
-            lines.append(f"\t\t\t{{")
-            lines.append(f'\t\t\t\ttype = "report"')
-            lines.append(f'\t\t\t\treport = {comp}')
-            lines.append(f"\t\t\t}}")
+        lines.append(f'\t\t\tdisplayname = "{page.display_name}"')
+        lines.append(f'\t\t\tContent="{zml}"')
         lines.append(f"\t\t}}")
 
     lines.append(f"\t}}")
@@ -708,61 +1064,61 @@ def emit_application(
 
     # Forms
     lines.append("")
-    lines.extend(emit_forms(forms))
+    # Build blueprint_forms map for forms that participate in blueprints
+    blueprint_forms: dict[str, list[str]] = {}
+    if blueprints:
+        for bp in blueprints:
+            blueprint_forms[bp.form] = [s.display_name for s in bp.stages]
+    lines.extend(emit_forms(forms, blueprint_forms=blueprint_forms))
 
     # Reports
     if reports:
         lines.append("")
         lines.extend(emit_reports(reports))
 
-    # Blueprints (KB-adherent: generated for any form with a Status field)
-    if blueprints:
-        lines.append("")
-        lines.extend(emit_blueprints(blueprints))
-
     # Pages / Dashboards (KB-adherent: required for app to load in Creator)
     if pages:
         lines.append("")
-        lines.extend(emit_pages(pages))
+        lines.extend(emit_pages(pages, forms, reports))
 
-    # Workflows + Schedules (nested inside workflow block, like real exports)
-    if workflows or schedules:
+    # Workflow block: contains form workflows, schedules, and blueprints
+    # In Zoho .ds format, workflow is at depth 1 (child of application),
+    # and blueprint is nested inside workflow at depth 2.
+    if workflows or schedules or blueprints:
         lines.append("")
         lines.append("")
         lines.append(f"\t\tworkflow")
         lines.append(f"\t\t{{")
-        lines.append(f"\t\tform")
-        lines.append(f"\t\t{{")
 
-        for wf in workflows:
-            lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
-            lines.append(f"\t\t\t{{")
-            lines.append(f"\t\t\t\ttype =  form")
-            lines.append(f"\t\t\t\tform = {wf.form}")
-            lines.append(f"")
-            lines.append(f"\t\t\t\trecord event = {wf.record_event}")
-            lines.append(f"")
-            lines.append(f"\t\t\t\t{wf.event_type}")
-            lines.append(f"\t\t\t\t{{")
-            lines.append(f"\t\t\t\t\tactions ")
-            lines.append(f"\t\t\t\t\t{{")
-            lines.append(f"\t\t\t\t\t\tcustom deluge script")
-            lines.append(f"\t\t\t\t\t\t(")
-            lines.append(_indent_code(wf.code, 7))
-            lines.append(f"\t\t\t\t\t\t)")
-            lines.append(f"\t\t\t\t\t}}")
-            lines.append(f"\t\t\t\t}}")
-            lines.append(f"")
-            lines.append(f"\t\t\t}}")
+        if workflows:
+            lines.append(f"\t\tform")
+            lines.append(f"\t\t{{")
+            for wf in workflows:
+                lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
+                lines.append(f"\t\t\t{{")
+                lines.append(f"\t\t\t\ttype =  form")
+                lines.append(f"\t\t\t\tform = {wf.form}")
+                lines.append(f"")
+                lines.append(f"\t\t\t\trecord event = {wf.record_event}")
+                lines.append(f"")
+                lines.append(f"\t\t\t\t{wf.event_type}")
+                lines.append(f"\t\t\t\t{{")
+                lines.append(f"\t\t\t\t\tactions ")
+                lines.append(f"\t\t\t\t\t{{")
+                lines.append(f"\t\t\t\t\t\tcustom deluge script")
+                lines.append(f"\t\t\t\t\t\t(")
+                lines.append(_indent_code(wf.code, 7))
+                lines.append(f"\t\t\t\t\t\t)")
+                lines.append(f"\t\t\t\t\t}}")
+                lines.append(f"\t\t\t\t}}")
+                lines.append(f"")
+                lines.append(f"\t\t\t}}")
+            lines.append(f"\t\t}}")
 
-        lines.append(f"\t\t}}")
-
-        # Schedules nested inside workflow block (only emit if present)
         if schedules:
             lines.append(f"")
             lines.append(f"\t\tschedule")
             lines.append(f"\t\t{{")
-
             for sched in schedules:
                 lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
                 lines.append(f"\t\t\t{{")
@@ -780,13 +1136,45 @@ def emit_application(
                 lines.append(f"\t\t\t\t\t}}")
                 lines.append(f"\t\t\t\t}}")
                 lines.append(f"\t\t\t}}")
-
             lines.append(f"\t\t}}")
+
+        # Blueprint block (nested inside workflow)
+        if blueprints:
+            lines.append(f"")
+            lines.append(f"")
+            lines.extend(emit_blueprints(blueprints))
 
         lines.append(f"")
         lines.append(f"")
         lines.append(f"")
         lines.append(f"\t}}")
+
+    # share_settings — default profiles (must come BEFORE web in .ds format)
+    lines.append(f"\tshare_settings")
+    lines.append(f"\t{{")
+    for profile_name, profile_type, desc in [
+        ("Read", "Users_Permissions", "This profile will have read permission for all components\\n"),
+        ("Write", "Users_Permissions", "This profile will have write permission for all components\\n"),
+        ("Administrator", "Users_Permissions", "This profile will have all the permissions.\\n"),
+        ("Developer", "Developer", "Developer Profile\\n"),
+        ("Customer", "Customer_Portal", "This is the default profile having only add and view permission.\\n"),
+    ]:
+        lines.append(f'\t\t\t"{profile_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f'\t\t\t\tname = "{profile_name}"')
+        lines.append(f'\t\t\t\ttype = {profile_type}')
+        lines.append(f'\t\t\t\tpermissions = {{Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}}')
+        lines.append(f'\t\t\t\tdescription = "{desc}"')
+        lines.append(f"\t\t\t}}")
+    # roles
+    lines.append(f"\t\t\troles")
+    lines.append(f"\t\t\t{{")
+    lines.append(f'\t\t\t\t"CEO"')
+    lines.append(f"\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\tdescription = "User belonging to this role can access data of all other users."')
+    lines.append(f"\t\t\t\t}}")
+    lines.append(f"\t\t\t}}")
+    lines.append(f"\t}}")
 
     # Web section — forms, reports, and menu (required for import)
     lines.append(f"\tweb")
@@ -956,33 +1344,6 @@ def emit_application(
     lines.append(f"\t\t\t}}")
     lines.append(f"\t\t}}")
     lines.append(f"\t}}")  # close web
-
-    # share_settings — default profiles
-    lines.append(f"\tshare_settings")
-    lines.append(f"\t{{")
-    for profile_name, profile_type, desc in [
-        ("Read", "Users_Permissions", "This profile will have read permission for all components\\n"),
-        ("Write", "Users_Permissions", "This profile will have write permission for all components\\n"),
-        ("Administrator", "Users_Permissions", "This profile will have all the permissions.\\n"),
-        ("Developer", "Developer", "Developer Profile\\n"),
-        ("Customer", "Customer_Portal", "This is the default profile having only add and view permission.\\n"),
-    ]:
-        lines.append(f'\t\t\t"{profile_name}"')
-        lines.append(f"\t\t\t{{")
-        lines.append(f'\t\t\t\tname = "{profile_name}"')
-        lines.append(f'\t\t\t\ttype = {profile_type}')
-        lines.append(f'\t\t\t\tpermissions = {{Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}}')
-        lines.append(f'\t\t\t\tdescription = "{desc}"')
-        lines.append(f"\t\t\t}}")
-    # roles
-    lines.append(f"\t\t\troles")
-    lines.append(f"\t\t\t{{")
-    lines.append(f'\t\t\t\t"CEO"')
-    lines.append(f"\t\t\t\t{{")
-    lines.append(f'\t\t\t\t\tdescription = "User belonging to this role can access data of all other users."')
-    lines.append(f"\t\t\t\t}}")
-    lines.append(f"\t\t\t}}")
-    lines.append(f"\t}}")
 
     # phone section
     def _emit_device_section(device_name: str) -> list[str]:
