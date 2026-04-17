@@ -598,10 +598,16 @@ class KnowledgeBase:
     # 6. Validation: validate()
     # ------------------------------------------------------------------
 
-    def validate(self) -> dict:
-        """Validate the KB's internal consistency via HRC projections."""
+    def validate(self, *, use_premises: bool = True) -> dict:
+        """Validate the KB's internal consistency via HRC projections.
+
+        Args:
+            use_premises: If True (default), enable premise queries so
+                constraints can ask the KB to resolve ambiguities before
+                declaring violations. Reduces false positives.
+        """
         from forgeds.knowledge.hrc_bridge import validate_knowledge
-        return validate_knowledge(str(self._rb_path))
+        return validate_knowledge(str(self._rb_path), use_premises=use_premises)
 
     # ------------------------------------------------------------------
     # 7. Shadow learning: learn()
