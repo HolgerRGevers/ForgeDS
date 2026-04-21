@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useIdeStore } from "../../stores/ideStore";
 import type { TreeNode } from "../../types/ide";
 
@@ -164,13 +164,48 @@ function TreeNodeItem({
 
 // --- Main component ---
 
-export function AppTreeExplorer() {
+interface AppTreeExplorerProps {
+  onLoadDsFile?: (file: File) => void;
+}
+
+export function AppTreeExplorer({ onLoadDsFile }: AppTreeExplorerProps) {
   const appStructure = useIdeStore((s) => s.appStructure);
   const selectedNodeId = useIdeStore((s) => s.selectedNodeId);
   const treeFilter = useIdeStore((s) => s.treeFilter);
   const selectNode = useIdeStore((s) => s.selectNode);
   const toggleNode = useIdeStore((s) => s.toggleNode);
   const setTreeFilter = useIdeStore((s) => s.setTreeFilter);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".ds") && onLoadDsFile) {
+        onLoadDsFile(file);
+      }
+    },
+    [onLoadDsFile],
+  );
+
+  const handleFilePick = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && onLoadDsFile) {
+        onLoadDsFile(file);
+      }
+      // Reset so the same file can be picked again
+      e.target.value = "";
+    },
+    [onLoadDsFile],
+  );
 
   const handleCollapseAll = useCallback(() => {
     if (!appStructure) return;
@@ -192,23 +227,50 @@ export function AppTreeExplorer() {
   const noResults = treeFilter && filteredTree.length === 0;
 
   return (
-    <div className="flex h-full flex-col bg-gray-900">
+    <div
+      className="flex h-full flex-col bg-gray-900"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-700 px-3 py-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
           Explorer
         </span>
-        <button
-          onClick={handleCollapseAll}
-          className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
-          title="Collapse All"
-          aria-label="Collapse all tree nodes"
-        >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M1 3h14v1H1zM3 7h10v1H3zM5 11h6v1H5z" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Upload .ds file button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+            title="Upload .ds file"
+            aria-label="Upload a .ds export file"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1L4 5h2.5v5h3V5H12L8 1zM2 13h12v1H2z" />
+            </svg>
+          </button>
+          <button
+            onClick={handleCollapseAll}
+            className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+            title="Collapse All"
+            aria-label="Collapse all tree nodes"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M1 3h14v1H1zM3 7h10v1H3zM5 11h6v1H5z" />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {/* Hidden file input for .ds upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".ds"
+        className="hidden"
+        onChange={handleFilePick}
+        aria-hidden="true"
+      />
 
       {/* Search input */}
       <div className="border-b border-gray-700 px-3 py-2">
@@ -225,8 +287,9 @@ export function AppTreeExplorer() {
       {/* Tree content */}
       <div className="flex-1 overflow-y-auto py-1" role="tree">
         {!appStructure && (
-          <div className="px-3 py-4 text-center text-sm text-gray-500">
-            No app structure loaded.
+          <div className="px-4 py-6 text-center text-sm text-gray-500">
+            <p className="mb-1">Upload a .ds file to explore</p>
+            <p className="text-xs text-gray-600">Drag &amp; drop or use the upload button above</p>
           </div>
         )}
 
