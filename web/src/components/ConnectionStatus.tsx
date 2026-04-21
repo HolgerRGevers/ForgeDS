@@ -7,12 +7,18 @@ const dotColor: Record<string, string> = {
 };
 
 const labelText: Record<string, string> = {
-  connected: "Connected",
+  connected: "Local",
   connecting: "Connecting\u2026",
-  disconnected: "Disconnected",
+  disconnected: "Offline",
 };
 
-export function ConnectionStatus() {
+const tooltipText: Record<string, string> = {
+  connected: "Bridge connected at localhost:9876 \u2014 full write access",
+  connecting: "Attempting to reach local bridge\u2026",
+  disconnected: "No connection \u2014 cached files only, changes queued locally",
+};
+
+export function BridgePill() {
   const status = useBridgeStore((s) => s.status);
   const connect = useBridgeStore((s) => s.connect);
 
@@ -22,10 +28,10 @@ export function ConnectionStatus() {
     <button
       type="button"
       onClick={isClickable ? connect : undefined}
-      title={isClickable ? "Click to retry" : undefined}
-      className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium select-none ${
+      title={tooltipText[status]}
+      className={`inline-flex items-center gap-1.5 rounded-full bg-gray-700 px-2 py-0.5 text-xs select-none ${
         isClickable
-          ? "cursor-pointer hover:bg-zinc-700/50"
+          ? "cursor-pointer hover:bg-gray-600"
           : "cursor-default"
       }`}
     >
@@ -37,3 +43,5 @@ export function ConnectionStatus() {
     </button>
   );
 }
+
+export const ConnectionStatus = BridgePill;

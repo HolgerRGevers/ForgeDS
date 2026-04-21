@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
+import { Logo } from "../brand";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,10 +19,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-950">
       <div className="w-full max-w-md space-y-8 rounded-xl border border-gray-800 bg-gray-900 p-8">
         {/* Logo */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            ForgeDS<span className="text-blue-400">_IDE</span>
-          </h1>
+        <div className="text-center flex flex-col items-center">
+          <Logo variant="color" layout="vertical" size={64} />
           <p className="mt-2 text-sm text-gray-400">
             Sign in with GitHub to start building Zoho Creator apps
           </p>

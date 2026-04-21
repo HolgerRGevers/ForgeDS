@@ -3,7 +3,7 @@ export { AppShell } from "./AppShell";
 export { AuthGuard } from "./AuthGuard";
 export { BuildProgress } from "./BuildProgress";
 export { CodePreview } from "./CodePreview";
-export { ConnectionStatus } from "./ConnectionStatus";
+export { BridgePill, ConnectionStatus } from "./ConnectionStatus";
 export { ModeToggle } from "./ModeToggle";
 export { ProjectHistory } from "./ProjectHistory";
 export { PromptInput } from "./PromptInput";
