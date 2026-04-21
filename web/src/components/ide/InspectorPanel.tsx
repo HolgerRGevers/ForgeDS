@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useIdeStore } from "../../stores/ideStore";
+import { useBridgeStore } from "../../stores/bridgeStore";
 import type { InspectedElementType, RelationshipLink } from "../../types/ide";
 
 // --- Type badge colors ---
@@ -95,6 +96,9 @@ function Section({
 export function InspectorPanel() {
   const inspectorData = useIdeStore((s) => s.inspectorData);
   const selectNode = useIdeStore((s) => s.selectNode);
+  const status = useBridgeStore((s) => s.status);
+
+  const bridgeOffline = status !== "connected";
 
   // Empty state
   if (!inspectorData || inspectorData.type === "none") {
@@ -108,6 +112,14 @@ export function InspectorPanel() {
         <div className="flex flex-1 items-center justify-center px-4">
           <p className="text-center text-sm text-gray-500">
             Select an element to inspect
+            {bridgeOffline && (
+              <>
+                <br />
+                <span className="text-xs text-gray-600">
+                  Start bridge for relationships &amp; usages
+                </span>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -177,7 +189,7 @@ export function InspectorPanel() {
         )}
 
         {/* Relationships */}
-        {relationships.length > 0 && (
+        {relationships.length > 0 ? (
           <Section title="Relationships">
             <div className="space-y-0.5">
               {relationships.map((link) => (
@@ -189,10 +201,14 @@ export function InspectorPanel() {
               ))}
             </div>
           </Section>
-        )}
+        ) : bridgeOffline ? (
+          <Section title="Relationships">
+            <p className="text-xs text-gray-600">Available with bridge enrichment</p>
+          </Section>
+        ) : null}
 
         {/* Usages */}
-        {usages.length > 0 && (
+        {usages.length > 0 ? (
           <Section title="Usages">
             <div className="space-y-0.5">
               {usages.map((u) => (
@@ -205,7 +221,11 @@ export function InspectorPanel() {
               ))}
             </div>
           </Section>
-        )}
+        ) : bridgeOffline ? (
+          <Section title="Usages">
+            <p className="text-xs text-gray-600">Available with bridge enrichment</p>
+          </Section>
+        ) : null}
       </div>
     </div>
   );
