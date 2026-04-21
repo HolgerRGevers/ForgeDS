@@ -10,6 +10,8 @@ import {
 import { useIdeStore } from "../stores/ideStore";
 import { useBridgeStore } from "../stores/bridgeStore";
 import type { AppStructure, InspectorData, TreeNode } from "../types/ide";
+import { DSParser } from "../lib/ds-parser";
+import { buildAppTree } from "../lib/ds-tree-builder";
 
 type ExplorerMode = "repo" | "ds";
 
@@ -77,6 +79,49 @@ export default function IdePage() {
       });
     }
   }, [send, loadAppStructure, addConsoleEntry]);
+
+  const loadDsFromFile = useCallback(
+    async (file: File) => {
+      try {
+        const content = await file.text();
+        const parser = new DSParser(content);
+        parser.parse();
+
+        // Derive app name from filename (strip .ds extension)
+        const appName = file.name.replace(/\.ds$/i, "");
+        const appDisplayName = appName;
+
+        const tree = buildAppTree(
+          parser.forms,
+          parser.scripts,
+          appName,
+          appDisplayName,
+        );
+
+        const nodeIndex = buildNodeIndex(tree);
+
+        const structure: AppStructure = {
+          name: appName,
+          displayName: appDisplayName,
+          tree,
+          nodeIndex,
+          enrichmentLevel: "local",
+        };
+
+        loadAppStructure(structure);
+        addConsoleEntry({
+          type: "info",
+          message: `Loaded .ds file: ${file.name} — ${parser.forms.length} form(s), ${parser.scripts.length} script(s)`,
+        });
+      } catch (err) {
+        addConsoleEntry({
+          type: "error",
+          message: `Failed to parse .ds file: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+    },
+    [loadAppStructure, addConsoleEntry],
+  );
 
   const runLint = useCallback(async () => {
     try {
@@ -287,7 +332,9 @@ export default function IdePage() {
         )}
         {status !== "connected" && (
           <span className="text-[10px] text-gray-500">
-            Bridge offline — GitHub mode active
+            {appStructure
+              ? `Bridge offline — ${appStructure.displayName} loaded locally`
+              : "Bridge offline — upload a .ds file to explore"}
           </span>
         )}
       </div>
@@ -302,7 +349,7 @@ export default function IdePage() {
               {explorerMode === "repo" ? (
                 <RepoExplorer onFileSelect={handleRepoFileSelect} />
               ) : (
-                <AppTreeExplorer />
+                <AppTreeExplorer onLoadDsFile={loadDsFromFile} />
               )}
             </div>
           )}
