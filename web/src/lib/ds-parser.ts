@@ -1,7 +1,7 @@
 /**
  * DSParser - TypeScript port of forgeds/core/parse_ds_export.py
  *
- * Task 1: Data structures and form/field parsing.
+ * Parses forms, fields, workflows, schedules, and approvals.
  */
 
 export interface FormField {
