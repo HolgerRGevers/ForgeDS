@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { BridgePill } from "./ConnectionStatus";
 import { UserMenu } from "./UserMenu";
-import { Logo } from "../brand";
+import { BrandMark } from "./BrandMark";
 
 interface AppShellProps {
   children: ReactNode;
@@ -22,7 +22,11 @@ export function AppShell({ children }: AppShellProps) {
       <header className="flex items-center justify-between bg-gray-800 px-4 py-2 shadow-md">
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-2">
-          <Logo variant="color" layout="horizontal" size={28} />
+          <BrandMark size={24} />
+          <span className="text-lg font-medium tracking-tight">
+            <span className="text-gray-100">Forge</span>
+            <span className="text-[#c2662d]">DS</span>
+          </span>
         </NavLink>
 
         {/* Navigation */}
