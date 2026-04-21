@@ -34,6 +34,8 @@ export interface AppStructure {
   tree: TreeNode[];
   /** Flat lookup: node ID -> TreeNode for fast access */
   nodeIndex: Map<string, TreeNode>;
+  /** How this structure was loaded */
+  enrichmentLevel?: "local" | "bridge-enriched";
 }
 
 // === Editor Types ===
