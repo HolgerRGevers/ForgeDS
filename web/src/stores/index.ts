@@ -7,3 +7,4 @@ export { useAuthStore } from "./authStore";
 export { useRepoStore } from "./repoStore";
 export { useSkillStore } from "./skillStore";
 export * from "./wizardStore";
+export * from "./dashboardStore";
