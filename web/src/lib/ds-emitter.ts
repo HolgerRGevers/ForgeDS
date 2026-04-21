@@ -10,7 +10,6 @@
 import type {
   DsApplication,
   DsBlueprint,
-  DsField,
   DsFile,
   DsForm,
   DsFormWorkflow,
