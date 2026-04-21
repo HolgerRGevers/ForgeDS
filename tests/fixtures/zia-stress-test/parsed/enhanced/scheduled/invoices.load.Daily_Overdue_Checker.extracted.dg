@@ -1,0 +1,48 @@
+// ============================================================
+// Script:   invoices.load.Daily_Overdue_Checker.extracted.dg
+// Name:     Daily Overdue Checker
+// Location: invoices > scheduled > on load
+// Trigger:  scheduled
+// Purpose:  Extracted from .ds export
+// Version:  v2.1 (extracted)
+// ============================================================
+
+records = Invoices[Status == "Pending" && Due_Date < zoho.currentdate];
+
+if (records != null && records.count() > 0)
+{
+	for each rec in records
+	{
+		days = daysBetween(rec.Due_Date, zoho.currentdate);
+
+		if (days > 30)
+		{
+			// Update status — inside {} control flow
+			rec.Status = "Escalated";
+
+			// invokeUrl with POST — [] inside {} (DG010 target)
+			params = Map();
+			params.put("invoice_id", rec.ID);
+			params.put("days_overdue", days);
+			params.put("vendor", ifnull(rec.Vendor_Name, "Unknown"));
+
+			resp = invokeUrl
+			[
+				url : "https://api.example.com/notify"
+				type : POST
+				parameters : params.toString()
+				headers : {"Content-Type": "application/json"}
+			];
+
+			// Audit trail — [] inside {} (DG006, DG009)
+			row = insert into Audit_Log
+			[
+				action = "Overdue Escalation"
+				record_id = rec.ID
+				details = "Invoice overdue by " + days + " days"
+				timestamp = zoho.currenttime
+				Added_User = zoho.adminuser
+			];
+		}
+	}
+}

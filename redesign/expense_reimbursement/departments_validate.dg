@@ -1,0 +1,22 @@
+// ============================================================
+// Script:   departments_validate.dg
+// Location: Departments > Form Workflow
+// Trigger:  On Validate
+// Purpose:  Validate department reference records
+// Version:  v2.1 (KB-Informed Fix for R=7.5 gap)
+// ============================================================
+
+// 1. Department name is required
+if(input.Department_Name == null || input.Department_Name == "")
+{
+    alert "Department name is required.";
+    cancel submit;
+}
+
+// 2. Duplicate department detection
+duplicates = departments[Department_Name == input.Department_Name && ID != input.ID];
+if(duplicates != null && duplicates.count() > 0)
+{
+    alert "A department with this name already exists.";
+    cancel submit;
+}

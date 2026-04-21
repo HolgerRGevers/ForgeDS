@@ -747,6 +747,69 @@ def emit_application(
         lines.append(f"")
         lines.append(f"\t}}")
 
+    # Pages section — at least one page required for desktop Design view
+    # Without a page, the desktop preview crashes with "An internal error"
+    lines.append(f"\tpages")
+    lines.append(f"\t{{")
+    lines.append(f"\t\tpage DashBoard")
+    lines.append(f"\t\t{{")
+    lines.append(f'\t\t\tdisplayname = "Dashboard"')
+    # Build Dashboard ZML — if a dashboard_zml.txt template exists in
+    # config/, use it. Otherwise generate a minimal embedded report page.
+    dashboard_zml_path = root / "config" / "dashboard_zml.txt" if 'root' in dir() else None
+    if dashboard_zml_path and dashboard_zml_path.exists():
+        zml = dashboard_zml_path.read_text(encoding="utf-8").strip()
+    elif reports:
+        first_report = reports[0].link_name
+        first_form = forms[0].link_name if forms else "form"
+        # Generate a dashboard with KPI panel + embedded report
+        zml = (
+            "<zml    \\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n>"
+            "\\n\\t<layout>"
+            "\\n\\t<row>"
+            "\\n\\t<column\\n   \\t\\t width='100%'\\n   \\t>"
+            "\\n\\t<panel elementName='Panel 1'\\n \\n >"
+            "\\n\\t<pr \\n\\t\\t\\twidth='fill'\\n\\t\\theight='fill'\\n>"
+            "\\n\\t<pc \\n\\t\\tpadding = '20px'\\n\\tbgColor = '#FFFFFF'"
+            "\\n\\n\\t\\twidth = '100%'\\n\\t\\thAlign = 'left'"
+            "\\n\\t\\tvAlign = 'middle'\\n>"
+            "\\n\\t<pr \\n\\t\\t\\twidth='auto'\\n\\t\\theight='auto'\\n>"
+            "\\n\\t<pc \\n\\t\\n>"
+            "\\n\\t<pr \\n\\t>\\n\\t<pc \\n\\t\\n>"
+            "\\n\\t<text \\n\\n\\tcolor = 'theme'\\n\\tsize = '20px'"
+            "\\n\\tbold = 'true' \\n\\ttype = 'Form Data'"
+            "\\n\\n\\tdisplayType = 'actual'"
+            "\\n\\tthousandsSeperator = 'LOCALE'"
+            "\\n\\tdecimalSeperator = 'DOT'"
+            "\\n\\tnumberScale = 'none'"
+            f"\\n\\n\\t  value = 'thisapp.{first_form}.ID.count'"
+            "\\n>\\n</text>\\n\\n</pc>\\n</pr>"
+            "\\n<pr \\n\\t>\\n\\t<pc \\n\\t\\n>"
+            "\\n\\t<text \\n\\n\\tmarginTop = '3px'"
+            "\\n\\tcolor = '#44404C'\\n\\tsize = '15px'"
+            "\\n\\ttype = 'Text'"
+            f"\\n\\n\\t  value = 'Total Records'\\n>"
+            "\\n</text>\\n\\n</pc>\\n</pr>"
+            "\\n</pc>\\n</pr>\\n</pc>\\n</pr>\\n</panel>"
+            "\\n</column>\\n</row>"
+            "\\n<row>\\n\\t<column\\n   \\t\\t width='100%'\\n   \\t>"
+            f"\\n\\t<report \\n\\telementName='Report'"
+            f"\\n\\n\\t\\tappLinkName = 'thisapp'"
+            f"\\n\\t\\tlinkName = '{first_report}'"
+            "\\n\\t\\n\\t\\tiszreport = 'false'"
+            "\\n\\theightType = 'auto'"
+            "\\n\\theightValue = '700'\\n\\n/>"
+            "\\n</column>\\n</row>"
+            "\\n</layout>\\n</zml>"
+        )
+    else:
+        zml = ("<zml    \\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n>"
+               "\\n\\t<layout>\\n\\t<row>\\n\\t<column\\n   \\t\\t width='100%'\\n   \\t>"
+               "\\n</column>\\n</row>\\n</layout>\\n</zml>")
+    lines.append(f'\t\t\tContent="{zml}"')
+    lines.append(f"\t\t}}")
+    lines.append(f"\t}}")
+
     # Web section — forms, reports, and menu (required for import)
     lines.append(f"\tweb")
     lines.append(f"\t{{")
@@ -782,7 +845,7 @@ def emit_application(
             lines.append(f"\t\t\t\t\t\t\tfields")
             lines.append(f"\t\t\t\t\t\t\t(")
             for c in cols:
-                lines.append(f'\t\t\t\t\t\t\t\t{c} as "{c}"')
+                lines.append(f'\t\t\t\t\t\t\t\t{c}')
             lines.append(f"\t\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t)")
@@ -837,7 +900,7 @@ def emit_application(
             lines.append(f"\t\t\t\t\t\t\tfields")
             lines.append(f"\t\t\t\t\t\t\t(")
             for c in cols:
-                lines.append(f'\t\t\t\t\t\t\t\t{c} as "{c}"')
+                lines.append(f'\t\t\t\t\t\t\t\t{c}')
             lines.append(f"\t\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t)")
@@ -863,6 +926,18 @@ def emit_application(
     lines.append(f"\t\t\t{{")
     lines.append(f'\t\t\t\tdisplayname = "Space"')
     lines.append(f'\t\t\t\ticon = "objects-spaceship"')
+
+    # Dashboard section first
+    lines.append(f"")
+    lines.append(f"\t\t\t\tsection Section_Dashboard")
+    lines.append(f"\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\tdisplayname = "Dashboard"')
+    lines.append(f'\t\t\t\t\ticon = "ui-1-dashboard-half"')
+    lines.append(f"\t\t\t\t\tpage DashBoard")
+    lines.append(f"\t\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\t\ticon = "ui-1-dashboard-half"')
+    lines.append(f"\t\t\t\t\t}}")
+    lines.append(f"\t\t\t\t}}")
 
     # Build menu sections — one per form with its reports
     form_reports: dict[str, list[ReportSpec]] = {}
@@ -941,6 +1016,9 @@ def emit_application(
     lines.append(f'\t\t\t\t\tdescription = "User belonging to this role can access data of all other users."')
     lines.append(f"\t\t\t\t}}")
     lines.append(f"\t\t\t}}")
+    # role Hierarchy — lists forms that participate in role-based access
+    form_list = ",".join(f.link_name for f in forms)
+    lines.append(f"\t\t\trole Hierarchy = {{{form_list}}}")
     lines.append(f"\t}}")
 
     # phone section
@@ -982,9 +1060,8 @@ def emit_application(
     lines.append('{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}')
     lines.append("}")
 
-    # Note: reports configuration block omitted — it contains an
-    # app-specific Version/Key that Zoho generates internally.
-    # Including fake values crashes the app on open.
+    # Note: reports configuration block only needed for Zoho Analytics
+    # pivot tables — omitted for standard apps.
 
     lines.append("}")
     return "\n".join(lines) + "\n"

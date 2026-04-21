@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import secrets
 import traceback
 
 import websockets
@@ -29,6 +31,18 @@ from bridge.handlers import (
 
 HOST = "localhost"
 PORT = 9876
+
+# Allowed origins for WebSocket connections (CORS protection)
+_ALLOWED_ORIGINS = [
+    "http://localhost:5173",   # Vite dev server
+    "http://localhost:3000",   # Alt dev server
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+# Auth token — generated at startup and printed so the SPA can use it.
+# Can be overridden via FORGEDS_BRIDGE_TOKEN for stable dev setups.
+_AUTH_TOKEN = os.environ.get("FORGEDS_BRIDGE_TOKEN") or secrets.token_urlsafe(32)
 
 logger = logging.getLogger("bridge")
 
@@ -132,14 +146,44 @@ async def _handle_message(ws: ServerConnection, raw: str) -> None:
         await _send_json(ws, {
             "id": msg_id,
             "type": "error",
-            "data": {"message": f"Internal error handling {msg_type}"},
+            "data": {"message": "Internal server error"},
         })
 
 
 async def _handler(ws: ServerConnection) -> None:
-    """Per-connection handler — reads messages until the client disconnects."""
+    """Per-connection handler — authenticates, then reads messages.
+
+    The first message must be a JSON object with {"type": "auth", "token": "<token>"}.
+    """
     remote = ws.remote_address
     logger.info("Client connected: %s", remote)
+
+    # --- Authentication handshake ---
+    try:
+        raw_auth = await asyncio.wait_for(ws.recv(), timeout=10)
+        try:
+            auth_msg = json.loads(raw_auth)
+        except json.JSONDecodeError:
+            auth_msg = {}
+
+        if auth_msg.get("type") != "auth" or not secrets.compare_digest(
+            auth_msg.get("token", ""), _AUTH_TOKEN
+        ):
+            await _send_json(ws, {
+                "id": None,
+                "type": "error",
+                "data": {"message": "Authentication required. Send {type: 'auth', token: '<token>'} first."},
+            })
+            await ws.close(4001, "Unauthorized")
+            logger.warning("Auth failed from %s", remote)
+            return
+
+        await _send_json(ws, {"id": None, "type": "auth_ok", "data": {}})
+    except (asyncio.TimeoutError, websockets.ConnectionClosed):
+        logger.warning("Auth timeout / disconnect from %s", remote)
+        return
+
+    # --- Message loop (authenticated) ---
     try:
         async for raw in ws:
             await _handle_message(ws, raw)
@@ -152,11 +196,12 @@ async def _handler(ws: ServerConnection) -> None:
 async def run_server() -> None:
     """Start the WebSocket server and run forever."""
     logger.info("Starting ForgeDS bridge on ws://%s:%s", HOST, PORT)
+    logger.info("Auth token: %s", _AUTH_TOKEN)
     async with websockets.serve(
         _handler,
         HOST,
         PORT,
-        origins=None,  # Allow connections from any origin (localhost only)
+        origins=_ALLOWED_ORIGINS,
     ):
         await asyncio.Future()  # run forever
 

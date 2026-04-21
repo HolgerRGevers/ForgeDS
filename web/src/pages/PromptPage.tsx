@@ -60,6 +60,9 @@ export default function PromptPage() {
 
   const ps = usePromptStore.getState;
 
+  // Sidebar visibility (collapsed on mobile by default)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Project history (localStorage)
   const [history, setHistory] = useState<ProjectHistoryItem[]>(() =>
     loadHistory(),
@@ -335,7 +338,7 @@ export default function PromptPage() {
     switch (stage) {
       case "input":
         return (
-          <div className="flex h-full items-center justify-center p-6">
+          <div className="flex h-full items-center justify-center p-4 sm:p-6">
             <div className="w-full max-w-2xl">
               <PromptInput
                 onSubmit={handlePromptSubmit}
@@ -348,7 +351,7 @@ export default function PromptPage() {
         );
       case "planning":
         return (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-4 sm:p-6">
             <div className="mx-auto max-w-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Plan</h2>
@@ -360,7 +363,7 @@ export default function PromptPage() {
                 {planSteps.map((step, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-3 rounded-lg border border-gray-800 bg-gray-900 px-4 py-3"
+                    className="flex items-start gap-3 rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 sm:px-4 sm:py-3"
                   >
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-700 text-xs font-medium text-gray-300">
                       {i + 1}
@@ -380,7 +383,7 @@ export default function PromptPage() {
         );
       case "refined":
         return (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-4 sm:p-6">
             <RefinedPrompt
               sections={sections}
               onSectionUpdate={handleSectionUpdate}
@@ -391,7 +394,7 @@ export default function PromptPage() {
         );
       case "building":
         return (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-4 sm:p-6">
             <BuildProgress
               messages={buildMessages}
               isBuilding={true}
@@ -402,7 +405,7 @@ export default function PromptPage() {
         );
       case "complete":
         return (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-4 sm:p-6">
             <BuildProgress
               messages={buildMessages}
               isBuilding={false}
@@ -424,29 +427,44 @@ export default function PromptPage() {
   }
 
   return (
-    <div className="flex h-full">
-      <aside className="w-64 shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-900">
+    <div className="flex h-full flex-col lg:flex-row">
+      {/* Mobile sidebar toggle */}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((v) => !v)}
+        className="flex items-center gap-2 border-b border-gray-800 bg-gray-900 px-3 py-2 text-xs text-gray-400 hover:text-white lg:hidden"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        History {history.length > 0 && `(${history.length})`}
+      </button>
+
+      {/* Left sidebar: history */}
+      <aside className={`${sidebarOpen ? "block" : "hidden"} w-full shrink-0 overflow-y-auto border-b border-gray-800 bg-gray-900 lg:block lg:w-64 lg:border-b-0 lg:border-r ${sidebarOpen ? "max-h-[40vh] lg:max-h-none" : ""}`}>
         <ProjectHistory
           items={history}
-          onSelect={handleHistorySelect}
+          onSelect={(id) => { handleHistorySelect(id); setSidebarOpen(false); }}
           onDelete={handleHistoryDelete}
           onClearAll={handleHistoryClearAll}
         />
       </aside>
 
-      <div className="flex-1 overflow-hidden">{renderCenter()}</div>
+      {/* Center content */}
+      <div className="min-h-0 flex-1 overflow-hidden">{renderCenter()}</div>
 
+      {/* Right panel toggle + panel (hidden on mobile) */}
       <button
         type="button"
         onClick={() => ps().setRightPanelOpen(!rightPanelOpen)}
-        className="flex w-6 shrink-0 items-center justify-center border-l border-gray-800 bg-gray-900 text-gray-500 transition-colors hover:text-white"
+        className="hidden w-6 shrink-0 items-center justify-center border-l border-gray-800 bg-gray-900 text-gray-500 transition-colors hover:text-white md:flex"
         title={rightPanelOpen ? "Collapse preview" : "Expand preview"}
       >
         {rightPanelOpen ? "\u203A" : "\u2039"}
       </button>
 
       {rightPanelOpen && (
-        <aside className="w-96 shrink-0 overflow-hidden border-l border-gray-800 bg-gray-900">
+        <aside className="hidden w-80 shrink-0 overflow-hidden border-l border-gray-800 bg-gray-900 md:block xl:w-96">
           <CodePreview
             files={generatedFiles}
             activeFileIndex={activeFileIndex}

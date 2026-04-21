@@ -34,3 +34,117 @@ schema:
 
 # Seed data paths (relative to project root)
 seed_data_dir: "config/seed-data"
+
+# Knowledge base — documentation scraper & graph
+knowledge:
+  raw_md_dir: "raw_md"
+  knowledge_dir: "knowledge"
+  scrape_delay: 2
+  follow_links: true        # crawl index pages for leaf doc links
+  parallel: true             # scrape modules in parallel threads
+  max_depth: 2               # max crawl depth from seed URLs
+
+  sources:
+    # --- Tier 1: Critical (language core + Catalyst CLI) ---
+    - url: "https://docs.catalyst.zoho.com/en/cli/v1/data-store-import-and-export/import-operation/"
+      module: catalyst-cli
+    - url: "https://docs.catalyst.zoho.com/en/cli/v1/data-store-import-and-export/export-operation/"
+      module: catalyst-cli
+
+    - url: "https://www.zoho.com/deluge/help/functions/text.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/number.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/date-time.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/time.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/collection.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/list.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/key-value.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/logical.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/type-check.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/conversion.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/xml.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/functions/utilities.html"
+      module: deluge-functions
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/file-methods.html"
+      module: deluge-functions
+      follow_links: true
+
+    - url: "https://www.zoho.com/deluge/help/data-access.html"
+      module: deluge-data-access
+      follow_links: true
+
+    - url: "https://www.zoho.com/deluge/help/variables.html"
+      module: deluge-core
+    - url: "https://www.zoho.com/deluge/help/system-variables.html"
+      module: deluge-core
+    - url: "https://www.zoho.com/deluge/help/datatypes.html"
+      module: deluge-core
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/operators.html"
+      module: deluge-core
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/conditions.html"
+      module: deluge-core
+      follow_links: true
+
+    - url: "https://www.zoho.com/deluge/help/encryption-tasks.html"
+      module: deluge-encryption
+      follow_links: true
+
+    # --- Tier 2: Integrations ---
+    - url: "https://www.zoho.com/deluge/help/crm-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/creator-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/desk-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/books-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/mail-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/projects-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/writer-tasks.html"
+      module: deluge-integrations
+      follow_links: true
+    - url: "https://www.zoho.com/deluge/help/web-data/invokeurl-task.html"
+      module: deluge-web
+    - url: "https://www.zoho.com/deluge/help/connections.html"
+      module: deluge-web
+    - url: "https://www.zoho.com/deluge/help/notifications-using-deluge.html"
+      module: deluge-notifications
+      follow_links: true
+
+    # --- Tier 3: Creator platform ---
+    - url: "https://www.zoho.com/creator/help/api/v2.1/"
+      module: creator-api
+      follow_links: true
+      max_depth: 3

@@ -1,0 +1,65 @@
+// ============================================================
+// Script:   chargeback_validate.dg
+// Location: Chargeback Incidents > Form Workflow
+// Trigger:  On Validate
+// Purpose:  Server-side validation for chargeback incident submissions
+// Version:  v2.1 (KB-Informed Redesign)
+// ============================================================
+
+// 1. Mandatory PSP Reference
+if(input.PSP_Reference == null || input.PSP_Reference == "")
+{
+    alert "PSP Reference is required for all chargeback incidents.";
+    cancel submit;
+}
+
+// 2. Positive amount validation
+if(input.Amount_Original <= 0)
+{
+    alert "Original amount must be greater than zero.";
+    cancel submit;
+}
+
+// 3. Incident date cannot be in the future
+if(input.Incident_Date > zoho.currentdate)
+{
+    alert "Incident date cannot be in the future.";
+    cancel submit;
+}
+
+// 4. Dispute deadline must be after incident date
+if(input.Dispute_Deadline != null && input.Dispute_Deadline < input.Incident_Date)
+{
+    alert "Dispute deadline must be after the incident date.";
+    cancel submit;
+}
+
+// 5. Duplicate detection (COSO fraud risk)
+duplicates = chargeback_incidents[PSP_Reference == input.PSP_Reference && ID != input.ID];
+if(duplicates != null && duplicates.count() > 0)
+{
+    alert "A chargeback incident with this PSP Reference already exists. Check for duplicates.";
+    cancel submit;
+}
+
+// 6. Auto-populate Days Remaining
+if(input.Dispute_Deadline != null)
+{
+    daysLeft = daysBetween(zoho.currentdate, input.Dispute_Deadline);
+    input.Days_Remaining = daysLeft;
+}
+
+// 7. Set initial status for new records
+if(input.Status == null || input.Status == "")
+{
+    input.Status = "New";
+}
+
+// 8. Audit trail for creation
+row = insert into audit_trail
+[
+    Incident_ID = input.ID
+    Action = "Created"
+    Performed_By = zoho.loginuser
+    Action_Date = zoho.currenttime
+];

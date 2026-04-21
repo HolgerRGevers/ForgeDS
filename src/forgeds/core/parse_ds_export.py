@@ -527,6 +527,10 @@ def main() -> None:
         "--json", action="store_true",
         help="Output field data as JSON to stdout",
     )
+    parser.add_argument(
+        "--ingest", action="store_true",
+        help="Ingest parsed app into the knowledge base and report residual.",
+    )
     args = parser.parse_args()
 
     # Read .ds file
@@ -574,6 +578,27 @@ def main() -> None:
     # Total field count
     total_fields = sum(len(f.fields) for f in ds.forms)
     print(f"\nTotal: {len(ds.forms)} forms, {total_fields} fields, {len(ds.scripts)} scripts")
+
+    # KB ingestion (optional)
+    if args.ingest:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if kb.available():
+            try:
+                from forgeds.knowledge.app_ingest import ingest_ds_app
+                module = f"app:{Path(args.ds_file).stem}"
+                ingest_ds_app(args.ds_file, str(kb.db_path), module_name=module)
+                print(f"\nKB: ingested as module '{module}'")
+                report = kb.project(module)
+                if report:
+                    print(f"  R({module}) = {report.residual:.1f}  ({len(report.gaps)} gaps)")
+                    for g in sorted(report.gaps, key=lambda x: -x.severity)[:5]:
+                        sev = {2.0: "CRIT", 1.5: "HIGH", 1.0: "MED", 0.5: "LOW"}.get(g.severity, "INFO")
+                        print(f"    [{sev}] {g.entity}: {g.message[:70]}")
+            except Exception as e:
+                print(f"  KB ingest error: {e}", file=sys.stderr)
+        else:
+            print("WARNING: knowledge.db not found. Ingest disabled.", file=sys.stderr)
 
 
 if __name__ == "__main__":

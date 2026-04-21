@@ -1,0 +1,3862 @@
+/*
+ * Author       : holger.gevers360
+ * Generated on : 10-Apr-2026 14:24:00
+ * Version      : 1.0
+ */
+ application "Purchase Order Processing"
+ {
+ 	date format = "dd-MMM-yyyy"
+ 	time zone = "America/Los_Angeles"
+ 	time format = "24-hr"
+
+ 	forms
+	{
+		form approval_history
+		{
+			displayname = "Approval History"
+			success message = "Approval History Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			purchase_order
+			(
+				type = list	
+				displayname = "Purchase Order"
+				values  = purchase_orders.ID
+    			displayformat = [order_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			action_1
+			(
+				type = picklist
+				displayname = "Action"
+				values = {"Submitted","Approved","Rejected"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			performed_by
+			(
+    			type = text
+				displayname = "Performed By"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			action_date
+			(
+    			type = datetime
+				displayname = "Action Date"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			notes
+			(
+    			type = textarea
+				displayname = "Notes"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form business_partner
+		{
+			displayname = "Business Partner"
+			success message = "Business Partner Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			academictitle
+			(
+    			type = text
+				displayname = "Academic Title"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			additionallastname
+			(
+    			type = text
+				displayname = "Additional Last Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			authorizationgroup
+			(
+    			type = text
+				displayname = "Authorization Group"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			birthdate
+			(
+    			type = date
+				displayname = "Birth Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnerbirthdatestatus
+			(
+    			type = text
+				displayname = "Birth Date Status"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnerbirthname
+			(
+    			type = text
+				displayname = "Birth Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnerbirthplacename
+			(
+    			type = text
+				displayname = "Birth Place Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have businesspartnerid
+			(
+    			type = text
+				displayname = "Business Partner ID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			correspondencelanguage
+			(
+    			type = text
+				displayname = "Correspondence Language"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			namecountry
+			(
+    			type = text
+				displayname = "Country Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			createdbyuser
+			(
+    			type = text
+				displayname = "Created By User"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			creationdate
+			(
+    			type = date
+				displayname = "Creation Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			creationtime
+			(
+    			type = text
+				displayname = "Creation Time"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			customer
+			(
+    			type = text
+				displayname = "Customer"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnerdeathdate
+			(
+    			type = date
+				displayname = "Death Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			etag
+			(
+    			type = text
+				displayname = "ETag"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			firstname
+			(
+    			type = text
+				displayname = "First Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			formofaddress
+			(
+    			type = text
+				displayname = "Form Of Address"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnerfullname
+			(
+    			type = text
+				displayname = "Full Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnergrouping
+			(
+    			type = text
+				displayname = "Grouping"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartneridbyextsystem
+			(
+    			type = text
+				displayname = "ID By External System"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			independentaddressid
+			(
+    			type = text
+				displayname = "Independent Address ID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			industry
+			(
+    			type = text
+				displayname = "Industry"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			initials
+			(
+    			type = text
+				displayname = "Initials"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			internationallocationnumber1
+			(
+    			type = text
+				displayname = "International Location Number 1"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			internationallocationnumber2
+			(
+    			type = text
+				displayname = "International Location Number 2"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			internationallocationnumber3
+			(
+    			type = text
+				displayname = "International Location Number 3"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			language
+			(
+    			type = text
+				displayname = "Language"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastchangedate
+			(
+    			type = date
+				displayname = "Last Change Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastchangetime
+			(
+    			type = text
+				displayname = "Last Change Time"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastchangedbyuser
+			(
+    			type = text
+				displayname = "Last Changed By User"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastname
+			(
+    			type = text
+				displayname = "Last Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastnameprefix
+			(
+    			type = text
+				displayname = "Last Name Prefix"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastnamesecondprefix
+			(
+    			type = text
+				displayname = "Last Name Second Prefix"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			legalform
+			(
+    			type = text
+				displayname = "Legal Form"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			buspartmaritalstatus
+			(
+    			type = text
+				displayname = "Marital Status"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			middlename
+			(
+    			type = text
+				displayname = "Middle Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnername
+			(
+    			type = text
+				displayname = "Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			groupbusinesspartnername1
+			(
+    			type = text
+				displayname = "Name 1"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			groupbusinesspartnername2
+			(
+    			type = text
+				displayname = "Name 2"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			nameformat
+			(
+    			type = text
+				displayname = "Name Format"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			buspartnationality
+			(
+    			type = text
+				displayname = "Nationality"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			naturalpersonemployername
+			(
+    			type = text
+				displayname = "Natural Person Employer Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartneroccupation
+			(
+    			type = text
+				displayname = "Occupation"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			organizationfoundationdate
+			(
+    			type = text
+				displayname = "Organization Foundation Date"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			organizationliquidationdate
+			(
+    			type = text
+				displayname = "Organization Liquidation Date"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			organizationbpname1
+			(
+    			type = text
+				displayname = "Organization Name 1"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			organizationbpname2
+			(
+    			type = text
+				displayname = "Organization Name 2"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			organizationbpname3
+			(
+    			type = text
+				displayname = "Organization Name 3"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			organizationbpname4
+			(
+    			type = text
+				displayname = "Organization Name 4"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			personfullname
+			(
+    			type = text
+				displayname = "Person Full Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			personnumber
+			(
+    			type = text
+				displayname = "Person Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnerprintformat
+			(
+    			type = text
+				displayname = "Print Format"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			searchterm1
+			(
+    			type = text
+				displayname = "Search Term 1"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			searchterm2
+			(
+    			type = text
+				displayname = "Search Term 2"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnersupplementname
+			(
+    			type = text
+				displayname = "Supplement Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			supplier
+			(
+    			type = text
+				displayname = "Supplier"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			tradingpartner
+			(
+    			type = text
+				displayname = "Trading Partner"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartnertype
+			(
+    			type = text
+				displayname = "Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			businesspartneruuid
+			(
+    			type = text
+				displayname = "UUID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form line_items
+		{
+			displayname = "Line Items"
+			success message = "Line Item Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			purchase_order
+			(
+				type = list	
+				displayname = "Purchase Order"
+				values  = purchase_orders.ID
+    			displayformat = [order_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			product
+			(
+				type = picklist	
+				displayname = "Product"
+				values  = product_master.ID
+    			displayformat = [productid]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			quantity
+			(
+				type = number
+				displayname = "Quantity"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			unit_price
+			(
+				displayname = "Unit Price"
+				type = USD
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			line_total
+			(
+				displayname = "Line Total"
+				type = USD
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			description
+			(
+    			type = text
+				displayname = "Description"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form order_notifications
+		{
+			displayname = "Order Notifications"
+			success message = "Order Notification Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			purchase_order
+			(
+				type = list	
+				displayname = "Purchase Order"
+				values  = purchase_orders.ID
+    			displayformat = [order_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sent_to
+			(
+    			type = email
+				displayname = "Sent To"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sent_at
+			(
+    			type = datetime
+				displayname = "Sent At"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			subject_1
+			(
+    			type = text
+				displayname = "Subject"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			body
+			(
+    			type = textarea
+				displayname = "Body"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			status
+			(
+				type = picklist
+				displayname = "Status"
+				values = {"Failed","Queued","Sent"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Notification Created","Notification Sent","Notification Draft","Notification Delivered","Notification Failed","Notification Resent","Notification Read","Notification Archived","Notification Escalated","Notification Resolved"}
+			}
+		}
+		form product_master
+		{
+			displayname = "Product Master"
+			success message = "Product Master Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			anpcode
+			(
+    			type = text
+				displayname = "ANP Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			baseunit
+			(
+    			type = text
+				displayname = "Base Unit"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			brand
+			(
+    			type = text
+				displayname = "Brand"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			competitorid
+			(
+    			type = text
+				displayname = "Competitor ID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			countryoforigin
+			(
+    			type = text
+				displayname = "Country Of Origin"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			createdbyuser
+			(
+    			type = text
+				displayname = "Created By User"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			creationdate
+			(
+    			type = date
+				displayname = "Creation Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			crossplantstatus
+			(
+    			type = text
+				displayname = "Cross Plant Status"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			crossplantstatusvaliditydate
+			(
+    			type = date
+				displayname = "Cross Plant Status Validity Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			division
+			(
+    			type = text
+				displayname = "Division"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			prodnoingenprodinprepackprod
+			(
+    			type = text
+				displayname = "Generic Product Number in Prepack Material"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			grossweight
+			(
+				type = decimal
+				displayname = "Gross Weight"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			productgroup
+			(
+    			type = text
+				displayname = "Group"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			producthierarchy
+			(
+    			type = text
+				displayname = "Hierarchy"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			industrystandardname
+			(
+    			type = text
+				displayname = "Industry Standard Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			itemcategorygroup
+			(
+    			type = text
+				displayname = "Item Category Group"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastchangedatetime
+			(
+    			type = datetime
+				displayname = "Last Change Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lastchangedbyuser
+			(
+    			type = text
+				displayname = "Last Changed By User"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			lowlevelcode
+			(
+    			type = text
+				displayname = "Low Level Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			materialvolume
+			(
+				type = decimal
+				displayname = "Material Volume"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			maximumpackagingheight
+			(
+				type = decimal
+				displayname = "Maximum Packaging Height"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			maximumpackaginglength
+			(
+				type = decimal
+				displayname = "Maximum Packaging Length"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			maximumpackagingwidth
+			(
+				type = decimal
+				displayname = "Maximum Packaging Width"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			netweight
+			(
+				type = decimal
+				displayname = "Net Weight"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			productoldid
+			(
+    			type = text
+				displayname = "Old ID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			procurementrule
+			(
+    			type = text
+				displayname = "Procurement Rule"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have productid
+			(
+    			type = text
+				displayname = "Product ID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			purchaseorderquantityunitunit
+			(
+    			type = text
+				displayname = "Purchase Order Quantity Unit"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			serialidentifierassgmtprofile
+			(
+    			type = text
+				displayname = "Serial Number Profile"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sizeordimensiontext
+			(
+    			type = text
+				displayname = "Size Or Dimension Text"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sourceofsupply
+			(
+    			type = text
+				displayname = "Source Of Supply"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			productstandardid
+			(
+    			type = text
+				displayname = "Standard ID"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			producttype
+			(
+    			type = text
+				displayname = "Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			validitystartdate
+			(
+    			type = date
+				displayname = "Validity Start Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			varblpurordunitisactive
+			(
+    			type = text
+				displayname = "Variable Purchase Order Unit Active"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form purchase_orders
+		{
+			displayname = "Purchase Orders"
+			success message = "Purchase Order Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			order_id
+			(
+    			type = autonumber
+				displayname = "Order ID"
+				start index = 1
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			vendor
+			(
+				type = picklist	
+				displayname = "Vendor"
+				values  = business_partner.ID
+    			displayformat = [businesspartnerid]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			total_amount
+			(
+				displayname = "Total Amount"
+				type = USD
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			order_date
+			(
+    			type = date
+				displayname = "Order Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			status
+			(
+				type = picklist
+				displayname = "Status"
+				values = {"Submitted","Draft","Approved","Rejected"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			submitted_by
+			(
+    			type = text
+				displayname = "Submitted By"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			approval_status
+			(
+				type = picklist
+				displayname = "Approval Status"
+				values = {"Approved","Rejected","Pending"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			created_at
+			(
+    			type = datetime
+				displayname = "Created At"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Purchase Order Created","Pending Approval","Draft","Approved","Rejected","Order Placed with Vendor","Order Confirmed by Vendor","Order Cancelled","Goods Received","Order On Hold","Goods Inspected","Invoice Received","Return Goods","Invoice Approved","Invoice Rejected","Payment Processed","Order Closed","Return Processed"}
+			}
+		}
+	}
+	reports
+	{
+		list line_items_Report
+		{
+			displayName = "All Line Items"
+			show all rows from line_items    
+			(
+				purchase_order as "Purchase Order"
+				product as "Product"
+				quantity as "Quantity"
+				unit_price as "Unit Price"
+				(
+					display = total,average,min,max	
+				)
+				line_total as "Line Total"
+				(
+					display = total,average,min,max	
+				)
+				description as "Description"
+			)
+		}
+		list purchase_orders_Report
+		{
+			displayName = "All Purchase Orders"
+			show all rows from purchase_orders    
+			(
+				order_id as "Order ID"
+				vendor as "Vendor"
+				total_amount as "Total Amount"
+				(
+					display = total,average,min,max	
+				)
+				order_date as "Order Date"
+				status as "Status"
+				submitted_by as "Submitted By"
+				approval_status as "Approval Status"
+				created_at as "Created At"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (status == "Draft")
+				fields = [status]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (status == "Submitted")
+				fields = [status]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+			)
+		}
+		kanban purchase_orders_by_status
+		{
+			displayName = "Statuses"
+			show all rows from purchase_orders    
+			(
+				order_id as "Order ID"
+				vendor as "Vendor"
+				total_amount as "Total Amount"
+				(
+					display = total,average,min,max	
+				)
+				order_date as "Order Date"
+				status as "Status"
+				submitted_by as "Submitted By"
+				approval_status as "Approval Status"
+				created_at as "Created At"
+			)
+			options
+			(
+	 			display field = status
+	 		)
+		}
+		list approval_history_Report
+		{
+			displayName = "All Approval Histories"
+			show all rows from approval_history    
+			(
+				purchase_order as "Purchase Order"
+				action_1 as "Action"
+				performed_by as "Performed By"
+				action_date as "Action Date"
+				notes as "Notes"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (action_1 == "Approved")
+				fields = [action_1]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (action_1 == "Rejected")
+				fields = [action_1]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (action_1 == "Submitted")
+				fields = [action_1]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+			)
+		}
+		kanban approval_history_by_action_1
+		{
+			displayName = "Actions"
+			show all rows from approval_history    
+			(
+				purchase_order as "Purchase Order"
+				action_1 as "Action"
+				performed_by as "Performed By"
+				action_date as "Action Date"
+				notes as "Notes"
+			)
+			options
+			(
+	 			display field = action_1
+	 		)
+		}
+		list order_notifications_Report
+		{
+			displayName = "All Order Notifications"
+			show all rows from order_notifications    
+			(
+				purchase_order as "Purchase Order"
+				sent_to as "Sent To"
+				sent_at as "Sent At"
+				subject_1 as "Subject"
+				body as "Body"
+				status as "Status"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (status == "Failed")
+				fields = [status]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (status == "Queued")
+				fields = [status]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (status == "Sent")
+				fields = [status]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+			)
+		}
+		kanban order_notifications_by_status
+		{
+			displayName = "Statuses"
+			show all rows from order_notifications    
+			(
+				purchase_order as "Purchase Order"
+				sent_to as "Sent To"
+				sent_at as "Sent At"
+				subject_1 as "Subject"
+				body as "Body"
+				status as "Status"
+			)
+			options
+			(
+	 			display field = status
+	 		)
+		}
+		list business_partner_Report
+		{
+			displayName = "All Business Partners"
+			show all rows from business_partner    
+			(
+				academictitle as "Academic Title"
+				additionallastname as "Additional Last Name"
+				authorizationgroup as "Authorization Group"
+				birthdate as "Birth Date"
+				businesspartnerbirthdatestatus as "Birth Date Status"
+				businesspartnerbirthname as "Birth Name"
+				businesspartnerbirthplacename as "Birth Place Name"
+				businesspartnerid as "Business Partner ID"
+				correspondencelanguage as "Correspondence Language"
+				namecountry as "Country Name"
+				createdbyuser as "Created By User"
+				creationdate as "Creation Date"
+				creationtime as "Creation Time"
+				customer as "Customer"
+				businesspartnerdeathdate as "Death Date"
+				etag as "ETag"
+				firstname as "First Name"
+				formofaddress as "Form Of Address"
+				businesspartnerfullname as "Full Name"
+				businesspartnergrouping as "Grouping"
+				businesspartneridbyextsystem as "ID By External System"
+				independentaddressid as "Independent Address ID"
+				industry as "Industry"
+				initials as "Initials"
+				internationallocationnumber1 as "International Location Number 1"
+				internationallocationnumber2 as "International Location Number 2"
+				internationallocationnumber3 as "International Location Number 3"
+				language as "Language"
+				lastchangedate as "Last Change Date"
+				lastchangetime as "Last Change Time"
+				lastchangedbyuser as "Last Changed By User"
+				lastname as "Last Name"
+				lastnameprefix as "Last Name Prefix"
+				lastnamesecondprefix as "Last Name Second Prefix"
+				legalform as "Legal Form"
+				buspartmaritalstatus as "Marital Status"
+				middlename as "Middle Name"
+				businesspartnername as "Name"
+				groupbusinesspartnername1 as "Name 1"
+				groupbusinesspartnername2 as "Name 2"
+				nameformat as "Name Format"
+				buspartnationality as "Nationality"
+				naturalpersonemployername as "Natural Person Employer Name"
+				businesspartneroccupation as "Occupation"
+				organizationfoundationdate as "Organization Foundation Date"
+				organizationliquidationdate as "Organization Liquidation Date"
+				organizationbpname1 as "Organization Name 1"
+				organizationbpname2 as "Organization Name 2"
+				organizationbpname3 as "Organization Name 3"
+				organizationbpname4 as "Organization Name 4"
+				personfullname as "Person Full Name"
+				personnumber as "Person Number"
+				businesspartnerprintformat as "Print Format"
+				searchterm1 as "Search Term 1"
+				searchterm2 as "Search Term 2"
+				businesspartnersupplementname as "Supplement Name"
+				supplier as "Supplier"
+				tradingpartner as "Trading Partner"
+				businesspartnertype as "Type"
+				businesspartneruuid as "UUID"
+			)
+		}
+		list product_master_Report
+		{
+			displayName = "All Product Masters"
+			show all rows from product_master    
+			(
+				anpcode as "ANP Code"
+				baseunit as "Base Unit"
+				brand as "Brand"
+				competitorid as "Competitor ID"
+				countryoforigin as "Country Of Origin"
+				createdbyuser as "Created By User"
+				creationdate as "Creation Date"
+				crossplantstatus as "Cross Plant Status"
+				crossplantstatusvaliditydate as "Cross Plant Status Validity Date"
+				division as "Division"
+				prodnoingenprodinprepackprod as "Generic Product Number in Prepack Material"
+				grossweight as "Gross Weight"
+				productgroup as "Group"
+				producthierarchy as "Hierarchy"
+				industrystandardname as "Industry Standard Name"
+				itemcategorygroup as "Item Category Group"
+				lastchangedatetime as "Last Change Time"
+				lastchangedbyuser as "Last Changed By User"
+				lowlevelcode as "Low Level Code"
+				materialvolume as "Material Volume"
+				maximumpackagingheight as "Maximum Packaging Height"
+				maximumpackaginglength as "Maximum Packaging Length"
+				maximumpackagingwidth as "Maximum Packaging Width"
+				netweight as "Net Weight"
+				productoldid as "Old ID"
+				procurementrule as "Procurement Rule"
+				productid as "Product ID"
+				purchaseorderquantityunitunit as "Purchase Order Quantity Unit"
+				serialidentifierassgmtprofile as "Serial Number Profile"
+				sizeordimensiontext as "Size Or Dimension Text"
+				sourceofsupply as "Source Of Supply"
+				productstandardid as "Standard ID"
+				producttype as "Type"
+				validitystartdate as "Validity Start Date"
+				varblpurordunitisactive as "Variable Purchase Order Unit Active"
+			)
+		}
+	}
+	pages
+	{
+		page DashBoard
+		{
+			displayname = "Dashboard"
+			Content="<zml    \t\t\n\t\t\n\t\t\n\t\t\n\t\t\n>\n\t<layout>\n\t<row>\n\t<column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel 1'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#F97164'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '64%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginTop = '8px'\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.line_items.line_total.sum'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '8px' \n\tmarginTop = '0px'\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Total Line Total'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '36%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#C75A50'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'media-1-volume-up'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#EEA131'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '65%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.line_items.unit_price.sum'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Total Unit Prices'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '35%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#BE8127'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'shopping-tag'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#00CFA9'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '65%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.purchase_orders.total_amount.sum'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Total Total Amounts'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '35%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#0BA385'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'business-percentage-39'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='26%'\n   \t>\n\t<panel elementName='Panel 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#3E99DE'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '65%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.product_master.grossweight.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Average Gross Weight'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '35%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#0E78C9'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'business-percentage-39'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Grouped_Panel 1'\n \n\t\n\ttitle = 'Approval Status'\n\t\n\t\ttitleSize = '15px'\n            boldTitle = 'true'\n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#F97164'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'design-todo'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tcolor = '#C75A50'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'approval_status == &quot;Approved&quot;'\n\t  value = 'thisapp.purchase_orders.approval_status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Approved'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#EEA131'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'design-todo'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tcolor = '#BE8127'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'approval_status == &quot;Rejected&quot;'\n\t  value = 'thisapp.purchase_orders.approval_status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginTop = '0px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Rejected'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#00CFA9'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-hourglass'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tcolor = '#0BA385'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'approval_status == &quot;Pending&quot;'\n\t  value = 'thisapp.purchase_orders.approval_status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginTop = '0px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Pending'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#3E99DE'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'shopping-list'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tcolor = '#0E78C9'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.purchase_orders.approval_status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginTop = '0px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Total'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel_Button 1'\n \n\t\n\ttitle = 'Quick Links'\n\t\n\t\ttitleSize = '15px'\n            boldTitle = 'true'\n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'line_items'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Line Items'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='27%'\n   \t>\n\t<panel elementName='Panel_Button 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'purchase_orders'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#3F3F3F'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Purchase Orders'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel_Button 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'approval_history'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#3F3F3F'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Approval History'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel_Button 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'order_notifications'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#3F3F3F'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Order Notifications'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='50%'\n   \t>\n\t<chart \n\telementName='Chart 1'\n\n\t\n\ttitle = 'Serial Number Profile by Maximum Packaging Width'\n\t\n\t\ttitleSize = '16px'\n\ttype = 'Stacked Column'\n\txtitle = 'Serial Number Profile'\n\tytitle = 'Maximum Packaging Width'\n\tbgColor = 'rgb(255, 255, 255)'\n\ttheme = '#f37d16'\n\tlegendPos = 'center.top'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'product_master'\n\txfield = 'serialidentifierassgmtprofile'\n\tyfields = 'sum:maximumpackagingwidth'\n\tgroupBy = 'varblpurordunitisactive'\n\t\tDelugeCriteria = 'serialidentifierassgmtprofile is not null &amp;&amp; serialidentifierassgmtprofile != &quot;&quot;'\n/>\n\n</column><column\n   \t\t width='50%'\n   \t>\n\t<chart \n\telementName='Chart 2'\n\n\t\n\ttitle = 'Approval Status by Total Amount'\n\t\n\t\ttitleSize = '16px'\n\ttype = 'Stacked Column'\n\txtitle = 'Approval Status'\n\tytitle = 'Total Amount'\n\tbgColor = 'rgb(255, 255, 255)'\n\ttheme = 'theme1'\n\tlegendPos = 'center.top'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'purchase_orders'\n\txfield = 'approval_status'\n\tyfields = 'sum:total_amount'\n\tgroupBy = 'status'\n\t\tDelugeCriteria = 'approval_status is not null &amp;&amp; approval_status != &quot;&quot;'\n/>\n\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<report \n\telementName='Report'\n\n\t\tappLinkName = 'thisapp'\n\t\tlinkName = 'line_items_Report'\n\t\n\t\tiszreport = 'false'\n\t\t\t\t\tzc_AddRec = 'false'\n\t\t\t\t\tzc_EditRec = 'false'\n\t\t\t\t\tzc_Print = 'false'\n\t\t\t\t\tzc_Export = 'false'\n\t\t\t\t\tzc_DelRec = 'false'\n\t\t\t\t\tzc_DuplRec = 'false'\n\t\t\t\t\tzc_Search = 'false'\n\t\t\t\t\tzc_EditBulkRec = 'false'\n\t\t\t\t\tzc_BulkDelete = 'false'\n\t\t\t\t\tzc_BulkDuplicate = 'false'\n\theightType = 'auto'\n\theightValue = '700'\n\n/>\n</column>\n</row>\n</layout>\n</zml>"
+		}
+	}
+
+
+
+
+		workflow
+		{
+
+
+
+
+		blueprint
+		{
+    			purchase_order_approval_workflow as "Purchase Order Approval Workflow"
+    			{
+        			type = Blueprint
+        			form = purchase_orders
+        			start
+        			{
+            			start stage = "Purchase Order Created"
+        			}
+        			stages
+        			{
+           			"Purchase Order Created"
+           			{
+           			}
+           			"Pending Approval"
+           			{
+           			}
+           			"Draft"
+           			{
+           			}
+           			"Approved"
+           			{
+           			}
+           			"Rejected"
+           			{
+           			}
+           			"Order Placed with Vendor"
+           			{
+           			}
+           			"Order Confirmed by Vendor"
+           			{
+           			}
+           			"Order Cancelled"
+           			{
+           			}
+           			"Goods Received"
+           			{
+           			}
+           			"Order On Hold"
+           			{
+           			}
+           			"Goods Inspected"
+           			{
+           			}
+           			"Invoice Received"
+           			{
+           			}
+           			"Return Goods"
+           			{
+           			}
+           			"Invoice Approved"
+           			{
+           			}
+           			"Invoice Rejected"
+           			{
+           			}
+           			"Payment Processed"
+           			{
+           			}
+           			"Order Closed"
+           			{
+           			}
+           			"Return Processed"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				submit_for_approval as "Submit for Approval"
+    				{
+         				type = normal
+         				from stage = "Purchase Order Created"
+         				to stage = "Pending Approval"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				save_as_draft as "Save as Draft"
+    				{
+         				type = normal
+         				from stage = "Purchase Order Created"
+         				to stage = "Draft"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resume_draft as "Resume Draft"
+    				{
+         				type = normal
+         				from stage = "Draft"
+         				to stage = "Purchase Order Created"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				approve_po as "Approve Purchase Order"
+    				{
+         				type = normal
+         				from stage = "Pending Approval"
+         				to stage = "Approved"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_po as "Reject Purchase Order"
+    				{
+         				type = normal
+         				from stage = "Pending Approval"
+         				to stage = "Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				return_to_draft as "Return to Draft"
+    				{
+         				type = normal
+         				from stage = "Pending Approval"
+         				to stage = "Draft"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				place_order_with_vendor as "Place Order with Vendor"
+    				{
+         				type = normal
+         				from stage = "Approved"
+         				to stage = "Order Placed with Vendor"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				revert_to_approval as "Revert to Pending Approval"
+    				{
+         				type = normal
+         				from stage = "Approved"
+         				to stage = "Pending Approval"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				edit_and_resubmit as "Edit and Resubmit"
+    				{
+         				type = normal
+         				from stage = "Rejected"
+         				to stage = "Draft"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reopen_for_resubmission as "Reopen for Resubmission"
+    				{
+         				type = normal
+         				from stage = "Rejected"
+         				to stage = "Purchase Order Created"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_vendor_receipt as "Confirm Vendor Receipt"
+    				{
+         				type = normal
+         				from stage = "Order Placed with Vendor"
+         				to stage = "Order Confirmed by Vendor"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				cancel_order as "Cancel Order"
+    				{
+         				type = normal
+         				from stage = "Order Placed with Vendor"
+         				to stage = "Order Cancelled"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				receive_goods as "Receive Goods"
+    				{
+         				type = normal
+         				from stage = "Order Confirmed by Vendor"
+         				to stage = "Goods Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				hold_order as "Place Order On Hold"
+    				{
+         				type = normal
+         				from stage = "Order Confirmed by Vendor"
+         				to stage = "Order On Hold"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resume_order as "Resume Order Processing"
+    				{
+         				type = normal
+         				from stage = "Order On Hold"
+         				to stage = "Order Confirmed by Vendor"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				inspect_goods as "Inspect Goods"
+    				{
+         				type = normal
+         				from stage = "Goods Received"
+         				to stage = "Goods Inspected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				receive_invoice as "Receive Vendor Invoice"
+    				{
+         				type = normal
+         				from stage = "Goods Inspected"
+         				to stage = "Invoice Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				initiate_return as "Initiate Return for Defective Items"
+    				{
+         				type = normal
+         				from stage = "Goods Inspected"
+         				to stage = "Return Goods"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				approve_invoice as "Approve Invoice"
+    				{
+         				type = normal
+         				from stage = "Invoice Received"
+         				to stage = "Invoice Approved"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_invoice as "Reject Invoice"
+    				{
+         				type = normal
+         				from stage = "Invoice Received"
+         				to stage = "Invoice Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				process_payment as "Process Payment"
+    				{
+         				type = normal
+         				from stage = "Invoice Approved"
+         				to stage = "Payment Processed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				revert_to_rejected as "Revert to Rejected"
+    				{
+         				type = normal
+         				from stage = "Invoice Approved"
+         				to stage = "Invoice Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resubmit_invoice as "Correct and Resubmit Invoice"
+    				{
+         				type = normal
+         				from stage = "Invoice Rejected"
+         				to stage = "Invoice Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_order as "Close Purchase Order"
+    				{
+         				type = normal
+         				from stage = "Payment Processed"
+         				to stage = "Order Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				process_return as "Process Return"
+    				{
+         				type = normal
+         				from stage = "Return Goods"
+         				to stage = "Return Processed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+    			purchase_order_notification_flow as "Purchase Order Notification Flow"
+    			{
+        			type = Blueprint
+        			form = order_notifications
+        			start
+        			{
+            			start stage = "Notification Created"
+        			}
+        			stages
+        			{
+           			"Notification Created"
+           			{
+           			}
+           			"Notification Sent"
+           			{
+           			}
+           			"Notification Draft"
+           			{
+           			}
+           			"Notification Delivered"
+           			{
+           			}
+           			"Notification Failed"
+           			{
+           			}
+           			"Notification Resent"
+           			{
+           			}
+           			"Notification Read"
+           			{
+           			}
+           			"Notification Archived"
+           			{
+           			}
+           			"Notification Escalated"
+           			{
+           			}
+           			"Notification Resolved"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				send_notification as "Send Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Created"
+         				to stage = "Notification Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				save_as_draft as "Save as Draft"
+    				{
+         				type = normal
+         				from stage = "Notification Created"
+         				to stage = "Notification Draft"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resume_draft as "Resume Draft"
+    				{
+         				type = normal
+         				from stage = "Notification Draft"
+         				to stage = "Notification Created"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_delivery as "Confirm Delivery"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Notification Delivered"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				handle_failure as "Handle Delivery Failure"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Notification Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resend_notification as "Resend Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Sent"
+         				to stage = "Notification Resent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				mark_read as "Mark as Read"
+    				{
+         				type = normal
+         				from stage = "Notification Delivered"
+         				to stage = "Notification Read"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				archive_notification as "Archive Notification"
+    				{
+         				type = normal
+         				from stage = "Notification Delivered"
+         				to stage = "Notification Archived"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_notification as "Escalate to Admin"
+    				{
+         				type = normal
+         				from stage = "Notification Failed"
+         				to stage = "Notification Escalated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resolve_escalation as "Resolve Escalation"
+    				{
+         				type = normal
+         				from stage = "Notification Escalated"
+         				to stage = "Notification Resolved"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+		}
+
+
+	}
+	share_settings
+	{
+			"Read"
+			{
+				name = "Read"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have read permission for all components\n"
+			}
+			"Write"
+			{
+				name = "Write"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have write permission for all components\n"
+			}
+			"Administrator"
+			{
+				name = "Administrator"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have all the permissions.\n"
+			}
+			"Purchase Order Approver"
+			{
+				name = "Purchase Order Approver"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Review submitted purchase orders for accuracy and compliance \n"
+				ModulePermissions
+				{
+					purchase_orders
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							purchase_orders_Report={"View","Edit"}
+							purchase_orders_by_status={"View","Edit"}
+						}
+					}
+					approval_history
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_history_Report={"View"}
+							approval_history_by_action_1={"View"}
+						}
+					}
+				}
+			}
+			"Finance Administrator"
+			{
+				name = "Finance Administrator"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Monitor total purchase order amounts and budget allocations \n"
+				ModulePermissions
+				{
+					line_items
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							line_items_Report={"View","Edit","Delete"}
+						}
+					}
+					purchase_orders
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							purchase_orders_Report={"View"}
+							purchase_orders_by_status={"View"}
+						}
+					}
+					business_partner
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							business_partner_Report={"View"}
+						}
+					}
+					approval_history
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_history_Report={"View"}
+							approval_history_by_action_1={"View"}
+						}
+					}
+				}
+			}
+			"Developer"
+			{
+				name = "Developer"
+				type = Developer
+				permissions = {Chat:false, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Developer Profile\n"
+			}
+			"Procurement Specialist"
+			{
+				name = "Procurement Specialist"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Create and submit purchase orders \n"
+				ModulePermissions
+				{
+					product_master
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							product_master_Report={"View","Edit"}
+						}
+					}
+					purchase_orders
+					{
+						enabled= Create,Viewall,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							purchase_orders_Report={"View","Edit"}
+							purchase_orders_by_status={"View","Edit"}
+						}
+					}
+					business_partner
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							business_partner_Report={"View","Edit"}
+						}
+					}
+				}
+			}
+			"System Administrator"
+			{
+				name = "System Administrator"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Manage user access and permissions across the application \n"
+				ModulePermissions
+				{
+					purchase_orders
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							purchase_orders_Report={"View","Edit","Delete"}
+							purchase_orders_by_status={"View","Edit","Delete"}
+						}
+					}
+					product_master
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							product_master_Report={"View","Edit","Delete"}
+						}
+					}
+					line_items
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							line_items_Report={"View","Edit","Delete"}
+						}
+					}
+					business_partner
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							business_partner_Report={"View","Edit","Delete"}
+						}
+					}
+					approval_history
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_history_Report={"View","Edit","Delete"}
+							approval_history_by_action_1={"View","Edit","Delete"}
+						}
+					}
+					order_notifications
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							order_notifications_by_status={"View","Edit","Delete"}
+							order_notifications_Report={"View","Edit","Delete"}
+						}
+					}
+				}
+			}
+			"Supplier Coordinator"
+			{
+				name = "Supplier Coordinator"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Update product and pricing information in the product master \n"
+				ModulePermissions
+				{
+					product_master
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							product_master_Report={"View","Edit","Delete"}
+						}
+					}
+					order_notifications
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							order_notifications_by_status={"View"}
+							order_notifications_Report={"View"}
+						}
+					}
+				}
+			}
+			"Vendor Representative"
+			{
+				name = "Vendor Representative"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Receive and acknowledge purchase order notifications \n"
+				ModulePermissions
+				{
+					product_master
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							product_master_Report={"View"}
+						}
+					}
+					order_notifications
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							order_notifications_by_status={"View"}
+							order_notifications_Report={"View"}
+						}
+					}
+				}
+			}
+			"Customer"
+			{
+				name = "Customer"
+				type = Customer_Portal
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This is the default profile having only add and view permission.\n"
+			}
+			roles
+			{
+				"CEO"
+				{
+					description = "User belonging to this role can access data of all other users."
+				}
+			}
+	}
+
+
+	web
+	{
+		forms
+		{
+			form approval_history
+			{
+				label placement = left
+			}
+			form business_partner
+			{
+				label placement = left
+			}
+			form line_items
+			{
+				label placement = left
+			}
+			form order_notifications
+			{
+				label placement = left
+			}
+			form product_master
+			{
+				label placement = left
+			}
+			form purchase_orders
+			{
+				label placement = left
+			}
+		}
+		reports
+		{
+			report line_items_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								purchase_order as "Purchase Order"
+								product as "Product"
+								quantity as "Quantity"
+								unit_price as "Unit Price"
+								line_total as "Line Total"
+								description as "Description"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								purchase_order as "Purchase Order"
+								product as "Product"
+								quantity as "Quantity"
+								unit_price as "Unit Price"
+								line_total as "Line Total"
+								description as "Description"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Purchase Order"
+		     				related field = purchase_order
+							fields
+							(
+								order_id as "Order ID"
+								vendor as "Vendor"
+								total_amount as "Total Amount"
+								order_date as "Order Date"
+								status as "Status"
+								submitted_by as "Submitted By"
+								approval_status as "Approval Status"
+								created_at as "Created At"
+							)
+						)
+						datablock3
+						(
+							layout type = -2
+		     				title = "Product"
+		     				related field = product
+							fields
+							(
+								anpcode as "ANP Code"
+								baseunit as "Base Unit"
+								brand as "Brand"
+								competitorid as "Competitor ID"
+								countryoforigin as "Country Of Origin"
+								createdbyuser as "Created By User"
+								creationdate as "Creation Date"
+								crossplantstatus as "Cross Plant Status"
+								crossplantstatusvaliditydate as "Cross Plant Status Validity Date"
+								division as "Division"
+								prodnoingenprodinprepackprod as "Generic Product Number in Prepack Material"
+								grossweight as "Gross Weight"
+								productgroup as "Group"
+								producthierarchy as "Hierarchy"
+								industrystandardname as "Industry Standard Name"
+								itemcategorygroup as "Item Category Group"
+								lastchangedatetime as "Last Change Time"
+								lastchangedbyuser as "Last Changed By User"
+								lowlevelcode as "Low Level Code"
+								materialvolume as "Material Volume"
+								maximumpackagingheight as "Maximum Packaging Height"
+								maximumpackaginglength as "Maximum Packaging Length"
+								maximumpackagingwidth as "Maximum Packaging Width"
+								netweight as "Net Weight"
+								productoldid as "Old ID"
+								procurementrule as "Procurement Rule"
+								productid as "Product ID"
+								purchaseorderquantityunitunit as "Purchase Order Quantity Unit"
+								serialidentifierassgmtprofile as "Serial Number Profile"
+								sizeordimensiontext as "Size Or Dimension Text"
+								sourceofsupply as "Source Of Supply"
+								productstandardid as "Standard ID"
+								producttype as "Type"
+								validitystartdate as "Validity Start Date"
+								varblpurordunitisactive as "Variable Purchase Order Unit Active"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report purchase_orders_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								order_id as "Order ID"
+								vendor as "Vendor"
+								total_amount as "Total Amount"
+								order_date as "Order Date"
+								status as "Status"
+								submitted_by as "Submitted By"
+								approval_status as "Approval Status"
+								created_at as "Created At"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								order_id as "Order ID"
+								vendor as "Vendor"
+								total_amount as "Total Amount"
+								order_date as "Order Date"
+								status as "Status"
+								submitted_by as "Submitted By"
+								approval_status as "Approval Status"
+								created_at as "Created At"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Vendor"
+		     				related field = vendor
+							fields
+							(
+								academictitle as "Academic Title"
+								additionallastname as "Additional Last Name"
+								authorizationgroup as "Authorization Group"
+								birthdate as "Birth Date"
+								businesspartnerbirthdatestatus as "Birth Date Status"
+								businesspartnerbirthname as "Birth Name"
+								businesspartnerbirthplacename as "Birth Place Name"
+								businesspartnerid as "Business Partner ID"
+								correspondencelanguage as "Correspondence Language"
+								namecountry as "Country Name"
+								createdbyuser as "Created By User"
+								creationdate as "Creation Date"
+								creationtime as "Creation Time"
+								customer as "Customer"
+								businesspartnerdeathdate as "Death Date"
+								etag as "ETag"
+								firstname as "First Name"
+								formofaddress as "Form Of Address"
+								businesspartnerfullname as "Full Name"
+								businesspartnergrouping as "Grouping"
+								businesspartneridbyextsystem as "ID By External System"
+								independentaddressid as "Independent Address ID"
+								industry as "Industry"
+								initials as "Initials"
+								internationallocationnumber1 as "International Location Number 1"
+								internationallocationnumber2 as "International Location Number 2"
+								internationallocationnumber3 as "International Location Number 3"
+								language as "Language"
+								lastchangedate as "Last Change Date"
+								lastchangetime as "Last Change Time"
+								lastchangedbyuser as "Last Changed By User"
+								lastname as "Last Name"
+								lastnameprefix as "Last Name Prefix"
+								lastnamesecondprefix as "Last Name Second Prefix"
+								legalform as "Legal Form"
+								buspartmaritalstatus as "Marital Status"
+								middlename as "Middle Name"
+								businesspartnername as "Name"
+								groupbusinesspartnername1 as "Name 1"
+								groupbusinesspartnername2 as "Name 2"
+								nameformat as "Name Format"
+								buspartnationality as "Nationality"
+								naturalpersonemployername as "Natural Person Employer Name"
+								businesspartneroccupation as "Occupation"
+								organizationfoundationdate as "Organization Foundation Date"
+								organizationliquidationdate as "Organization Liquidation Date"
+								organizationbpname1 as "Organization Name 1"
+								organizationbpname2 as "Organization Name 2"
+								organizationbpname3 as "Organization Name 3"
+								organizationbpname4 as "Organization Name 4"
+								personfullname as "Person Full Name"
+								personnumber as "Person Number"
+								businesspartnerprintformat as "Print Format"
+								searchterm1 as "Search Term 1"
+								searchterm2 as "Search Term 2"
+								businesspartnersupplementname as "Supplement Name"
+								supplier as "Supplier"
+								tradingpartner as "Trading Partner"
+								businesspartnertype as "Type"
+								businesspartneruuid as "UUID"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report purchase_orders_by_status
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								submitted_by as "Submitted By"
+								order_id as "Order ID"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								order_id as "Order ID"
+								vendor as "Vendor"
+								total_amount as "Total Amount"
+								order_date as "Order Date"
+								status as "Status"
+								submitted_by as "Submitted By"
+								approval_status as "Approval Status"
+								created_at as "Created At"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report approval_history_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								purchase_order as "Purchase Order"
+								action_1 as "Action"
+								performed_by as "Performed By"
+								action_date as "Action Date"
+								notes as "Notes"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								purchase_order as "Purchase Order"
+								action_1 as "Action"
+								performed_by as "Performed By"
+								action_date as "Action Date"
+								notes as "Notes"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Purchase Order"
+		     				related field = purchase_order
+							fields
+							(
+								order_id as "Order ID"
+								vendor as "Vendor"
+								total_amount as "Total Amount"
+								order_date as "Order Date"
+								status as "Status"
+								submitted_by as "Submitted By"
+								approval_status as "Approval Status"
+								created_at as "Created At"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report approval_history_by_action_1
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								performed_by as "Performed By"
+								purchase_order as "Purchase Order"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								purchase_order as "Purchase Order"
+								action_1 as "Action"
+								performed_by as "Performed By"
+								action_date as "Action Date"
+								notes as "Notes"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report order_notifications_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								purchase_order as "Purchase Order"
+								sent_to as "Sent To"
+								sent_at as "Sent At"
+								subject_1 as "Subject"
+								body as "Body"
+								status as "Status"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								purchase_order as "Purchase Order"
+								sent_to as "Sent To"
+								sent_at as "Sent At"
+								subject_1 as "Subject"
+								body as "Body"
+								status as "Status"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Purchase Order"
+		     				related field = purchase_order
+							fields
+							(
+								order_id as "Order ID"
+								vendor as "Vendor"
+								total_amount as "Total Amount"
+								order_date as "Order Date"
+								status as "Status"
+								submitted_by as "Submitted By"
+								approval_status as "Approval Status"
+								created_at as "Created At"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report order_notifications_by_status
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								subject_1 as "Subject"
+								purchase_order as "Purchase Order"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								purchase_order as "Purchase Order"
+								sent_to as "Sent To"
+								sent_at as "Sent At"
+								subject_1 as "Subject"
+								body as "Body"
+								status as "Status"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report business_partner_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								academictitle as "Academic Title"
+								additionallastname as "Additional Last Name"
+								authorizationgroup as "Authorization Group"
+								birthdate as "Birth Date"
+								businesspartnerbirthdatestatus as "Birth Date Status"
+								businesspartnerbirthname as "Birth Name"
+								businesspartnerbirthplacename as "Birth Place Name"
+								businesspartnerid as "Business Partner ID"
+								correspondencelanguage as "Correspondence Language"
+								namecountry as "Country Name"
+								createdbyuser as "Created By User"
+								creationdate as "Creation Date"
+								creationtime as "Creation Time"
+								customer as "Customer"
+								businesspartnerdeathdate as "Death Date"
+								etag as "ETag"
+								firstname as "First Name"
+								formofaddress as "Form Of Address"
+								businesspartnerfullname as "Full Name"
+								businesspartnergrouping as "Grouping"
+								businesspartneridbyextsystem as "ID By External System"
+								independentaddressid as "Independent Address ID"
+								industry as "Industry"
+								initials as "Initials"
+								internationallocationnumber1 as "International Location Number 1"
+								internationallocationnumber2 as "International Location Number 2"
+								internationallocationnumber3 as "International Location Number 3"
+								language as "Language"
+								lastchangedate as "Last Change Date"
+								lastchangetime as "Last Change Time"
+								lastchangedbyuser as "Last Changed By User"
+								lastname as "Last Name"
+								lastnameprefix as "Last Name Prefix"
+								lastnamesecondprefix as "Last Name Second Prefix"
+								legalform as "Legal Form"
+								buspartmaritalstatus as "Marital Status"
+								middlename as "Middle Name"
+								businesspartnername as "Name"
+								groupbusinesspartnername1 as "Name 1"
+								groupbusinesspartnername2 as "Name 2"
+								nameformat as "Name Format"
+								buspartnationality as "Nationality"
+								naturalpersonemployername as "Natural Person Employer Name"
+								businesspartneroccupation as "Occupation"
+								organizationfoundationdate as "Organization Foundation Date"
+								organizationliquidationdate as "Organization Liquidation Date"
+								organizationbpname1 as "Organization Name 1"
+								organizationbpname2 as "Organization Name 2"
+								organizationbpname3 as "Organization Name 3"
+								organizationbpname4 as "Organization Name 4"
+								personfullname as "Person Full Name"
+								personnumber as "Person Number"
+								businesspartnerprintformat as "Print Format"
+								searchterm1 as "Search Term 1"
+								searchterm2 as "Search Term 2"
+								businesspartnersupplementname as "Supplement Name"
+								supplier as "Supplier"
+								tradingpartner as "Trading Partner"
+								businesspartnertype as "Type"
+								businesspartneruuid as "UUID"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								academictitle as "Academic Title"
+								additionallastname as "Additional Last Name"
+								authorizationgroup as "Authorization Group"
+								birthdate as "Birth Date"
+								businesspartnerbirthdatestatus as "Birth Date Status"
+								businesspartnerbirthname as "Birth Name"
+								businesspartnerbirthplacename as "Birth Place Name"
+								businesspartnerid as "Business Partner ID"
+								correspondencelanguage as "Correspondence Language"
+								namecountry as "Country Name"
+								createdbyuser as "Created By User"
+								creationdate as "Creation Date"
+								creationtime as "Creation Time"
+								customer as "Customer"
+								businesspartnerdeathdate as "Death Date"
+								etag as "ETag"
+								firstname as "First Name"
+								formofaddress as "Form Of Address"
+								businesspartnerfullname as "Full Name"
+								businesspartnergrouping as "Grouping"
+								businesspartneridbyextsystem as "ID By External System"
+								independentaddressid as "Independent Address ID"
+								industry as "Industry"
+								initials as "Initials"
+								internationallocationnumber1 as "International Location Number 1"
+								internationallocationnumber2 as "International Location Number 2"
+								internationallocationnumber3 as "International Location Number 3"
+								language as "Language"
+								lastchangedate as "Last Change Date"
+								lastchangetime as "Last Change Time"
+								lastchangedbyuser as "Last Changed By User"
+								lastname as "Last Name"
+								lastnameprefix as "Last Name Prefix"
+								lastnamesecondprefix as "Last Name Second Prefix"
+								legalform as "Legal Form"
+								buspartmaritalstatus as "Marital Status"
+								middlename as "Middle Name"
+								businesspartnername as "Name"
+								groupbusinesspartnername1 as "Name 1"
+								groupbusinesspartnername2 as "Name 2"
+								nameformat as "Name Format"
+								buspartnationality as "Nationality"
+								naturalpersonemployername as "Natural Person Employer Name"
+								businesspartneroccupation as "Occupation"
+								organizationfoundationdate as "Organization Foundation Date"
+								organizationliquidationdate as "Organization Liquidation Date"
+								organizationbpname1 as "Organization Name 1"
+								organizationbpname2 as "Organization Name 2"
+								organizationbpname3 as "Organization Name 3"
+								organizationbpname4 as "Organization Name 4"
+								personfullname as "Person Full Name"
+								personnumber as "Person Number"
+								businesspartnerprintformat as "Print Format"
+								searchterm1 as "Search Term 1"
+								searchterm2 as "Search Term 2"
+								businesspartnersupplementname as "Supplement Name"
+								supplier as "Supplier"
+								tradingpartner as "Trading Partner"
+								businesspartnertype as "Type"
+								businesspartneruuid as "UUID"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report product_master_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								anpcode as "ANP Code"
+								baseunit as "Base Unit"
+								brand as "Brand"
+								competitorid as "Competitor ID"
+								countryoforigin as "Country Of Origin"
+								createdbyuser as "Created By User"
+								creationdate as "Creation Date"
+								crossplantstatus as "Cross Plant Status"
+								crossplantstatusvaliditydate as "Cross Plant Status Validity Date"
+								division as "Division"
+								prodnoingenprodinprepackprod as "Generic Product Number in Prepack Material"
+								grossweight as "Gross Weight"
+								productgroup as "Group"
+								producthierarchy as "Hierarchy"
+								industrystandardname as "Industry Standard Name"
+								itemcategorygroup as "Item Category Group"
+								lastchangedatetime as "Last Change Time"
+								lastchangedbyuser as "Last Changed By User"
+								lowlevelcode as "Low Level Code"
+								materialvolume as "Material Volume"
+								maximumpackagingheight as "Maximum Packaging Height"
+								maximumpackaginglength as "Maximum Packaging Length"
+								maximumpackagingwidth as "Maximum Packaging Width"
+								netweight as "Net Weight"
+								productoldid as "Old ID"
+								procurementrule as "Procurement Rule"
+								productid as "Product ID"
+								purchaseorderquantityunitunit as "Purchase Order Quantity Unit"
+								serialidentifierassgmtprofile as "Serial Number Profile"
+								sizeordimensiontext as "Size Or Dimension Text"
+								sourceofsupply as "Source Of Supply"
+								productstandardid as "Standard ID"
+								producttype as "Type"
+								validitystartdate as "Validity Start Date"
+								varblpurordunitisactive as "Variable Purchase Order Unit Active"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								anpcode as "ANP Code"
+								baseunit as "Base Unit"
+								brand as "Brand"
+								competitorid as "Competitor ID"
+								countryoforigin as "Country Of Origin"
+								createdbyuser as "Created By User"
+								creationdate as "Creation Date"
+								crossplantstatus as "Cross Plant Status"
+								crossplantstatusvaliditydate as "Cross Plant Status Validity Date"
+								division as "Division"
+								prodnoingenprodinprepackprod as "Generic Product Number in Prepack Material"
+								grossweight as "Gross Weight"
+								productgroup as "Group"
+								producthierarchy as "Hierarchy"
+								industrystandardname as "Industry Standard Name"
+								itemcategorygroup as "Item Category Group"
+								lastchangedatetime as "Last Change Time"
+								lastchangedbyuser as "Last Changed By User"
+								lowlevelcode as "Low Level Code"
+								materialvolume as "Material Volume"
+								maximumpackagingheight as "Maximum Packaging Height"
+								maximumpackaginglength as "Maximum Packaging Length"
+								maximumpackagingwidth as "Maximum Packaging Width"
+								netweight as "Net Weight"
+								productoldid as "Old ID"
+								procurementrule as "Procurement Rule"
+								productid as "Product ID"
+								purchaseorderquantityunitunit as "Purchase Order Quantity Unit"
+								serialidentifierassgmtprofile as "Serial Number Profile"
+								sizeordimensiontext as "Size Or Dimension Text"
+								sourceofsupply as "Source Of Supply"
+								productstandardid as "Standard ID"
+								producttype as "Type"
+								validitystartdate as "Validity Start Date"
+								varblpurordunitisactive as "Variable Purchase Order Unit Active"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "Dashboard"
+					icon = "ui-1-dashboard-half"
+					page DashBoard
+					{
+						icon = "ui-1-dashboard-half"
+					}
+				}
+				section Section_2
+				{
+					displayname = "Line Items"
+					icon = "shopping-cart-simple"
+					form  line_items
+					{
+						icon = "ui-1-bold-add"
+					}
+					report line_items_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section Section_3
+				{
+					displayname = "Purchase Orders"
+					icon = "shopping-list"
+					form  purchase_orders
+					{
+						icon = "ui-1-bold-add"
+					}
+					report purchase_orders_Report
+					{
+						icon = "shopping-list"
+					}
+					report purchase_orders_by_status
+					{
+						icon = "design-2-selection"
+					}
+				}
+				section Section_4
+				{
+					displayname = "Approval Histories"
+					icon = "shopping-cash-register"
+					form  approval_history
+					{
+						icon = "ui-1-bold-add"
+					}
+					report approval_history_Report
+					{
+						icon = "travel-world"
+					}
+					report approval_history_by_action_1
+					{
+						icon = "media-1-action-74"
+					}
+				}
+				section Section_5
+				{
+					displayname = "Order Notifications"
+					icon = "shopping-basket-edit"
+					form  order_notifications
+					{
+						icon = "ui-1-bold-add"
+					}
+					report order_notifications_Report
+					{
+						icon = "travel-world"
+					}
+					report order_notifications_by_status
+					{
+						icon = "design-2-selection"
+					}
+				}
+				section Section_6
+				{
+					displayname = "Business Partners"
+					icon = "business-tie-02"
+					form  business_partner
+					{
+						icon = "ui-1-bold-add"
+					}
+					report business_partner_Report
+					{
+						icon = "business-tie-02"
+					}
+				}
+				section Section_7
+				{
+					displayname = "Product Masters"
+					icon = "education-book-open"
+					form  product_master
+					{
+						icon = "ui-1-bold-add"
+					}
+					report product_master_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section ZC_App_Preferences
+				{
+					displayname = "App Preferences"
+					icon = "design-app"
+					systemcomponent
+					{
+						type = localization
+						displayname = "Language Selection"
+						icon = "education-language"
+					}
+					systemcomponent
+					{
+						type = connection
+						displayname = "Integrations"
+						icon = "tech-2-connection"
+					}
+				}
+				section ZC_Approvals
+				{
+					displayname = "Approvals"
+					icon = "ui-2-hourglass"
+					systemcomponent
+					{
+						type = approval
+						approval status = pending
+						displayname = "Pending Tasks"
+						icon = "ui-2-hourglass"
+					}
+					systemcomponent
+					{
+						type = approval
+						approval status = completed
+						displayname = "Completed Tasks"
+						icon = "design-todo"
+					}
+				}
+				section SharedAnalytics_Section
+				{
+					type = shared_user_report_section
+					displayname = "Reports"
+					icon = "business-chart-bar-33"
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 11
+			font = "poppins"
+			color options
+			{
+				color = "5"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+	phone
+	{
+		forms
+		{
+			form approval_history
+			{
+				label placement = auto
+			}
+			form business_partner
+			{
+				label placement = auto
+			}
+			form line_items
+			{
+				label placement = auto
+			}
+			form order_notifications
+			{
+				label placement = auto
+			}
+			form product_master
+			{
+				label placement = auto
+			}
+			form purchase_orders
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = turquoise
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	tablet
+	{
+		forms
+		{
+			form approval_history
+			{
+				label placement = auto
+			}
+			form business_partner
+			{
+				label placement = auto
+			}
+			form line_items
+			{
+				label placement = auto
+			}
+			form order_notifications
+			{
+				label placement = auto
+			}
+			form product_master
+			{
+				label placement = auto
+			}
+			form purchase_orders
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = turquoise
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	translation
+{
+{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}
+}
+}

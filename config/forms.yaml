@@ -1,0 +1,1091 @@
+# Generated from Zia stress test .ds exports
+# Source: Purchase Order, Expense Claim, Invoice, Incident apps
+
+forms:
+  approval_history:
+    displayname: "Approval History"
+    fields:
+      - name: purchase_order
+        displayname: "Add New"
+        type: SingleLine
+      - name: action_1
+        displayname: "Action"
+        type: Dropdown
+      - name: performed_by
+        displayname: "Performed By"
+        type: SingleLine
+      - name: action_date
+        displayname: "Action Date"
+        type: DateTime
+      - name: notes
+        displayname: "Notes"
+        type: MultiLine
+
+  approval_thresholds:
+    displayname: "Approval Thresholds"
+    fields:
+      - name: tier_name
+        displayname: "Tier Name"
+        type: SingleLine
+      - name: max_amount_zar
+        displayname: "Max Amount ZAR"
+        type: SingleLine
+      - name: active
+        displayname: "Active"
+        type: Checkbox
+      - name: created_time
+        displayname: "Created Time"
+        type: DateTime
+      - name: last_modified_time
+        displayname: "Last Modified Time"
+        type: DateTime
+
+  business_partner:
+    displayname: "Business Partner"
+    fields:
+      - name: academictitle
+        displayname: "Academic Title"
+        type: SingleLine
+      - name: additionallastname
+        displayname: "Additional Last Name"
+        type: SingleLine
+      - name: authorizationgroup
+        displayname: "Authorization Group"
+        type: SingleLine
+      - name: birthdate
+        displayname: "Birth Date"
+        type: Date
+      - name: businesspartnerbirthdatestatus
+        displayname: "Birth Date Status"
+        type: SingleLine
+      - name: businesspartnerbirthname
+        displayname: "Birth Name"
+        type: SingleLine
+      - name: businesspartnerbirthplacename
+        displayname: "Birth Place Name"
+        type: SingleLine
+      - name: businesspartnerid
+        displayname: "Business Partner ID"
+        type: SingleLine
+      - name: correspondencelanguage
+        displayname: "Correspondence Language"
+        type: SingleLine
+      - name: namecountry
+        displayname: "Country Name"
+        type: SingleLine
+      - name: createdbyuser
+        displayname: "Created By User"
+        type: SingleLine
+      - name: creationdate
+        displayname: "Creation Date"
+        type: Date
+      - name: creationtime
+        displayname: "Creation Time"
+        type: SingleLine
+      - name: customer
+        displayname: "Customer"
+        type: SingleLine
+      - name: businesspartnerdeathdate
+        displayname: "Death Date"
+        type: Date
+      - name: etag
+        displayname: "ETag"
+        type: SingleLine
+      - name: firstname
+        displayname: "First Name"
+        type: SingleLine
+      - name: formofaddress
+        displayname: "Form Of Address"
+        type: SingleLine
+      - name: businesspartnerfullname
+        displayname: "Full Name"
+        type: SingleLine
+      - name: businesspartnergrouping
+        displayname: "Grouping"
+        type: SingleLine
+      - name: businesspartneridbyextsystem
+        displayname: "ID By External System"
+        type: SingleLine
+      - name: independentaddressid
+        displayname: "Independent Address ID"
+        type: SingleLine
+      - name: industry
+        displayname: "Industry"
+        type: SingleLine
+      - name: initials
+        displayname: "Initials"
+        type: SingleLine
+      - name: internationallocationnumber1
+        displayname: "International Location Number 1"
+        type: SingleLine
+      - name: internationallocationnumber2
+        displayname: "International Location Number 2"
+        type: SingleLine
+      - name: internationallocationnumber3
+        displayname: "International Location Number 3"
+        type: SingleLine
+      - name: language
+        displayname: "Language"
+        type: SingleLine
+      - name: lastchangedate
+        displayname: "Last Change Date"
+        type: Date
+      - name: lastchangetime
+        displayname: "Last Change Time"
+        type: SingleLine
+      - name: lastchangedbyuser
+        displayname: "Last Changed By User"
+        type: SingleLine
+      - name: lastname
+        displayname: "Last Name"
+        type: SingleLine
+      - name: lastnameprefix
+        displayname: "Last Name Prefix"
+        type: SingleLine
+      - name: lastnamesecondprefix
+        displayname: "Last Name Second Prefix"
+        type: SingleLine
+      - name: legalform
+        displayname: "Legal Form"
+        type: SingleLine
+      - name: buspartmaritalstatus
+        displayname: "Marital Status"
+        type: SingleLine
+      - name: middlename
+        displayname: "Middle Name"
+        type: SingleLine
+      - name: businesspartnername
+        displayname: "Name"
+        type: SingleLine
+      - name: groupbusinesspartnername1
+        displayname: "Name 1"
+        type: SingleLine
+      - name: groupbusinesspartnername2
+        displayname: "Name 2"
+        type: SingleLine
+      - name: nameformat
+        displayname: "Name Format"
+        type: SingleLine
+      - name: buspartnationality
+        displayname: "Nationality"
+        type: SingleLine
+      - name: naturalpersonemployername
+        displayname: "Natural Person Employer Name"
+        type: SingleLine
+      - name: businesspartneroccupation
+        displayname: "Occupation"
+        type: SingleLine
+      - name: organizationfoundationdate
+        displayname: "Organization Foundation Date"
+        type: SingleLine
+      - name: organizationliquidationdate
+        displayname: "Organization Liquidation Date"
+        type: SingleLine
+      - name: organizationbpname1
+        displayname: "Organization Name 1"
+        type: SingleLine
+      - name: organizationbpname2
+        displayname: "Organization Name 2"
+        type: SingleLine
+      - name: organizationbpname3
+        displayname: "Organization Name 3"
+        type: SingleLine
+      - name: organizationbpname4
+        displayname: "Organization Name 4"
+        type: SingleLine
+      - name: personfullname
+        displayname: "Person Full Name"
+        type: SingleLine
+      - name: personnumber
+        displayname: "Person Number"
+        type: SingleLine
+      - name: businesspartnerprintformat
+        displayname: "Print Format"
+        type: SingleLine
+      - name: searchterm1
+        displayname: "Search Term 1"
+        type: SingleLine
+      - name: searchterm2
+        displayname: "Search Term 2"
+        type: SingleLine
+      - name: businesspartnersupplementname
+        displayname: "Supplement Name"
+        type: SingleLine
+      - name: supplier
+        displayname: "Supplier"
+        type: SingleLine
+      - name: tradingpartner
+        displayname: "Trading Partner"
+        type: SingleLine
+      - name: businesspartnertype
+        displayname: "Type"
+        type: SingleLine
+      - name: businesspartneruuid
+        displayname: "UUID"
+        type: SingleLine
+
+  error_logs:
+    displayname: "Error Logs"
+    fields:
+      - name: incident
+        displayname: "Add New"
+        type: SingleLine
+      - name: error_message
+        displayname: "Error Message"
+        type: MultiLine
+      - name: error_timestamp
+        displayname: "Error Timestamp"
+        type: DateTime
+      - name: error_code
+        displayname: "Error Code"
+        type: SingleLine
+      - name: retry_count
+        displayname: "Retry Count"
+        type: Number
+      - name: source_system
+        displayname: "Source System"
+        type: SingleLine
+
+  escalation_logs:
+    displayname: "Escalation Logs"
+    fields:
+      - name: invoice
+        displayname: "Add New"
+        type: Dropdown
+      - name: action_1
+        displayname: "Action"
+        type: SingleLine
+      - name: action_date
+        displayname: "Action Date"
+        type: DateTime
+      - name: user
+        displayname: "User"
+        type: SingleLine
+      - name: details
+        displayname: "Details"
+        type: MultiLine
+      - name: external_api_response
+        displayname: "External API Response"
+        type: MultiLine
+
+  expense_claims:
+    displayname: "Expense Claims"
+    fields:
+      - name: employee
+        displayname: "Add New"
+        type: Dropdown
+      - name: expense_date
+        displayname: "Expense Date"
+        type: Date
+      - name: total_amount
+        displayname: "Total Amount"
+        type: SingleLine
+      - name: status
+        displayname: "Status"
+        type: Dropdown
+      - name: priority
+        displayname: "Priority"
+        type: SingleLine
+      - name: project
+        displayname: "Add New"
+        type: Dropdown
+      - name: expense_type
+        displayname: "Expense Type"
+        type: SingleLine
+      - name: description
+        displayname: "Description"
+        type: MultiLine
+      - name: approval_threshold
+        displayname: "Add New"
+        type: SingleLine
+
+  finance_managers:
+    displayname: "Finance Managers"
+    fields:
+      - name: user_email
+        displayname: "User Email"
+        type: Email
+      - name: user_name
+        displayname: "User Name"
+        type: SingleLine
+      - name: role
+        displayname: "Role"
+        type: SingleLine
+      - name: assigned_to
+        displayname: "Add New"
+        type: Dropdown
+
+  incident_reports:
+    displayname: "Incident Reports"
+    fields:
+      - name: incident_id
+        displayname: "Incident ID"
+        type: SingleLine
+      - name: category
+        displayname: "Category"
+        type: Dropdown
+      - name: description
+        displayname: "Description"
+        type: MultiLine
+      - name: status
+        displayname: "Status"
+        type: Dropdown
+      - name: reported_by
+        displayname: "Reported By"
+        type: SingleLine
+      - name: reported_date
+        displayname: "Reported Date"
+        type: DateTime
+      - name: assigned_to
+        displayname: "Assigned To"
+        type: SingleLine
+      - name: location
+        displayname: "Location"
+        type: SingleLine
+      - name: priority
+        displayname: "Priority"
+        type: Dropdown
+      - name: source
+        displayname: "Add New"
+        type: Dropdown
+
+  invoices:
+    displayname: "Invoices"
+    fields:
+      - name: adjustment
+        displayname: "Adjustment"
+        type: SingleLine
+      - name: adjustment_description
+        displayname: "Adjustment Description"
+        type: SingleLine
+      - name: avatax_exemption_number
+        displayname: "Avatax Exemption Number"
+        type: SingleLine
+      - name: avatax_tax_code
+        displayname: "Avatax Tax Code"
+        type: SingleLine
+      - name: avatax_use_code
+        displayname: "Avatax Use Code"
+        type: SingleLine
+      - name: balance
+        displayname: "Balance"
+        type: Decimal
+      - name: cfdi_reference_type
+        displayname: "CFDI Reference Type"
+        type: SingleLine
+      - name: cfdi_usage
+        displayname: "CFDI Usage"
+        type: SingleLine
+      - name: client_viewed_time
+        displayname: "Client Viewed Time"
+        type: SingleLine
+      - name: created_time
+        displayname: "Created Time"
+        type: DateTime
+      - name: credits_applied
+        displayname: "Credits Applied"
+        type: Decimal
+      - name: custom_body
+        displayname: "Custom Body"
+        type: SingleLine
+      - name: custom_subject
+        displayname: "Custom Subject"
+        type: MultiLine
+      - name: customer_notes
+        displayname: "Customer Notes"
+        type: MultiLine
+      - name: discount
+        displayname: "Discount"
+        type: Decimal
+      - name: due_date
+        displayname: "Due Date"
+        type: Date
+      - name: exchange_rate
+        displayname: "Exchange Rate"
+        type: Decimal
+      - name: gst_number
+        displayname: "GST Number"
+        type: SingleLine
+      - name: invoice_date
+        displayname: "Invoice Date"
+        type: Date
+      - name: invoice_description
+        displayname: "Invoice Description"
+        type: MultiLine
+      - name: invoice_number
+        displayname: "Invoice Number"
+        type: SingleLine
+      - name: last_modified_time
+        displayname: "Last Modified Time"
+        type: DateTime
+      - name: last_payment_date
+        displayname: "Last Payment Date"
+        type: Date
+      - name: last_reminder_sent_date
+        displayname: "Last Reminder Sent Date"
+        type: Date
+      - name: order_number
+        displayname: "Order Number"
+        type: SingleLine
+      - name: payment_expected_date
+        displayname: "Payment Expected Date"
+        type: Date
+      - name: payment_made
+        displayname: "Payment Made"
+        type: Decimal
+      - name: price_precision
+        displayname: "Price Precision"
+        type: Number
+      - name: reason
+        displayname: "Reason"
+        type: SingleLine
+      - name: reminders_sent
+        displayname: "Reminders Sent"
+        type: Number
+      - name: shipping_charge
+        displayname: "Shipping Charge"
+        type: SingleLine
+      - name: subject_field
+        displayname: "Subject"
+        type: SingleLine
+      - name: subtotal
+        displayname: "Subtotal"
+        type: Decimal
+      - name: tax_amount_withheld
+        displayname: "Tax Amount Withheld"
+        type: Decimal
+      - name: tax_total
+        displayname: "Tax Total"
+        type: Decimal
+      - name: terms_and_conditions
+        displayname: "Terms and Conditions"
+        type: MultiLine
+      - name: total_amount
+        displayname: "Total Amount"
+        type: Decimal
+      - name: vat_registration_number
+        displayname: "VAT Registration Number"
+        type: SingleLine
+      - name: vat_treatment
+        displayname: "VAT Treatment"
+        type: SingleLine
+      - name: write_off_amount
+        displayname: "Write Off Amount"
+        type: Decimal
+
+  line_items:
+    displayname: "Line Items"
+    fields:
+      - name: purchase_order
+        displayname: "Add New"
+        type: SingleLine
+      - name: product
+        displayname: "Add New"
+        type: Dropdown
+      - name: quantity
+        displayname: "Quantity"
+        type: Number
+      - name: unit_price
+        displayname: "Unit Price"
+        type: SingleLine
+      - name: line_total
+        displayname: "Line Total"
+        type: SingleLine
+      - name: description
+        displayname: "Description"
+        type: SingleLine
+
+  notification_queue:
+    displayname: "Notification Queue"
+    fields:
+      - name: invoice
+        displayname: "Add New"
+        type: Dropdown
+      - name: notification_type
+        displayname: "Notification Type"
+        type: SingleLine
+      - name: url
+        displayname: "URL"
+        type: URL
+      - name: method
+        displayname: "Method"
+        type: SingleLine
+      - name: payload
+        displayname: "Payload"
+        type: MultiLine
+      - name: status
+        displayname: "Status"
+        type: Dropdown
+      - name: attempt_count
+        displayname: "Attempt Count"
+        type: Number
+      - name: last_attempt
+        displayname: "Last Attempt"
+        type: DateTime
+
+  order_notifications:
+    displayname: "Order Notifications"
+    fields:
+      - name: purchase_order
+        displayname: "Add New"
+        type: SingleLine
+      - name: sent_to
+        displayname: "Sent To"
+        type: Email
+      - name: sent_at
+        displayname: "Sent At"
+        type: DateTime
+      - name: subject_1
+        displayname: "Subject"
+        type: SingleLine
+      - name: body
+        displayname: "Body"
+        type: MultiLine
+      - name: status
+        displayname: "Status"
+        type: Dropdown
+
+  orders:
+    displayname: "Orders"
+    fields:
+      - name: credit_card_expiry
+        displayname: "Credit Card Expiry"
+        type: SingleLine
+      - name: credit_card_umber
+        displayname: "Credit Card umber"
+        type: SingleLine
+      - name: customer_address
+        displayname: "Customer Address"
+        type: SingleLine
+      - name: customer_city
+        displayname: "Customer City"
+        type: SingleLine
+      - name: customer_company
+        displayname: "Customer Company"
+        type: SingleLine
+      - name: customer_country
+        displayname: "Customer Country"
+        type: SingleLine
+      - name: customer_first_name
+        displayname: "Customer First Name"
+        type: SingleLine
+      - name: customer_last_name
+        displayname: "Customer Last Name"
+        type: SingleLine
+      - name: customer_phone
+        displayname: "Customer Phone"
+        type: SingleLine
+      - name: customer_postal_code
+        displayname: "Customer Postal Code"
+        type: SingleLine
+      - name: customer_state
+        displayname: "Customer State"
+        type: SingleLine
+      - name: date_added
+        displayname: "Date Added"
+        type: SingleLine
+      - name: date_updated
+        displayname: "Date Updated"
+        type: SingleLine
+      - name: discount_total
+        displayname: "Discount Total"
+        type: SingleLine
+      - name: email
+        displayname: "Email"
+        type: Email
+      - name: folder_id
+        displayname: "Folder ID"
+        type: Number
+      - name: fulfillment_id
+        displayname: "Fulfillment Id"
+        type: SingleLine
+      - name: fulfillment_name
+        displayname: "Fulfillment Name"
+        type: SingleLine
+      - name: handling_total
+        displayname: "Handling Total"
+        type: Decimal
+      - name: order_total
+        displayname: "Order Total"
+        type: SingleLine
+      - name: payment_status
+        displayname: "Payment Status"
+        type: SingleLine
+      - name: payment_type
+        displayname: "Payment Type"
+        type: SingleLine
+      - name: processor_balance
+        displayname: "Processor Balance"
+        type: Decimal
+      - name: processor_response
+        displayname: "Processor Response"
+        type: Decimal
+      - name: product_total
+        displayname: "Product Total"
+        type: Number
+      - name: quantity_total
+        displayname: "Quantity Total"
+        type: Number
+      - name: refund_total
+        displayname: "Refund Total"
+        type: Decimal
+      - name: shipping_address
+        displayname: "Shipping Address"
+        type: SingleLine
+      - name: shipping_city
+        displayname: "Shipping City"
+        type: SingleLine
+      - name: shipping_company
+        displayname: "Shipping Company"
+        type: SingleLine
+      - name: shipping_country
+        displayname: "Shipping Country"
+        type: SingleLine
+      - name: shipping_first_name
+        displayname: "Shipping First Name"
+        type: SingleLine
+      - name: shipping_last_name
+        displayname: "Shipping Last Name"
+        type: SingleLine
+      - name: shipping_method
+        displayname: "Shipping Method"
+        type: SingleLine
+      - name: shipping_phone
+        displayname: "Shipping Phone"
+        type: SingleLine
+      - name: shipping_postal_code
+        displayname: "Shipping Postal Code"
+        type: SingleLine
+      - name: shipping_state
+        displayname: "Shipping State"
+        type: SingleLine
+      - name: shipping_total
+        displayname: "Shipping Total"
+        type: Decimal
+      - name: source_id
+        displayname: "Source ID"
+        type: SingleLine
+      - name: source_name
+        displayname: "Source Name"
+        type: SingleLine
+      - name: tax_total
+        displayname: "Tax Total"
+        type: Decimal
+      - name: weight_total
+        displayname: "Weight Total"
+        type: Number
+
+  overdue_invoices:
+    displayname: "Overdue Invoices"
+    fields:
+      - name: invoice_id
+        displayname: "Add New"
+        type: Dropdown
+      - name: customer
+        displayname: "Add New"
+        type: Dropdown
+      - name: due_date
+        displayname: "Due Date"
+        type: Date
+      - name: days_overdue
+        displayname: "Days Overdue"
+        type: Number
+      - name: status
+        displayname: "Status"
+        type: SingleLine
+      - name: escalation_date
+        displayname: "Escalation Date"
+        type: Date
+      - name: last_notification_sent
+        displayname: "Last Notification Sent"
+        type: DateTime
+      - name: notification_attempts
+        displayname: "Notification Attempts"
+        type: Number
+      - name: triggered_by
+        displayname: "Triggered By"
+        type: SingleLine
+
+  payments_received:
+    displayname: "Payments Received"
+    fields:
+      - name: amount_applied
+        displayname: "Amount Applied"
+        type: Decimal
+      - name: amount_received
+        displayname: "Amount Received"
+        type: Decimal
+      - name: amount_refunded
+        displayname: "Amount Refunded"
+        type: Decimal
+      - name: bank_charges
+        displayname: "Bank Charges"
+        type: Decimal
+      - name: exchange_rate
+        displayname: "Exchange Rate"
+        type: Decimal
+      - name: notes
+        displayname: "Notes"
+        type: MultiLine
+      - name: payment_date
+        displayname: "Payment Date"
+        type: Date
+      - name: payment_form
+        displayname: "Payment Form"
+        type: SingleLine
+      - name: payment_number
+        displayname: "Payment Number"
+        type: SingleLine
+      - name: reference_number
+        displayname: "Reference Number"
+        type: SingleLine
+      - name: tax_amount_withheld
+        displayname: "Tax Amount Withheld"
+        type: Decimal
+
+  product_master:
+    displayname: "Product Master"
+    fields:
+      - name: anpcode
+        displayname: "ANP Code"
+        type: SingleLine
+      - name: baseunit
+        displayname: "Base Unit"
+        type: SingleLine
+      - name: brand
+        displayname: "Brand"
+        type: SingleLine
+      - name: competitorid
+        displayname: "Competitor ID"
+        type: SingleLine
+      - name: countryoforigin
+        displayname: "Country Of Origin"
+        type: SingleLine
+      - name: createdbyuser
+        displayname: "Created By User"
+        type: SingleLine
+      - name: creationdate
+        displayname: "Creation Date"
+        type: Date
+      - name: crossplantstatus
+        displayname: "Cross Plant Status"
+        type: SingleLine
+      - name: crossplantstatusvaliditydate
+        displayname: "Cross Plant Status Validity Date"
+        type: Date
+      - name: division
+        displayname: "Division"
+        type: SingleLine
+      - name: prodnoingenprodinprepackprod
+        displayname: "Generic Product Number in Prepack Material"
+        type: SingleLine
+      - name: grossweight
+        displayname: "Gross Weight"
+        type: Decimal
+      - name: productgroup
+        displayname: "Group"
+        type: SingleLine
+      - name: producthierarchy
+        displayname: "Hierarchy"
+        type: SingleLine
+      - name: industrystandardname
+        displayname: "Industry Standard Name"
+        type: SingleLine
+      - name: itemcategorygroup
+        displayname: "Item Category Group"
+        type: SingleLine
+      - name: lastchangedatetime
+        displayname: "Last Change Time"
+        type: DateTime
+      - name: lastchangedbyuser
+        displayname: "Last Changed By User"
+        type: SingleLine
+      - name: lowlevelcode
+        displayname: "Low Level Code"
+        type: SingleLine
+      - name: materialvolume
+        displayname: "Material Volume"
+        type: Decimal
+      - name: maximumpackagingheight
+        displayname: "Maximum Packaging Height"
+        type: Decimal
+      - name: maximumpackaginglength
+        displayname: "Maximum Packaging Length"
+        type: Decimal
+      - name: maximumpackagingwidth
+        displayname: "Maximum Packaging Width"
+        type: Decimal
+      - name: netweight
+        displayname: "Net Weight"
+        type: Decimal
+      - name: productoldid
+        displayname: "Old ID"
+        type: SingleLine
+      - name: procurementrule
+        displayname: "Procurement Rule"
+        type: SingleLine
+      - name: productid
+        displayname: "Product ID"
+        type: SingleLine
+      - name: purchaseorderquantityunitunit
+        displayname: "Purchase Order Quantity Unit"
+        type: SingleLine
+      - name: serialidentifierassgmtprofile
+        displayname: "Serial Number Profile"
+        type: SingleLine
+      - name: sizeordimensiontext
+        displayname: "Size Or Dimension Text"
+        type: SingleLine
+      - name: sourceofsupply
+        displayname: "Source Of Supply"
+        type: SingleLine
+      - name: productstandardid
+        displayname: "Standard ID"
+        type: SingleLine
+      - name: producttype
+        displayname: "Type"
+        type: SingleLine
+      - name: validitystartdate
+        displayname: "Validity Start Date"
+        type: Date
+      - name: varblpurordunitisactive
+        displayname: "Variable Purchase Order Unit Active"
+        type: SingleLine
+
+  projects:
+    displayname: "Projects"
+    fields:
+      - name: billing_type
+        displayname: "Billing Type"
+        type: SingleLine
+      - name: created_time
+        displayname: "Created Time"
+        type: DateTime
+      - name: currency_code
+        displayname: "Currency Code"
+        type: SingleLine
+      - name: description
+        displayname: "Description"
+        type: MultiLine
+      - name: project_code
+        displayname: "Project Code"
+        type: SingleLine
+      - name: project_name
+        displayname: "Project Name"
+        type: SingleLine
+
+  purchase_orders:
+    displayname: "Purchase Orders"
+    fields:
+      - name: order_id
+        displayname: "Order ID"
+        type: SingleLine
+      - name: vendor
+        displayname: "Add New"
+        type: Dropdown
+      - name: total_amount
+        displayname: "Total Amount"
+        type: SingleLine
+      - name: order_date
+        displayname: "Order Date"
+        type: Date
+      - name: status
+        displayname: "Status"
+        type: Dropdown
+      - name: submitted_by
+        displayname: "Submitted By"
+        type: SingleLine
+      - name: approval_status
+        displayname: "Approval Status"
+        type: Dropdown
+      - name: created_at
+        displayname: "Created At"
+        type: DateTime
+
+  sync_attempts:
+    displayname: "Sync Attempts"
+    fields:
+      - name: incident
+        displayname: "Add New"
+        type: SingleLine
+      - name: request_payload
+        displayname: "Request Payload"
+        type: MultiLine
+      - name: response_status
+        displayname: "Response Status"
+        type: SingleLine
+      - name: response_body
+        displayname: "Response Body"
+        type: MultiLine
+      - name: sync_timestamp
+        displayname: "Sync Timestamp"
+        type: DateTime
+      - name: success
+        displayname: "Success"
+        type: Checkbox
+
+  users:
+    displayname: "Users"
+    fields:
+      - name: approval_amount_limit
+        displayname: "Approval Amount Limit"
+        type: Decimal
+      - name: approves_to_email
+        displayname: "Approves To Email"
+        type: SingleLine
+      - name: bank_account_type
+        displayname: "Bank Account Type"
+        type: SingleLine
+      - name: bank_name
+        displayname: "Bank Name"
+        type: SingleLine
+      - name: created_time
+        displayname: "Created Time"
+        type: Date
+      - name: date_of_birth
+        displayname: "Date of Birth"
+        type: Date
+      - name: date_of_joining
+        displayname: "Date of Joining"
+        type: Date
+      - name: default_approver_email
+        displayname: "Default Approver Email"
+        type: SingleLine
+      - name: designation_name
+        displayname: "Designation Name"
+        type: SingleLine
+      - name: email_address
+        displayname: "Email Address"
+        type: Email
+      - name: employee_number
+        displayname: "Employee Number"
+        type: SingleLine
+      - name: first_name1
+        displayname: "First Name"
+        type: SingleLine
+      - name: last_modified_time
+        displayname: "Last Modified Time"
+        type: Date
+      - name: last_name1
+        displayname: "Last Name"
+        type: SingleLine
+      - name: mobile
+        displayname: "Mobile"
+        type: SingleLine
+      - name: name
+        displayname: "Name"
+        type: SingleLine
+      - name: policy_name
+        displayname: "Policy Name"
+        type: SingleLine
+      - name: submission_amount_limit
+        displayname: "Submission Amount Limit"
+        type: Decimal
+      - name: user_mail_in_id
+        displayname: "User Mail in Id"
+        type: SingleLine
+      - name: user_type
+        displayname: "User Type"
+        type: SingleLine
+
+reports:
+  approval_history_Report:
+    type: list
+    form: approval_history
+    columns: "purchase_order, action_1, performed_by, action_date, notes"
+
+  approval_thresholds_Report:
+    type: list
+    form: approval_thresholds
+    columns: "tier_name, max_amount_zar, active, created_time, last_modified_time"
+
+  business_partner_Report:
+    type: list
+    form: business_partner
+    columns: "academictitle, additionallastname, authorizationgroup, birthdate, businesspartnerbirthdatestatus"
+
+  error_logs_Report:
+    type: list
+    form: error_logs
+    columns: "incident, error_message, error_timestamp, error_code, retry_count"
+
+  escalation_logs_Report:
+    type: list
+    form: escalation_logs
+    columns: "invoice, action_1, action_date, user, details"
+
+  expense_claims_Report:
+    type: list
+    form: expense_claims
+    columns: "employee, expense_date, total_amount, status, priority"
+
+  finance_managers_Report:
+    type: list
+    form: finance_managers
+    columns: "user_email, user_name, role, assigned_to"
+
+  incident_reports_Report:
+    type: list
+    form: incident_reports
+    columns: "incident_id, category, description, status, reported_by"
+
+  invoices_Report:
+    type: list
+    form: invoices
+    columns: "adjustment, adjustment_description, avatax_exemption_number, avatax_tax_code, avatax_use_code"
+
+  line_items_Report:
+    type: list
+    form: line_items
+    columns: "purchase_order, product, quantity, unit_price, line_total"
+
+  notification_queue_Report:
+    type: list
+    form: notification_queue
+    columns: "invoice, notification_type, url, method, payload"
+
+  order_notifications_Report:
+    type: list
+    form: order_notifications
+    columns: "purchase_order, sent_to, sent_at, subject_1, body"
+
+  orders_Report:
+    type: list
+    form: orders
+    columns: "credit_card_expiry, credit_card_umber, customer_address, customer_city, customer_company"
+
+  overdue_invoices_Report:
+    type: list
+    form: overdue_invoices
+    columns: "invoice_id, customer, due_date, days_overdue, status"
+
+  payments_received_Report:
+    type: list
+    form: payments_received
+    columns: "amount_applied, amount_received, amount_refunded, bank_charges, exchange_rate"
+
+  product_master_Report:
+    type: list
+    form: product_master
+    columns: "anpcode, baseunit, brand, competitorid, countryoforigin"
+
+  projects_Report:
+    type: list
+    form: projects
+    columns: "billing_type, created_time, currency_code, description, project_code"
+
+  purchase_orders_Report:
+    type: list
+    form: purchase_orders
+    columns: "order_id, vendor, total_amount, order_date, status"
+
+  sync_attempts_Report:
+    type: list
+    form: sync_attempts
+    columns: "incident, request_payload, response_status, response_body, sync_timestamp"
+
+  users_Report:
+    type: list
+    form: users
+    columns: "approval_amount_limit, approves_to_email, bank_account_type, bank_name, created_time"
+

@@ -1,0 +1,22 @@
+// ============================================================
+// Script:   clients_validate.dg
+// Location: Clients > Form Workflow
+// Trigger:  On Validate
+// Purpose:  Validate client reference records
+// Version:  v2.1 (KB-Informed Fix for R=7.5 gap)
+// ============================================================
+
+// 1. Client name is required
+if(input.Client_Name == null || input.Client_Name == "")
+{
+    alert "Client name is required.";
+    cancel submit;
+}
+
+// 2. Duplicate client detection
+duplicates = clients[Client_Name == input.Client_Name && ID != input.ID];
+if(duplicates != null && duplicates.count() > 0)
+{
+    alert "A client with this name already exists.";
+    cancel submit;
+}

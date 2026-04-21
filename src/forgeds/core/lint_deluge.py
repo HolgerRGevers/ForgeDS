@@ -147,8 +147,12 @@ class DelugeDB:
                 self.form_fields[form] = set()
             self.form_fields[form].add(row["field_link"])
 
-        # Expense_claims fields (used for input.X validation)
-        self.expense_fields: set[str] = self.form_fields.get("expense_claims", set())
+        # All fields across all forms (used for input.X validation)
+        self.all_input_fields: set[str] = set()
+        for fields in self.form_fields.values():
+            self.all_input_fields.update(fields)
+        # Legacy alias — kept for backward compatibility
+        self.expense_fields: set[str] = self.all_input_fields
 
         # Approval_history fields (used for insert validation)
         self.approval_history_fields: set[str] = self.form_fields.get(
@@ -428,6 +432,12 @@ def check_dg011(
 def check_dg013(filename: str, line: str, lineno: int) -> list[Diagnostic]:
     """DG013: Mixed && and || without parentheses."""
     if "&&" in line and "||" in line:
+        # Skip if groups are explicitly parenthesized: (A && B) || C or A || (B && C)
+        stripped = strip_comments(line).strip()
+        if re.search(r"\([^)]*&&[^)]*\)\s*\|\|", stripped):
+            return []
+        if re.search(r"\|\|\s*\([^)]*&&[^)]*\)", stripped):
+            return []
         return [_diag(
             filename, lineno, Severity.WARNING, "DG013",
             "Mixed && and || on same line. Creator evaluates OR before AND "
@@ -650,7 +660,11 @@ def check_dg012(db: DelugeDB, filename: str, block: Block) -> list[Diagnostic]:
     if block.block_type != "insert" or block.target_table != "approval_history":
         return []
     if "action_1" in block.fields:
-        val = block.fields["action_1"].value.strip().strip('"')
+        raw = block.fields["action_1"].value.strip()
+        # Skip dynamic (concatenated) action_1 values — can't validate at lint time
+        if "+" in raw:
+            return []
+        val = raw.strip('"')
         if val not in db.valid_actions:
             return [_diag(
                 filename, block.fields["action_1"].line, Severity.WARNING, "DG012",
@@ -754,8 +768,8 @@ def check_dg005(filename: str, lines: list[str]) -> list[Diagnostic]:
             if table_name not in ("insert", "into", "if", "for", "while"):
                 query_vars[var_name] = lineno
 
-        # Detect null guard: if (var != null
-        guard_match = re.search(r"if\s*\(\s*(\w+)\s*!=\s*null", line)
+        # Detect null guard: if (var != null  OR  if (var == null (early-exit pattern)
+        guard_match = re.search(r"if\s*\(\s*(\w+)\s*[!=]=\s*null", line)
         if guard_match:
             var_name = guard_match.group(1)
             if var_name in query_vars:
@@ -852,6 +866,138 @@ def _fix_single_quotes(line: str) -> str:
     return re.sub(r"'([^']*)'", _replacer, line)
 
 
+# ============================================================
+# KB-backed rules (DG025–DG027) — enabled with --kb flag
+# ============================================================
+
+def check_dg025(filename: str, lines: list[str], kb_sigs: dict[str, dict]) -> list[Diagnostic]:
+    """DG025: Function call arity does not match KB-documented signature.
+
+    Checks function calls against the knowledge base's documented
+    parameter counts.  Only fires when --kb is passed.
+    """
+    diags: list[Diagnostic] = []
+    call_re = re.compile(r"(?:^|[=\s.])(\w+)\s*\(([^)]*)\)")
+    skip = {"if", "else", "for", "while", "info", "alert", "return",
+            "insert", "sendmail", "invokeurl", "openurl", "each"}
+
+    for i, raw_line in enumerate(lines):
+        lineno = i + 1
+        if is_comment_line(raw_line):
+            continue
+        line = strip_comments(raw_line)
+        for m in call_re.finditer(line):
+            func = m.group(1).lower()
+            if func in skip:
+                continue
+            if func not in kb_sigs:
+                continue
+            args_str = m.group(2).strip()
+            # Count args, respecting nested parens
+            if not args_str:
+                actual = 0
+            else:
+                depth = 0
+                count = 1
+                for ch in args_str:
+                    if ch in "([":
+                        depth += 1
+                    elif ch in ")]":
+                        depth -= 1
+                    elif ch == "," and depth == 0:
+                        count += 1
+                actual = count
+
+            expected = kb_sigs[func]["count"]
+            # Allow optional params (expected >= actual is fine)
+            if actual > expected:
+                diags.append(_diag(
+                    filename, lineno, Severity.WARNING, "DG025",
+                    f"'{m.group(1)}' called with {actual} arg(s) but KB "
+                    f"documents at most {expected}.",
+                ))
+    return diags
+
+
+def check_dg026(filename: str, lines: list[str], blocks: list[Block], kb_patterns: list[str]) -> list[Diagnostic]:
+    """DG026: Pattern usage does not match KB best practices.
+
+    Checks that sendmail blocks use zoho.adminuserid as sender and that
+    insert-into blocks include audit-trail fields when inserting into
+    history tables.  Only fires when --kb is passed.
+    """
+    diags: list[Diagnostic] = []
+    full_text = "\n".join(lines).lower()
+
+    for block in blocks:
+        # sendmail: KB says "from: zoho.adminuserid"
+        if block.block_type == "sendmail":
+            from_field = block.fields.get("from")
+            if from_field and "zoho.adminuserid" not in from_field.value.lower():
+                diags.append(_diag(
+                    filename, block.start_line, Severity.WARNING, "DG026",
+                    "sendmail 'from' should use zoho.adminuserid per KB pattern.",
+                ))
+
+        # insert into history/audit: KB says include actor + timestamp
+        if block.block_type == "insert" and block.target_table:
+            target = block.target_table.lower()
+            if any(kw in target for kw in ("history", "audit", "log")):
+                field_names = {k.lower() for k in block.fields.keys()}
+                if "actor" not in field_names and "added_user" not in field_names:
+                    diags.append(_diag(
+                        filename, block.start_line, Severity.WARNING, "DG026",
+                        f"Insert into '{block.target_table}' missing 'actor' or "
+                        f"'Added_User' field per KB audit-trail pattern.",
+                    ))
+                if "timestamp" not in field_names:
+                    diags.append(_diag(
+                        filename, block.start_line, Severity.INFO, "DG026",
+                        f"Insert into '{block.target_table}' missing 'timestamp' "
+                        f"field per KB audit-trail pattern.",
+                    ))
+
+    return diags
+
+
+def check_dg027(filename: str, lines: list[str], blocks: list[Block]) -> list[Diagnostic]:
+    """DG027: invokeUrl usage does not follow KB API patterns.
+
+    KB documents that invokeUrl should: set Content-Type header, handle
+    response codes, and use connections for authenticated calls.
+    Only fires when --kb is passed.
+    """
+    diags: list[Diagnostic] = []
+
+    for block in blocks:
+        if block.block_type != "invokeUrl":
+            continue
+
+        raw = "\n".join(block.raw_lines).lower() if block.raw_lines else ""
+        field_vals = {k.lower(): v.value.lower() for k, v in block.fields.items()}
+
+        # Check for Content-Type header
+        has_content_type = "content-type" in raw or "content_type" in raw
+        if not has_content_type:
+            diags.append(_diag(
+                filename, block.start_line, Severity.INFO, "DG027",
+                "invokeUrl missing Content-Type header per KB API pattern.",
+            ))
+
+        # Check for response code handling after the block
+        block_end = block.end_line
+        post_block = "\n".join(lines[block_end:min(block_end + 10, len(lines))]).lower()
+        has_response_check = "responsecode" in post_block or "get(\"responseCode\")" in post_block
+        if not has_response_check:
+            diags.append(_diag(
+                filename, block.end_line, Severity.WARNING, "DG027",
+                "invokeUrl result not checked for responseCode per KB pattern. "
+                "API failures may go undetected.",
+            ))
+
+    return diags
+
+
 def apply_fixes(db: DelugeDB, files: list[str]) -> int:
     """Apply auto-fixes to all files. Returns total fix count."""
     total = 0
@@ -869,8 +1015,14 @@ def apply_fixes(db: DelugeDB, files: list[str]) -> int:
 # Main pipeline
 # ============================================================
 
-def lint_file(db: DelugeDB, filepath: str) -> list[Diagnostic]:
-    """Run all lint passes on a single .dg file."""
+def lint_file(db: DelugeDB, filepath: str, *, kb=None) -> list[Diagnostic]:
+    """Run all lint passes on a single .dg file.
+
+    Parameters
+    ----------
+    kb : KBAccessor | None
+        If provided, KB-backed rules (DG025-DG027) are also executed.
+    """
     try:
         with open(filepath, encoding="utf-8") as f:
             raw_lines = f.readlines()
@@ -885,6 +1037,14 @@ def lint_file(db: DelugeDB, filepath: str) -> list[Diagnostic]:
     diags.extend(run_block_rules(db, filepath, blocks, lines))
     diags.extend(check_dg005(filepath, lines))
     diags.extend(check_dg020(filepath, lines, file_type))
+
+    # KB-backed rules (only when --kb is passed)
+    if kb is not None:
+        kb_sigs = kb.get_function_signatures()
+        kb_patterns = kb.get_patterns("sendmail") + kb.get_patterns("audit trail")
+        diags.extend(check_dg025(filepath, lines, kb_sigs))
+        diags.extend(check_dg026(filepath, lines, blocks, kb_patterns))
+        diags.extend(check_dg027(filepath, lines, blocks))
 
     return diags
 
@@ -927,6 +1087,10 @@ def main() -> None:
         "--fix", action="store_true",
         help=f"Auto-fix fixable rules ({', '.join(sorted(FIXABLE_RULES))}), then re-lint",
     )
+    parser.add_argument(
+        "--kb", action="store_true",
+        help="Enable KB-backed lint rules (DG025-DG027). Requires knowledge.db.",
+    )
     args = parser.parse_args()
 
     files = resolve_files(args.paths)
@@ -935,6 +1099,18 @@ def main() -> None:
         sys.exit(0)
 
     db = DelugeDB(DB_PATH)
+
+    # KB accessor (lazy — only loaded when --kb is passed)
+    kb = None
+    if args.kb:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if not kb.available():
+            print("WARNING: knowledge.db not found. KB rules disabled.", file=sys.stderr)
+            kb = None
+        else:
+            sigs = kb.get_function_signatures()
+            print(f"KB loaded: {len(sigs)} function signatures.", file=sys.stderr)
 
     # Auto-fix pass
     if args.fix:
@@ -948,7 +1124,7 @@ def main() -> None:
     all_diags: list[Diagnostic] = []
     try:
         for filepath in files:
-            all_diags.extend(lint_file(db, filepath))
+            all_diags.extend(lint_file(db, filepath, kb=kb))
     finally:
         db.close()
 

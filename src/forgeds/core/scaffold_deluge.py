@@ -276,6 +276,50 @@ def generate_custom_api_boilerplate(name: str) -> str:
 # Scaffold assembly
 # ============================================================
 
+def _kb_snippets_for_context(kb, context: str, includes: list[str]) -> list[str]:
+    """Query KB for code patterns matching the scaffold context.
+
+    Returns a list of comment-annotated code blocks suitable for
+    insertion into a scaffolded .dg file.
+    """
+    snippets: list[str] = []
+    queries: list[str] = []
+
+    if context == "form-workflow":
+        queries.append("on_validate cancel submit")
+        queries.append("form workflow validation pattern")
+    elif context == "approval-script":
+        queries.append("approval workflow before transition")
+        queries.append("self-approval prevention segregation")
+    elif context == "scheduled":
+        queries.append("scheduled task cron pattern")
+    elif context == "custom-api":
+        queries.append("custom API response map")
+
+    # Include-specific queries
+    if "audit-trail" in includes:
+        queries.append("insert into approval_history audit trail")
+    if "sendmail" in includes:
+        queries.append("sendmail zoho.adminuserid notification")
+    if "threshold-check" in includes:
+        queries.append("approval threshold lookup fallback")
+
+    for q in queries:
+        patterns = kb.get_patterns(q)
+        if patterns:
+            # Take the first (most relevant) pattern
+            code = patterns[0].strip()
+            # Wrap as a KB-sourced comment block
+            lines = code.split("\n")
+            block = ["// --- KB Pattern: " + q + " ---"]
+            for line in lines[:30]:  # Cap at 30 lines per snippet
+                block.append("// " + line if not line.startswith("//") else line)
+            block.append("// --- End KB Pattern ---")
+            snippets.append("\n".join(block))
+
+    return snippets
+
+
 def scaffold_script(
     name: str,
     location: str,
@@ -283,6 +327,8 @@ def scaffold_script(
     purpose: str,
     context: str,
     includes: list[str],
+    *,
+    kb_snippets: list[str] | None = None,
 ) -> str:
     """Assemble a complete .dg scaffold from components."""
     parts: list[str] = []
@@ -318,6 +364,15 @@ def scaffold_script(
     if "gl-lookup" in includes:
         parts.append(generate_gl_lookup())
         parts.append("")
+
+    # KB-sourced pattern snippets (when --kb-patterns is passed)
+    if kb_snippets:
+        parts.append("// ============================================================")
+        parts.append("// KB-sourced patterns (reference — adapt to your form/fields)")
+        parts.append("// ============================================================")
+        for snippet in kb_snippets:
+            parts.append(snippet)
+            parts.append("")
 
     parts.append("// TODO: Add business logic here")
     parts.append("")
@@ -365,6 +420,8 @@ def main() -> None:
                         help="Script context type")
     parser.add_argument("--include", default="",
                         help="Comma-separated boilerplate: audit-trail,sendmail,self-approval,gl-lookup,threshold-check")
+    parser.add_argument("--kb-patterns", action="store_true",
+                        help="Pull code patterns from the knowledge base into the scaffold.")
     args = parser.parse_args()
 
     # Load manifest
@@ -413,8 +470,19 @@ def main() -> None:
         context = args.context
         includes = [i.strip() for i in args.include.split(",") if i.strip()]
 
+    # KB patterns (optional)
+    kb_snips = None
+    if args.kb_patterns:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if kb.available():
+            kb_snips = _kb_snippets_for_context(kb, context, includes)
+            print(f"KB: injecting {len(kb_snips)} pattern(s) into scaffold.", file=sys.stderr)
+        else:
+            print("WARNING: knowledge.db not found. KB patterns disabled.", file=sys.stderr)
+
     # Generate
-    output = scaffold_script(name, location, trigger, purpose, context, includes)
+    output = scaffold_script(name, location, trigger, purpose, context, includes, kb_snippets=kb_snips)
 
     if args.output:
         out_path = Path(args.output)

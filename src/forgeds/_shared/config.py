@@ -12,121 +12,141 @@ from pathlib import Path
 def _load_yaml_simple(path: str) -> dict:
     """Minimal YAML loader — handles the subset used by forgeds.yaml.
 
-    Supports: scalars, lists (- item), nested dicts (key: value),
-    inline lists [a, b], quoted strings. Does NOT support anchors,
-    tags, or multi-line scalars.
+    Supports: scalars, lists (``- item``), nested dicts via indentation,
+    multi-key list items (``- key: val\\n  key2: val2``), inline lists
+    ``[a, b]``, and quoted strings. Does NOT support anchors, tags, or
+    multi-line scalars.
     """
-    result = {}
-    stack = [(result, -1)]  # (current_dict, indent_level)
-    current_list_key = None
-    current_list = None
-
+    lines = []
     with open(path, "r", encoding="utf-8") as f:
         for raw_line in f:
             line = raw_line.rstrip()
             stripped = line.lstrip()
-
-            # Skip empty lines and comments
             if not stripped or stripped.startswith("#"):
                 continue
-
             indent = len(line) - len(stripped)
+            lines.append((indent, stripped))
 
-            # List item
-            if stripped.startswith("- "):
-                item_text = stripped[2:].strip()
-                # Check if it's a list of inline lists like - ["a", "b"]
-                if item_text.startswith("[") and item_text.endswith("]"):
-                    inner = item_text[1:-1]
-                    parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
-                    if current_list is not None:
-                        current_list.append(parts)
-                    continue
-                # Check if it's a dict-like list item: - key: value
-                if ": " in item_text and not item_text.startswith('"'):
-                    k, v = item_text.split(": ", 1)
-                    entry = {k.strip(): _parse_value(v.strip())}
-                    if current_list is not None:
-                        current_list.append(entry)
-                    continue
-                # Simple scalar list item
-                if current_list is not None:
-                    current_list.append(_parse_value(item_text))
-                continue
+    result = {}
+    # stack entries: (container, indent) where container is a dict
+    stack = [(result, -1)]
+    # When we see ``key:`` with no value, the key could be a dict or list.
+    # We record (parent_dict, key, indent) so we can convert on first child.
+    pending_key = None  # (parent_dict, key_name, key_indent)
+    # Active list being appended to, plus the indent of its ``- `` items.
+    active_list = None  # the list object
+    active_list_indent = -1
+    # When a list item is a dict (``- key: value``), additional keys at
+    # a deeper indent belong to the same dict entry.
+    active_list_item = None  # the dict being built
+    active_list_item_indent = -1
 
-            # Key: value pair
-            if ":" in stripped:
-                colon_pos = stripped.index(":")
-                key = stripped[:colon_pos].strip()
-                rest = stripped[colon_pos + 1:].strip()
+    for idx, (indent, stripped) in enumerate(lines):
 
-                # Pop stack to find the right parent dict
+        # --- List item --------------------------------------------------
+        if stripped.startswith("- "):
+            item_text = stripped[2:].strip()
+
+            # If there's a pending empty key, convert it to a list.
+            if pending_key is not None:
+                p_dict, p_key, p_indent = pending_key
+                lst = []
+                p_dict[p_key] = lst
+                active_list = lst
+                active_list_indent = indent
+                pending_key = None
+                # Pop any placeholder dict that was pushed for this key.
                 while len(stack) > 1 and stack[-1][1] >= indent:
                     stack.pop()
-                parent = stack[-1][0]
+            elif active_list is not None and indent != active_list_indent:
+                # Indent changed — this belongs to a different level.
+                # Walk up the stack to find the right container.
+                while len(stack) > 1 and stack[-1][1] >= indent:
+                    stack.pop()
+                # Reset list state — the pending-key path above will
+                # handle this if there was one; otherwise this is an
+                # error in the YAML but we do our best.
+                active_list = None
 
-                if rest == "" or rest == "|":
-                    # Nested dict or upcoming list
-                    new_dict = {}
-                    parent[key] = new_dict
-                    stack.append((new_dict, indent))
-                    current_list_key = None
-                    current_list = None
-                elif rest.startswith("[") and rest.endswith("]"):
-                    # Inline list
-                    inner = rest[1:-1]
-                    if inner.strip():
-                        items = [p.strip().strip('"').strip("'") for p in inner.split(",")]
-                    else:
-                        items = []
-                    parent[key] = items
-                    current_list_key = None
-                    current_list = None
+            # Close any prior multi-key list-item dict.
+            active_list_item = None
+
+            if active_list is None:
+                # First list item without a pending key — find or create
+                # the list on the stack. This handles the rare case where
+                # the YAML starts with ``- item`` at the top level.
+                active_list = []
+                stack[-1][0]["_list"] = active_list
+                active_list_indent = indent
+
+            # Inline list item: - [a, b]
+            if item_text.startswith("[") and item_text.endswith("]"):
+                inner = item_text[1:-1]
+                parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
+                active_list.append(parts)
+            # Dict list item: - key: value
+            elif ": " in item_text and not item_text.startswith('"'):
+                k, v = item_text.split(": ", 1)
+                entry = {k.strip(): _parse_value(v.strip())}
+                active_list.append(entry)
+                active_list_item = entry
+                # Content indent for continuation keys = indent of "- " + 2
+                active_list_item_indent = indent + 2
+            else:
+                # Simple scalar
+                active_list.append(_parse_value(item_text))
+
+            continue
+
+        # --- Continuation of a multi-key list item ----------------------
+        if (active_list_item is not None
+                and indent >= active_list_item_indent
+                and ":" in stripped):
+            colon_pos = stripped.index(":")
+            key = stripped[:colon_pos].strip()
+            rest = stripped[colon_pos + 1:].strip()
+            active_list_item[key] = _parse_value(rest) if rest else rest
+            continue
+
+        # --- Key: value pair --------------------------------------------
+        if ":" in stripped:
+            # We're no longer in a list-item context.
+            active_list_item = None
+
+            colon_pos = stripped.index(":")
+            key = stripped[:colon_pos].strip()
+            rest = stripped[colon_pos + 1:].strip()
+
+            # Resolve pending empty key — if we reach here it was a dict.
+            if pending_key is not None:
+                # The pending key already created a dict on the stack;
+                # just clear the flag.
+                pending_key = None
+
+            # Pop stack to find the right parent dict.
+            while len(stack) > 1 and stack[-1][1] >= indent:
+                stack.pop()
+            parent = stack[-1][0]
+
+            # Reset list state when we leave list territory.
+            if active_list is not None and indent <= active_list_indent:
+                active_list = None
+                active_list_indent = -1
+
+            if rest == "" or rest == "|":
+                new_dict = {}
+                parent[key] = new_dict
+                stack.append((new_dict, indent))
+                pending_key = (parent, key, indent)
+            elif rest.startswith("[") and rest.endswith("]"):
+                inner = rest[1:-1]
+                if inner.strip():
+                    items = [p.strip().strip('"').strip("'") for p in inner.split(",")]
                 else:
-                    parent[key] = _parse_value(rest)
-                    current_list_key = None
-                    current_list = None
-
-                # Check if next lines will be list items for this key
-                # We detect this when the value is empty (already handled as nested dict)
-                # or when we see "- " items at a deeper indent. For now, set up for list detection.
-                if rest == "":
-                    # Could be a dict or a list — we'll know when we see the first child.
-                    # If first child is "- ", convert to list.
-                    current_list_key = key
-                    current_list = None
-                    # We need a way to convert the dict to a list if needed
-                    class _ListDetector:
-                        def __init__(self, parent_dict, key_name):
-                            self.parent = parent_dict
-                            self.key = key_name
-                            self.converted = False
-                    detector = _ListDetector(parent, key)
-                    stack[-1] = (parent, stack[-1][1])
-
-            # Detect list after seeing "- " following an empty-value key
-            if current_list_key and stripped.startswith("- ") and current_list is None:
-                parent = stack[-1][0]
-                if current_list_key in parent and isinstance(parent[current_list_key], dict) and len(parent[current_list_key]) == 0:
-                    parent[current_list_key] = []
-                    current_list = parent[current_list_key]
-                elif current_list_key in parent and isinstance(parent[current_list_key], list):
-                    current_list = parent[current_list_key]
-                else:
-                    current_list = []
-                    parent[current_list_key] = current_list
-
-                # Re-process this line as a list item
-                item_text = stripped[2:].strip()
-                if item_text.startswith("[") and item_text.endswith("]"):
-                    inner = item_text[1:-1]
-                    parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
-                    current_list.append(parts)
-                elif ": " in item_text and not item_text.startswith('"'):
-                    k, v = item_text.split(": ", 1)
-                    current_list.append({k.strip(): _parse_value(v.strip())})
-                else:
-                    current_list.append(_parse_value(item_text))
+                    items = []
+                parent[key] = items
+            else:
+                parent[key] = _parse_value(rest)
 
     return result
 

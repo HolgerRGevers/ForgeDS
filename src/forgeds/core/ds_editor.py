@@ -504,6 +504,12 @@ def main() -> None:
     p_audit = sub.add_parser("audit", help="Audit descriptions, reports, menus")
     p_audit.add_argument("ds_file", help="Path to .ds file")
 
+    # Global KB flag (applies to add-descriptions and audit)
+    parser.add_argument(
+        "--kb", action="store_true",
+        help="Use KB for missing descriptions and post-edit residual reporting.",
+    )
+
     args = parser.parse_args()
     ds_path = Path(args.ds_file)
 
@@ -511,14 +517,54 @@ def main() -> None:
         print(f"Error: {ds_path} not found", file=sys.stderr)
         sys.exit(1)
 
+    # KB accessor (optional)
+    kb = None
+    if getattr(args, "kb", False):
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if not kb.available():
+            print("WARNING: knowledge.db not found. KB features disabled.", file=sys.stderr)
+            kb = None
+
     if args.command == "add-descriptions":
         config_path = Path(args.config)
-        if not config_path.exists():
+        if not config_path.exists() and kb is None:
             print(f"Error: {config_path} not found", file=sys.stderr)
             sys.exit(1)
-        descriptions = load_field_descriptions(config_path)
+        descriptions: dict[str, dict[str, str]] = {}
+        if config_path.exists():
+            descriptions = load_field_descriptions(config_path)
+
+        # KB enrichment: fill missing descriptions from KB documentation
+        if kb is not None:
+            content = ds_path.read_text(encoding="utf-8")
+            # Extract form names from .ds
+            form_names = re.findall(r"^\t+form\s+(\w+)\s*$", content, re.MULTILINE)
+            kb_added = 0
+            for form in form_names:
+                if form not in descriptions:
+                    descriptions[form] = {}
+                # Find fields in this form that lack descriptions
+                fields_in_form = re.findall(
+                    rf"(?<=form {form}).*?(?=form \w|$)",
+                    content, re.DOTALL,
+                )
+                if fields_in_form:
+                    for fm in re.finditer(r"field\s+(\w+)", fields_in_form[0]):
+                        field_name = fm.group(1)
+                        if field_name not in descriptions.get(form, {}):
+                            ctx = kb.query(f"{form} {field_name} field description", max_words=100)
+                            if ctx:
+                                # Extract first sentence as description
+                                first_line = ctx.split("\n")[0].strip("# *").strip()[:200]
+                                if first_line:
+                                    descriptions.setdefault(form, {})[field_name] = first_line
+                                    kb_added += 1
+            if kb_added:
+                print(f"KB: enriched {kb_added} field description(s) from knowledge base.", file=sys.stderr)
+
         total_fields = sum(len(f) for f in descriptions.values())
-        print(f"Loaded {total_fields} field descriptions from {config_path}")
+        print(f"Loaded {total_fields} field descriptions")
         added = add_descriptions(ds_path, descriptions)
         print(f"Added {added} descriptions to {ds_path}")
 
@@ -546,6 +592,22 @@ def main() -> None:
 
     elif args.command == "audit":
         audit_ds(ds_path)
+
+        # KB: run projection on the audited .ds for residual reporting
+        if kb is not None:
+            try:
+                from forgeds.knowledge.app_ingest import ingest_ds_app
+                module = f"app:{ds_path.stem}"
+                ingest_ds_app(str(ds_path), str(kb.db_path), module_name=module)
+                report = kb.project(module)
+                if report:
+                    print(f"\nKB Projection: R({ds_path.stem}) = {report.residual:.1f}")
+                    print(f"  Gaps: {len(report.gaps)}")
+                    for g in sorted(report.gaps, key=lambda x: -x.severity)[:5]:
+                        sev = {2.0: "CRIT", 1.5: "HIGH", 1.0: "MED", 0.5: "LOW"}.get(g.severity, "INFO")
+                        print(f"    [{sev}] {g.entity}: {g.message[:70]}")
+            except Exception as e:
+                print(f"  KB audit error: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

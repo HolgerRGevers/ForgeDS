@@ -15,9 +15,17 @@ dependencies (stdlib only). Extracted from the ERM project.
 - `src/forgeds/core/` — Zoho/Deluge tools (lint, build DB, scaffold, parse, edit .ds)
 - `src/forgeds/access/` — Access/VBA migration tools (lint SQL, build DB, export CSV)
 - `src/forgeds/hybrid/` — Cross-environment tools (hybrid lint, validate, upload)
+- `src/forgeds/knowledge/` — HRC knowledge base with Librarian token authority
 - `src/forgeds/_shared/` — Shared internals (diagnostics, config loader)
 - `templates/` — Starter configs for new consumer projects
 - `tests/fixtures/` — Lint test fixtures
+
+## Knowledge Base / HRC subsystem
+- **Librarian** (`librarian.c` / `librarian_io.py`): sole authority for token creation, destruction, and weight mutation. Coded in C for I/O efficiency; Python fallback if no compiler.
+- **RB** (Reality Database, `reality.db`): permanent source of truth — scraped docs, ingested apps, promoted shadow cases.
+- **HB** (Holographic Database, `holographic.db`): ephemeral projections — hologram tokens destroyed after analysis + user confirmation.
+- **Invariants**: SHA uniqueness across RB+HB; immutability after creation (only weight is mutable); closed-world output (only JSON analysis results leave the system).
+- **Token lifecycle**: all INSERT/DELETE go through `LibrarianHandle.create()` / `.destroy()`. Never write tokens via direct SQL.
 
 ## Key design principles
 1. **Config over hardcoding**: All project-specific values come from `forgeds.yaml` in the consumer project root. ForgeDS tools auto-discover this file by walking up from cwd.

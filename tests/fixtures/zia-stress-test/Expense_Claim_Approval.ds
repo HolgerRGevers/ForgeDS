@@ -1,0 +1,2336 @@
+/*
+ * Author       : holger.gevers360
+ * Generated on : 10-Apr-2026 14:43:41
+ * Version      : 1.0
+ */
+ application "Expense Claim Approval"
+ {
+ 	date format = "dd-MMM-yyyy"
+ 	time zone = "America/Los_Angeles"
+ 	time format = "24-hr"
+
+ 	forms
+	{
+		form approval_thresholds
+		{
+			displayname = "Approval Thresholds"
+			success message = "Approval Threshold Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			tier_name
+			(
+    			type = text
+				displayname = "Tier Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			max_amount_zar
+			(
+				displayname = "Max Amount ZAR"
+				type = USD
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			active
+			(
+    			type = checkbox
+				displayname = "Active"
+				initial value = false
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			created_time
+			(
+    			type = datetime
+				displayname = "Created Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_modified_time
+			(
+    			type = datetime
+				displayname = "Last Modified Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Tier Created","Tier Active","Tier Inactive","Tier Updated","Tier Deleted"}
+			}
+		}
+		form expense_claims
+		{
+			displayname = "Expense Claims"
+			success message = "Expense Claim Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			employee
+			(
+				type = picklist	
+				displayname = "Employee"
+				values  = users.ID
+    			displayformat = [email_address]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			expense_date
+			(
+    			type = date
+				displayname = "Expense Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			total_amount
+			(
+				displayname = "Total Amount"
+				type = USD
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			status
+			(
+				type = picklist
+				displayname = "Status"
+				values = {"Draft","Approved","Rejected","Pending"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			priority
+			(
+				type = radiobuttons
+				displayname = "Priority"
+				values = {"Urgent","Normal"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			project
+			(
+				type = picklist	
+				displayname = "Project"
+				values  = projects.ID
+    			displayformat = [project_name]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			expense_type
+			(
+    			type = text
+				displayname = "Expense Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			description
+			(
+    			type = textarea
+				displayname = "Description"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			approval_threshold
+			(
+				type = list	
+				displayname = "Approval Threshold"
+				values  = approval_thresholds.ID
+    			displayformat = [tier_name]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Expense Claim Created","Pending Approval","Draft Saved","Under Review","Rejected","Pending Additional Information","Approved","Escalated for Review","Payment Processed","Payment Sent","Payment Failed","Closed"}
+			}
+		}
+		form finance_managers
+		{
+			displayname = "Finance Managers"
+			success message = "Finance Manager Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			user_email
+			(
+    			type = email
+				displayname = "User Email"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			user_name
+			(
+    			type = text
+				displayname = "User Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			role
+			(
+				type = radiobuttons
+				displayname = "Role"
+				values = {"Finance Manager"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			assigned_to
+			(
+				type = picklist	
+				displayname = "Assigned To"
+				values  = users.ID
+    			displayformat = [email_address]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form projects
+		{
+			displayname = "Projects"
+			success message = "Project Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			billing_type
+			(
+    			type = text
+				displayname = "Billing Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			created_time
+			(
+    			type = datetime
+				displayname = "Created Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			currency_code
+			(
+    			type = text
+				displayname = "Currency Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			description
+			(
+    			type = textarea
+				displayname = "Description"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			project_code
+			(
+    			type = text
+				displayname = "Project Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have project_name
+			(
+    			type = text
+				displayname = "Project Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form users
+		{
+			displayname = "Users"
+			success message = "User Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			approval_amount_limit
+			(
+				type = decimal
+				displayname = "Approval Amount Limit"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			approves_to_email
+			(
+    			type = text
+				displayname = "Approves To Email"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			bank_account_type
+			(
+    			type = text
+				displayname = "Bank Account Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			bank_name
+			(
+    			type = text
+				displayname = "Bank Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			created_time
+			(
+    			type = date
+				displayname = "Created Time"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			date_of_birth
+			(
+    			type = date
+				displayname = "Date of Birth"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			date_of_joining
+			(
+    			type = date
+				displayname = "Date of Joining"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			default_approver_email
+			(
+    			type = text
+				displayname = "Default Approver Email"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			designation_name
+			(
+    			type = text
+				displayname = "Designation Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have email_address
+			(
+    			type = email
+				displayname = "Email Address"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			employee_number
+			(
+    			type = text
+				displayname = "Employee Number"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			first_name1
+			(
+    			type = text
+				displayname = "First Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_modified_time
+			(
+    			type = date
+				displayname = "Last Modified Time"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_name1
+			(
+    			type = text
+				displayname = "Last Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			mobile
+			(
+    			type = text
+				displayname = "Mobile"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have name
+			(
+    			type = text
+				displayname = "Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			policy_name
+			(
+    			type = text
+				displayname = "Policy Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			submission_amount_limit
+			(
+				type = decimal
+				displayname = "Submission Amount Limit"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			user_mail_in_id
+			(
+    			type = text
+				displayname = "User Mail in Id"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			user_type
+			(
+    			type = text
+				displayname = "User Type"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+	}
+	reports
+	{
+		list expense_claims_Report
+		{
+			displayName = "All Expense Claims"
+			show all rows from expense_claims    
+			(
+				employee as "Employee"
+				expense_date as "Expense Date"
+				total_amount as "Total Amount"
+				(
+					display = total,average,min,max	
+				)
+				status as "Status"
+				priority as "Priority"
+				project as "Project"
+				expense_type as "Expense Type"
+				description as "Description"
+				approval_threshold as "Approval Threshold"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (status == "Approved")
+				fields = [status]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (status == "Draft")
+				fields = [status]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (status == "Rejected")
+				fields = [status]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+			)
+		}
+		kanban expense_claims_by_status
+		{
+			displayName = "Statuses"
+			show all rows from expense_claims    
+			(
+				employee as "Employee"
+				expense_date as "Expense Date"
+				total_amount as "Total Amount"
+				(
+					display = total,average,min,max	
+				)
+				status as "Status"
+				priority as "Priority"
+				project as "Project"
+				expense_type as "Expense Type"
+				description as "Description"
+				approval_threshold as "Approval Threshold"
+			)
+			options
+			(
+	 			display field = status
+	 		)
+		}
+		list users_Report
+		{
+			displayName = "All Users"
+			show all rows from users    
+			(
+				approval_amount_limit as "Approval Amount Limit"
+				approves_to_email as "Approves To Email"
+				bank_account_type as "Bank Account Type"
+				bank_name as "Bank Name"
+				created_time as "Created Time"
+				date_of_birth as "Date of Birth"
+				date_of_joining as "Date of Joining"
+				default_approver_email as "Default Approver Email"
+				designation_name as "Designation Name"
+				email_address as "Email Address"
+				employee_number as "Employee Number"
+				first_name1 as "First Name"
+				last_modified_time as "Last Modified Time"
+				last_name1 as "Last Name"
+				mobile as "Mobile"
+				name as "Name"
+				policy_name as "Policy Name"
+				submission_amount_limit as "Submission Amount Limit"
+				user_mail_in_id as "User Mail in Id"
+				user_type as "User Type"
+			)
+		}
+		list finance_managers_Report
+		{
+			displayName = "All Finance Managers"
+			show all rows from finance_managers    
+			(
+				user_email as "User Email"
+				user_name as "User Name"
+				role as "Role"
+				assigned_to as "Assigned To"
+			)
+		}
+		list approval_thresholds_Report
+		{
+			displayName = "All Approval Thresholds"
+			show all rows from approval_thresholds    
+			(
+				tier_name as "Tier Name"
+				max_amount_zar as "Max Amount ZAR"
+				(
+					display = total,average,min,max	
+				)
+				active as "Active"
+				created_time as "Created Time"
+				last_modified_time as "Last Modified Time"
+			)
+		}
+		list projects_Report
+		{
+			displayName = "All Projects"
+			show all rows from projects    
+			(
+				billing_type as "Billing Type"
+				created_time as "Created Time"
+				currency_code as "Currency Code"
+				description as "Description"
+				project_code as "Project Code"
+				project_name as "Project Name"
+			)
+		}
+	}
+	pages
+	{
+		page DashBoard
+		{
+			displayname = "Dashboard"
+			Content="<zml    \t\t\n\t\t\n\t\t\n\t\t\n\t\t\n>\n\t<layout>\n\t<row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<row>\n\t<column\n   \t\t width='75%'\n   \t>\n\t<row>\n\t<column\n   \t\t width='26%'\n   \t>\n\t<panel elementName='Panel 1'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#5A3D9B'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '0px'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\n\tcolor = '#FFFFFF'\n\tbgColor = '#9B69FB'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'business-percentage-39'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '12px'\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.expense_claims.total_amount.sum'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '5px'\n\tcolor = '#FFFFFF'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Total Total Amounts'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='26%'\n   \t>\n\t<panel elementName='Panel 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#734AD0'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '0px'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#9B69FB'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'business-percentage-39'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '12px'\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.users.approval_amount_limit.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '5px'\n\tcolor = '#E7E7E7'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Average Approval Amount Limits'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#9366F9'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '0px'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#AF8CFF'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'shopping-cash-register'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '12px'\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.users.submission_amount_limit.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '5px'\n\tcolor = '#FFFFFF'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Average Submission Amount Limits'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#734AD0'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpaddingTop = '0px'\n\tpaddingLeft = '10px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '0px'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#9B69FB'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'media-1-volume-up'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '12px'\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.approval_thresholds.max_amount_zar.sum'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginTop = '5px'\n\tcolor = '#FFFFFF'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Total Max Amount ZAR'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Grouped_Panel 1'\n \n\t\n\ttitle = 'Status'\n\t\n\t\ttitleSize = '15px'\n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '0px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '17px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '24%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#1ABE75'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'design-pen-23'\n\tsize = '20px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tcolor = '#3F3F3F'\n\tsize = '22px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Draft&quot;'\n\t  value = 'thisapp.expense_claims.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tmarginRight = '0px' \n\tmarginTop = '3px'\n\tcolor = '#909090'\n\tsize = '14px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Drafts'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '17px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '17px'\n\tpaddingBottom = '17px'\n\n\t\twidth = '24%'\n\t\thAlign = 'center'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#E2335C'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'design-todo'\n\tsize = '20px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tcolor = '#3F3F3F'\n\tsize = '22px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Approved&quot;'\n\t  value = 'thisapp.expense_claims.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tmarginRight = '0px' \n\tmarginTop = '3px'\n\tcolor = '#909090'\n\tsize = '14px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Approved'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '17px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '17px'\n\tpaddingBottom = '17px'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#1678F9'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'design-todo'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tcolor = '#3F3F3F'\n\tsize = '22px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Rejected&quot;'\n\t  value = 'thisapp.expense_claims.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tmarginRight = '0px' \n\tmarginTop = '3px'\n\tcolor = '#909090'\n\tsize = '14px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Rejected'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '17px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '17px'\n\tpaddingBottom = '17px'\n\n\t\twidth = '27%'\n\t\thAlign = 'center'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#F6BC2B'\n\twidth = '52px'\n\theight = '52px'\n\ttype = 'icon'\n\tvalue = 'ui-2-hourglass'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tcolor = '#3F3F3F'\n\tsize = '20px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'status == &quot;Pending&quot;'\n\t  value = 'thisapp.expense_claims.status.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '20px'\n\tmarginRight = '0px' \n\tmarginTop = '3px'\n\tcolor = '#909090'\n\tsize = '14px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Pending'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Panel_Button 1'\n \n\t\n\ttitle = 'Quick Links'\n\t\n\t\ttitleSize = '15px'\n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#8A3DFB'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '10px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '98%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginRight = '10px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#2C0D4A'\n\tbgColor = '#F4F0FF'\n\twidth = '36px'\n\theight = '36px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '18px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'expense_claims'\n\t\ttarget = 'new-window'\n\n\tcolor = '#6733AB'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Add New Expense Claims'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Panel_Button 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#8A3DFB'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '10px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '98%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginRight = '10px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#2C0D4A'\n\tbgColor = '#F4F0FF'\n\twidth = '36px'\n\theight = '36px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '18px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'users'\n\t\ttarget = 'new-window'\n\n\tcolor = '#6733AB'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Add New Users'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Panel_Button 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#8A3DFB'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '10px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '98%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginRight = '10px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#2C0D4A'\n\tbgColor = '#F4F0FF'\n\twidth = '36px'\n\theight = '36px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '18px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'finance_managers'\n\t\ttarget = 'new-window'\n\n\tcolor = '#6733AB'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Add New Finance Managers'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Panel_Button 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#8A3DFB'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '10px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '98%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginRight = '10px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#2C0D4A'\n\tbgColor = '#F4F0FF'\n\twidth = '36px'\n\theight = '36px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '16px'\n\tcornerRadius = '18px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n    action = 'OpenForm'\n\t\tcomponentLinkName = 'approval_thresholds'\n\t\ttarget = 'new-window'\n\n\tcolor = '#6733AB'\n\tsize = '15px'\n\ttype = 'Text'\n\n\n\n\n\n\n\n\t  value = 'Add New Approval Thresholds'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row>\n</column>\n</row><row>\n\t<column\n   \t\t width='50%'\n   \t>\n\t<chart \n\telementName='Chart 1'\n\n\t\n\ttitle = 'Submission Amount Limit by Approval Amount Limit'\n\t\n\t\ttitleSize = '15px'\n\ttype = 'Scatter'\n\txtitle = 'Submission Amount Limit'\n\tytitle = 'Approval Amount Limit'\n\tbgColor = '#FFFFFF'\n\ttheme = 'theme'\n\tlegendPos = 'none'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'users'\n\txfield = 'submission_amount_limit'\n\tyfields = 'value:approval_amount_limit'\n\tgroupBy = 'approval_amount_limit'\n\t\tDelugeCriteria = 'submission_amount_limit is not null'\n/>\n\n</column><column\n   \t\t width='50%'\n   \t>\n\t<chart \n\telementName='Chart 2'\n\n\t\n\ttitle = 'Priority by Total Amount'\n\t\n\t\ttitleSize = '15px'\n\ttype = 'Bar'\n\txtitle = 'Priority'\n\tytitle = 'Total Amount'\n\tbgColor = '#FFFFFF'\n\ttheme = '#198391'\n\tlegendPos = 'none'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'expense_claims'\n\txfield = 'priority'\n\tyfields = 'sum:total_amount'\n\tgroupBy = 'employee'\n\t\tDelugeCriteria = 'priority is not null &amp;&amp; priority != &quot;&quot;'\n/>\n\n</column>\n</row>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<report \n\telementName='Report'\n\n\t\tappLinkName = 'thisapp'\n\t\tlinkName = 'expense_claims_Report'\n\t\n\t\tiszreport = 'false'\n\t\t\t\t\tzc_AddRec = 'false'\n\t\t\t\t\tzc_EditRec = 'false'\n\t\t\t\t\tzc_Print = 'false'\n\t\t\t\t\tzc_Export = 'false'\n\t\t\t\t\tzc_DelRec = 'false'\n\t\t\t\t\tzc_DuplRec = 'false'\n\t\t\t\t\tzc_Search = 'false'\n\t\t\t\t\tzc_EditBulkRec = 'false'\n\t\t\t\t\tzc_BulkDelete = 'false'\n\t\t\t\t\tzc_BulkDuplicate = 'false'\n\theightType = 'custom'\n\theightValue = '500'\n\n/>\n</column>\n</row>\n</layout>\n</zml>"
+		}
+	}
+
+
+
+
+		workflow
+		{
+
+
+
+
+		blueprint
+		{
+    			expense_claim_approval_workflow as "Expense Claim Approval Workflow"
+    			{
+        			type = Blueprint
+        			form = expense_claims
+        			start
+        			{
+            			start stage = "Expense Claim Created"
+        			}
+        			stages
+        			{
+           			"Expense Claim Created"
+           			{
+           			}
+           			"Pending Approval"
+           			{
+           			}
+           			"Draft Saved"
+           			{
+           			}
+           			"Under Review"
+           			{
+           			}
+           			"Rejected"
+           			{
+           			}
+           			"Pending Additional Information"
+           			{
+           			}
+           			"Approved"
+           			{
+           			}
+           			"Escalated for Review"
+           			{
+           			}
+           			"Payment Processed"
+           			{
+           			}
+           			"Payment Sent"
+           			{
+           			}
+           			"Payment Failed"
+           			{
+           			}
+           			"Closed"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				submit_for_approval as "Submit for Approval"
+    				{
+         				type = normal
+         				from stage = "Expense Claim Created"
+         				to stage = "Pending Approval"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				save_as_draft as "Save as Draft"
+    				{
+         				type = normal
+         				from stage = "Expense Claim Created"
+         				to stage = "Draft Saved"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				return_to_creation as "Return to Creation"
+    				{
+         				type = normal
+         				from stage = "Draft Saved"
+         				to stage = "Expense Claim Created"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				assign_to_reviewer as "Assign to Reviewer"
+    				{
+         				type = normal
+         				from stage = "Pending Approval"
+         				to stage = "Under Review"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_claim as "Reject Claim"
+    				{
+         				type = normal
+         				from stage = "Pending Approval"
+         				to stage = "Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				request_additional_info as "Request Additional Documentation"
+    				{
+         				type = normal
+         				from stage = "Pending Approval"
+         				to stage = "Pending Additional Information"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				approve_claim as "Approve Claim"
+    				{
+         				type = normal
+         				from stage = "Under Review"
+         				to stage = "Approved"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_review as "Escalate to Higher Authority"
+    				{
+         				type = normal
+         				from stage = "Under Review"
+         				to stage = "Escalated for Review"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resume_review as "Resume Review After Submission"
+    				{
+         				type = normal
+         				from stage = "Pending Additional Information"
+         				to stage = "Under Review"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_incomplete as "Reject Due to Incomplete Information"
+    				{
+         				type = normal
+         				from stage = "Pending Additional Information"
+         				to stage = "Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				initiate_payment as "Initiate Payment"
+    				{
+         				type = normal
+         				from stage = "Approved"
+         				to stage = "Payment Processed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				revoke_approval as "Revoke Approval"
+    				{
+         				type = normal
+         				from stage = "Approved"
+         				to stage = "Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				return_for_resubmission as "Return to Employee for Resubmission"
+    				{
+         				type = normal
+         				from stage = "Rejected"
+         				to stage = "Expense Claim Created"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_payment_sent as "Confirm Payment Sent"
+    				{
+         				type = normal
+         				from stage = "Payment Processed"
+         				to stage = "Payment Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				handle_payment_failure as "Handle Payment Failure"
+    				{
+         				type = normal
+         				from stage = "Payment Processed"
+         				to stage = "Payment Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_claim as "Close Claim"
+    				{
+         				type = normal
+         				from stage = "Payment Sent"
+         				to stage = "Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				request_payment_details as "Request Updated Payment Details"
+    				{
+         				type = normal
+         				from stage = "Payment Failed"
+         				to stage = "Pending Additional Information"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				mark_unpayable as "Mark Claim as Unpayable"
+    				{
+         				type = normal
+         				from stage = "Payment Failed"
+         				to stage = "Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resume_review_by_senior as "Resume Review by Senior Approver"
+    				{
+         				type = normal
+         				from stage = "Escalated for Review"
+         				to stage = "Under Review"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_escalated as "Reject Escalated Claim"
+    				{
+         				type = normal
+         				from stage = "Escalated for Review"
+         				to stage = "Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+    			tiered_approval_process as "Tiered Approval Process"
+    			{
+        			type = Blueprint
+        			form = approval_thresholds
+        			start
+        			{
+            			start stage = "Tier Created"
+        			}
+        			stages
+        			{
+           			"Tier Created"
+           			{
+           			}
+           			"Tier Active"
+           			{
+           			}
+           			"Tier Inactive"
+           			{
+           			}
+           			"Tier Updated"
+           			{
+           			}
+           			"Tier Deleted"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				activate_tier as "Activate Tier"
+    				{
+         				type = normal
+         				from stage = "Tier Created"
+         				to stage = "Tier Active"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				deactivate_tier as "Deactivate Tier"
+    				{
+         				type = normal
+         				from stage = "Tier Created"
+         				to stage = "Tier Inactive"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				delete_tier as "Delete Tier Record"
+    				{
+         				type = normal
+         				from stage = "Tier Inactive"
+         				to stage = "Tier Deleted"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reactivate_tier as "Reactivate Tier"
+    				{
+         				type = normal
+         				from stage = "Tier Inactive"
+         				to stage = "Tier Active"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				update_tier as "Update Tier Thresholds"
+    				{
+         				type = normal
+         				from stage = "Tier Active"
+         				to stage = "Tier Updated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+		}
+
+
+	}
+	share_settings
+	{
+			"Read"
+			{
+				name = "Read"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have read permission for all components\n"
+			}
+			"Write"
+			{
+				name = "Write"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have write permission for all components\n"
+			}
+			"Project Coordinator"
+			{
+				name = "Project Coordinator"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Assign projects to expense claims \n"
+				ModulePermissions
+				{
+					projects
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							projects_Report={"View","Edit","Delete"}
+						}
+					}
+					expense_claims
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							expense_claims_Report={"View","Edit","Delete"}
+							expense_claims_by_status={"View","Edit","Delete"}
+						}
+					}
+				}
+			}
+			"Finance Manager"
+			{
+				name = "Finance Manager"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Review and approve or reject pending expense claims \n"
+				ModulePermissions
+				{
+					approval_thresholds
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_thresholds_Report={"View","Edit","Delete"}
+						}
+					}
+					finance_managers
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							finance_managers_Report={"View","Edit","Delete"}
+						}
+					}
+					expense_claims
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							expense_claims_Report={"View","Edit","Delete"}
+							expense_claims_by_status={"View","Edit","Delete"}
+						}
+					}
+				}
+			}
+			"Administrator"
+			{
+				name = "Administrator"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have all the permissions.\n"
+			}
+			"Employee"
+			{
+				name = "Employee"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Submit expense claims for reimbursement \n"
+				ModulePermissions
+				{
+					expense_claims
+					{
+						enabled= Create,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							expense_claims_Report={"View","Edit"}
+							expense_claims_by_status={"View","Edit"}
+						}
+					}
+				}
+			}
+			"Developer"
+			{
+				name = "Developer"
+				type = Developer
+				permissions = {Chat:false, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Developer Profile\n"
+			}
+			"Policy Administrator"
+			{
+				name = "Policy Administrator"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Define and manage approval thresholds by tier and amount \n"
+				ModulePermissions
+				{
+					approval_thresholds
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_thresholds_Report={"View","Edit","Delete"}
+						}
+					}
+					projects
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							projects_Report={"View"}
+						}
+					}
+				}
+			}
+			"Auditor"
+			{
+				name = "Auditor"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Review expense claims for compliance with policy and thresholds \n"
+				ModulePermissions
+				{
+					approval_thresholds
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_thresholds_Report={"View"}
+						}
+					}
+					projects
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							projects_Report={"View"}
+						}
+					}
+					users
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							users_Report={"View"}
+						}
+					}
+					finance_managers
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							finance_managers_Report={"View"}
+						}
+					}
+					expense_claims
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							expense_claims_Report={"View"}
+							expense_claims_by_status={"View"}
+						}
+					}
+				}
+			}
+			"Vendor"
+			{
+				name = "Vendor"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Provide invoices and supporting documents for expenses \n"
+				ModulePermissions
+				{
+					approval_thresholds
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							approval_thresholds_Report={"View"}
+						}
+					}
+					expense_claims
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							expense_claims_Report={"View","Edit"}
+							expense_claims_by_status={"View","Edit"}
+						}
+					}
+				}
+			}
+			"Customer"
+			{
+				name = "Customer"
+				type = Customer_Portal
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This is the default profile having only add and view permission.\n"
+			}
+			roles
+			{
+				"CEO"
+				{
+					description = "User belonging to this role can access data of all other users."
+				}
+			}
+	}
+
+
+	web
+	{
+		forms
+		{
+			form approval_thresholds
+			{
+				label placement = left
+			}
+			form expense_claims
+			{
+				label placement = left
+			}
+			form finance_managers
+			{
+				label placement = left
+			}
+			form projects
+			{
+				label placement = left
+			}
+			form users
+			{
+				label placement = left
+			}
+		}
+		reports
+		{
+			report expense_claims_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								employee as "Employee"
+								expense_date as "Expense Date"
+								total_amount as "Total Amount"
+								status as "Status"
+								priority as "Priority"
+								project as "Project"
+								expense_type as "Expense Type"
+								description as "Description"
+								approval_threshold as "Approval Threshold"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								employee as "Employee"
+								expense_date as "Expense Date"
+								total_amount as "Total Amount"
+								status as "Status"
+								priority as "Priority"
+								project as "Project"
+								expense_type as "Expense Type"
+								description as "Description"
+								approval_threshold as "Approval Threshold"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Employee"
+		     				related field = employee
+							fields
+							(
+								approval_amount_limit as "Approval Amount Limit"
+								approves_to_email as "Approves To Email"
+								bank_account_type as "Bank Account Type"
+								bank_name as "Bank Name"
+								created_time as "Created Time"
+								date_of_birth as "Date of Birth"
+								date_of_joining as "Date of Joining"
+								default_approver_email as "Default Approver Email"
+								designation_name as "Designation Name"
+								email_address as "Email Address"
+								employee_number as "Employee Number"
+								first_name1 as "First Name"
+								last_modified_time as "Last Modified Time"
+								last_name1 as "Last Name"
+								mobile as "Mobile"
+								name as "Name"
+								policy_name as "Policy Name"
+								submission_amount_limit as "Submission Amount Limit"
+								user_mail_in_id as "User Mail in Id"
+								user_type as "User Type"
+							)
+						)
+						datablock3
+						(
+							layout type = -2
+		     				title = "Project"
+		     				related field = project
+							fields
+							(
+								billing_type as "Billing Type"
+								created_time as "Created Time"
+								currency_code as "Currency Code"
+								description as "Description"
+								project_code as "Project Code"
+								project_name as "Project Name"
+							)
+						)
+						datablock4
+						(
+							layout type = -2
+		     				title = "Approval Threshold"
+		     				related field = approval_threshold
+							fields
+							(
+								tier_name as "Tier Name"
+								max_amount_zar as "Max Amount ZAR"
+								active as "Active"
+								created_time as "Created Time"
+								last_modified_time as "Last Modified Time"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report expense_claims_by_status
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								expense_type as "Expense Type"
+								employee as "Employee"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								employee as "Employee"
+								expense_date as "Expense Date"
+								total_amount as "Total Amount"
+								status as "Status"
+								priority as "Priority"
+								project as "Project"
+								expense_type as "Expense Type"
+								description as "Description"
+								approval_threshold as "Approval Threshold"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report users_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								approval_amount_limit as "Approval Amount Limit"
+								approves_to_email as "Approves To Email"
+								bank_account_type as "Bank Account Type"
+								bank_name as "Bank Name"
+								created_time as "Created Time"
+								date_of_birth as "Date of Birth"
+								date_of_joining as "Date of Joining"
+								default_approver_email as "Default Approver Email"
+								designation_name as "Designation Name"
+								email_address as "Email Address"
+								employee_number as "Employee Number"
+								first_name1 as "First Name"
+								last_modified_time as "Last Modified Time"
+								last_name1 as "Last Name"
+								mobile as "Mobile"
+								name as "Name"
+								policy_name as "Policy Name"
+								submission_amount_limit as "Submission Amount Limit"
+								user_mail_in_id as "User Mail in Id"
+								user_type as "User Type"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								approval_amount_limit as "Approval Amount Limit"
+								approves_to_email as "Approves To Email"
+								bank_account_type as "Bank Account Type"
+								bank_name as "Bank Name"
+								created_time as "Created Time"
+								date_of_birth as "Date of Birth"
+								date_of_joining as "Date of Joining"
+								default_approver_email as "Default Approver Email"
+								designation_name as "Designation Name"
+								email_address as "Email Address"
+								employee_number as "Employee Number"
+								first_name1 as "First Name"
+								last_modified_time as "Last Modified Time"
+								last_name1 as "Last Name"
+								mobile as "Mobile"
+								name as "Name"
+								policy_name as "Policy Name"
+								submission_amount_limit as "Submission Amount Limit"
+								user_mail_in_id as "User Mail in Id"
+								user_type as "User Type"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report finance_managers_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								user_email as "User Email"
+								user_name as "User Name"
+								role as "Role"
+								assigned_to as "Assigned To"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								user_email as "User Email"
+								user_name as "User Name"
+								role as "Role"
+								assigned_to as "Assigned To"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Assigned To"
+		     				related field = assigned_to
+							fields
+							(
+								approval_amount_limit as "Approval Amount Limit"
+								approves_to_email as "Approves To Email"
+								bank_account_type as "Bank Account Type"
+								bank_name as "Bank Name"
+								created_time as "Created Time"
+								date_of_birth as "Date of Birth"
+								date_of_joining as "Date of Joining"
+								default_approver_email as "Default Approver Email"
+								designation_name as "Designation Name"
+								email_address as "Email Address"
+								employee_number as "Employee Number"
+								first_name1 as "First Name"
+								last_modified_time as "Last Modified Time"
+								last_name1 as "Last Name"
+								mobile as "Mobile"
+								name as "Name"
+								policy_name as "Policy Name"
+								submission_amount_limit as "Submission Amount Limit"
+								user_mail_in_id as "User Mail in Id"
+								user_type as "User Type"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report approval_thresholds_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								tier_name as "Tier Name"
+								max_amount_zar as "Max Amount ZAR"
+								active as "Active"
+								created_time as "Created Time"
+								last_modified_time as "Last Modified Time"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								tier_name as "Tier Name"
+								max_amount_zar as "Max Amount ZAR"
+								active as "Active"
+								created_time as "Created Time"
+								last_modified_time as "Last Modified Time"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report projects_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								billing_type as "Billing Type"
+								created_time as "Created Time"
+								currency_code as "Currency Code"
+								description as "Description"
+								project_code as "Project Code"
+								project_name as "Project Name"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								billing_type as "Billing Type"
+								created_time as "Created Time"
+								currency_code as "Currency Code"
+								description as "Description"
+								project_code as "Project Code"
+								project_name as "Project Name"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "Dashboard"
+					icon = "ui-1-dashboard-half"
+					page DashBoard
+					{
+						icon = "ui-1-dashboard-half"
+					}
+				}
+				section Section_2
+				{
+					displayname = "Expense Claims"
+					icon = "business-currency-dollar"
+					form  expense_claims
+					{
+						icon = "ui-1-bold-add"
+					}
+					report expense_claims_Report
+					{
+						icon = "travel-world"
+					}
+					report expense_claims_by_status
+					{
+						icon = "design-2-selection"
+					}
+				}
+				section Section_3
+				{
+					displayname = "Users"
+					icon = "users-2-woman"
+					form  users
+					{
+						icon = "ui-1-bold-add"
+					}
+					report users_Report
+					{
+						icon = "users-2-woman"
+					}
+				}
+				section Section_4
+				{
+					displayname = "Finance Managers"
+					icon = "business-bank"
+					form  finance_managers
+					{
+						icon = "ui-1-bold-add"
+					}
+					report finance_managers_Report
+					{
+						icon = "business-bank"
+					}
+				}
+				section Section_5
+				{
+					displayname = "Approval Thresholds"
+					icon = "weather-fahrenheit"
+					form  approval_thresholds
+					{
+						icon = "ui-1-bold-add"
+					}
+					report approval_thresholds_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section Section_6
+				{
+					displayname = "Projects"
+					icon = "education-books-46"
+					form  projects
+					{
+						icon = "ui-1-bold-add"
+					}
+					report projects_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section ZC_App_Preferences
+				{
+					displayname = "App Preferences"
+					icon = "design-app"
+					systemcomponent
+					{
+						type = localization
+						displayname = "Language Selection"
+						icon = "education-language"
+					}
+					systemcomponent
+					{
+						type = connection
+						displayname = "Integrations"
+						icon = "tech-2-connection"
+					}
+				}
+				section ZC_Approvals
+				{
+					displayname = "Approvals"
+					icon = "ui-2-hourglass"
+					systemcomponent
+					{
+						type = approval
+						approval status = pending
+						displayname = "Pending Tasks"
+						icon = "ui-2-hourglass"
+					}
+					systemcomponent
+					{
+						type = approval
+						approval status = completed
+						displayname = "Completed Tasks"
+						icon = "design-todo"
+					}
+				}
+				section SharedAnalytics_Section
+				{
+					type = shared_user_report_section
+					displayname = "Reports"
+					icon = "business-chart-bar-33"
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 11
+			font = "poppins"
+			color options
+			{
+				color = "5"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+	phone
+	{
+		forms
+		{
+			form approval_thresholds
+			{
+				label placement = auto
+			}
+			form expense_claims
+			{
+				label placement = auto
+			}
+			form finance_managers
+			{
+				label placement = auto
+			}
+			form projects
+			{
+				label placement = auto
+			}
+			form users
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = green
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	tablet
+	{
+		forms
+		{
+			form approval_thresholds
+			{
+				label placement = auto
+			}
+			form expense_claims
+			{
+				label placement = auto
+			}
+			form finance_managers
+			{
+				label placement = auto
+			}
+			form projects
+			{
+				label placement = auto
+			}
+			form users
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = green
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	translation
+{
+{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}
+}
+}

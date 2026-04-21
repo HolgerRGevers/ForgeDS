@@ -6,6 +6,8 @@ __pycache__/
 dist/
 build/
 *.egg
+*.so
+*.dll
 
 # Generated databases
 *.db
@@ -18,11 +20,16 @@ build/
 .DS_Store
 Thumbs.db
 
-# Project secrets
+# Project secrets & local config
 config/zoho-api.yaml
+forgeds.yaml
 .env
 web/.env
 web/.env.*
+
+# Knowledge base scraped/generated data
+raw_md/
+/knowledge/
 
 # Node
 node_modules/

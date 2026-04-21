@@ -1,0 +1,83 @@
+// ============================================================
+// Script:   incident_reports.success.Incident_Sync_Workflow.extracted.dg
+// Name:     Incident Sync Workflow
+// Location: incident_reports > on add or edit > on success
+// Trigger:  on add or edit
+// Purpose:  Extracted from .ds export
+// Version:  v2.1 (extracted)
+// ============================================================
+
+try
+{
+	// Build request parameters using Map
+	params = Map();
+	params.put("id", input.ID);
+	params.put("type", ifnull(input.Category, "General"));
+	params.put("priority", ifnull(input.Priority, "Medium"));
+	params.put("reporter", zoho.loginuser);
+
+	// Build headers map
+	headers = Map();
+	headers.put("Content-Type", "application/json");
+	headers.put("X-Source", "ZohoCreator");
+
+	// invokeUrl — [] inside try {} (DG010 target)
+	resp = invokeUrl
+	[
+		url : "https://api.example.com/incidents"
+		type : POST
+		parameters : params.toString()
+		headers : headers
+	];
+
+	// Parse response — nested parens stress parser
+	if (resp != null)
+	{
+		resultMap = resp.toMap();
+		externalId = resultMap.get("id");
+		syncStatus = resultMap.get("status");
+
+		if (syncStatus == "ok")
+		{
+			// Status update — inside nested {} (DG011 target)
+			input.status = "Synced";
+			input.External_ID = externalId;
+
+			// Audit trail — [] inside nested {} (DG006, DG009)
+			row = insert into Audit_Log
+			[
+				action = "Synced"
+				record_id = input.ID
+				details = "Synced to external system. ID: " + ifnull(externalId, "unknown")
+				timestamp = zoho.currenttime
+				Added_User = zoho.loginuser
+			];
+		}
+		else
+		{
+			// Partial failure — log but don't block
+			input.status = "Sync Failed";
+
+			row = insert into Error_Log
+			[
+				message = "Sync returned non-ok status: " + ifnull(syncStatus, "null")
+				record_id = input.ID
+				timestamp = zoho.currenttime
+				Added_User = zoho.loginuser
+			];
+		}
+	}
+}
+catch (e)
+{
+	// Error logging — [] inside catch {} (second insert target in same script)
+	input.status = "Sync Error";
+
+	row = insert into Error_Log
+	[
+		message = e
+		record_id = input.ID
+		timestamp = zoho.currenttime
+		Added_User = zoho.loginuser
+	];
+}

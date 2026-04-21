@@ -1,0 +1,73 @@
+// ============================================================
+// Script:   expense_claim_approval.reference.dg
+// Location: Expense_Claims > Approval Process > On Approve
+// Trigger:  approval
+// Purpose:  Zia stress test — GL lookup, audit trail, sendmail
+// Context:  approval-script
+// Design:   All [] action blocks wrapped inside {} control flow
+// Note:     Triple nesting in .ds: approval > on approve > on load
+// Version:  v2.1 (Zia Stress Test)
+// ============================================================
+
+// ---- ON APPROVE ----
+
+// GL code lookup with null guard (DG005 target)
+glRec = gl_accounts[expense_category == input.category && Active == true];
+
+if (glRec != null && glRec.count() > 0)
+{
+    glCode = glRec.gl_code;
+    input.gl_code = glCode;
+}
+else
+{
+    // Fallback — flag for manual review
+    input.gl_code = "MANUAL-REVIEW";
+}
+
+// Update status — inside {} (DG011 target)
+input.status = "Approved";
+
+// Audit trail — [] inside {} (DG006, DG007, DG009, DG012)
+if (true)
+{
+    row = insert into approval_history
+    [
+        claim = input.ID
+        action_1 = "Approved"
+        actor = zoho.loginuser
+        timestamp = zoho.currenttime
+        comments = "Expense claim approved. GL Code: " + ifnull(input.gl_code, "pending")
+        Added_User = zoho.loginuser
+    ];
+}
+
+// Sendmail notification — [] inside {} (DG010, DG015/DG016)
+if (input.Email != null && input.Email != "")
+{
+    sendmail
+    [
+        from : zoho.adminuserid
+        to : input.Email
+        subject : "Expense Claim " + input.Claim_Reference + " Approved"
+        message : "<h2>Claim Approved</h2><p>Your expense claim <b>" + input.Claim_Reference + "</b> for R " + input.amount_zar + " has been approved.</p><p>GL Code: " + ifnull(input.gl_code, "pending") + "</p><p>Approved by: " + zoho.loginuser + "</p>"
+        content_type : Html
+    ];
+}
+
+// ---- ON REJECT (companion handler) ----
+// Note: In .ds export, this appears as a separate on reject block
+// with its own on load ( ... ) script container.
+//
+// On reject handler would contain:
+//   input.status = "Rejected";
+//   insert into approval_history [
+//       claim = input.ID
+//       action_1 = "Rejected"
+//       actor = zoho.loginuser
+//       timestamp = zoho.currenttime
+//       comments = input.Rejection_Reason
+//       Added_User = zoho.loginuser
+//   ];
+//   sendmail [ from : zoho.adminuserid to : input.Email
+//       subject : "Claim Rejected" message : rejection HTML ];

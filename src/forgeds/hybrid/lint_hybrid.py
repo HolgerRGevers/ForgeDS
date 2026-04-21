@@ -632,6 +632,75 @@ def run_script_rules(db: HybridDB, scripts_dir: str) -> list[Diagnostic]:
 
 
 # ============================================================
+# KB-backed rules (HY017–HY018) — enabled with --kb flag
+# ============================================================
+
+def check_hy017(db: HybridDB, kb) -> list[Diagnostic]:
+    """HY017: Type mapping contradicts KB documentation.
+
+    Cross-references the Access→Zoho type mappings against what the
+    knowledge base says about Deluge data types and coercion rules.
+    """
+    diags: list[Diagnostic] = []
+    kb_context = kb.query("Deluge data types coercion conversion rules")
+    if not kb_context:
+        return diags
+
+    kb_lower = kb_context.lower()
+    for access_type, mapping in db.type_mappings.items():
+        zoho_type = mapping["zoho_type"].lower()
+        risk = mapping.get("risk", "").lower()
+
+        # Check if KB mentions this mapping has caveats
+        if risk in ("high", "medium"):
+            # See if KB documents the risky type conversion
+            if access_type.lower() in kb_lower and zoho_type in kb_lower:
+                continue  # KB acknowledges this mapping
+            diags.append(_diag(
+                "type_mappings", 0, Severity.INFO, "HY017",
+                f"Access type '{access_type}' → Zoho '{mapping['zoho_type']}' "
+                f"has {risk} data-loss risk. KB does not document this coercion path.",
+            ))
+
+    return diags
+
+
+def check_hy018(db: HybridDB, kb) -> list[Diagnostic]:
+    """HY018: Field naming does not follow KB conventions.
+
+    Checks that Zoho form field link_names follow the naming patterns
+    documented in the knowledge base (snake_case, no reserved words, etc.).
+    """
+    diags: list[Diagnostic] = []
+    kb_context = kb.query("field link_name naming convention Creator")
+    if not kb_context:
+        return diags
+
+    # KB documents that link_names should be snake_case, no spaces, no special chars
+    for form, fields in db.form_fields.items():
+        for field in fields:
+            # Check snake_case convention
+            if field != field.lower() and not field.startswith("ID"):
+                # Mixed case — check if KB specifically allows this pattern
+                if "camelcase" not in kb_context.lower():
+                    diags.append(_diag(
+                        form, 0, Severity.INFO, "HY018",
+                        f"Field '{form}.{field}' uses mixed case. "
+                        f"KB convention is snake_case for link_names.",
+                    ))
+
+    return diags
+
+
+def run_kb_rules(db: HybridDB, kb) -> list[Diagnostic]:
+    """Run all KB-backed hybrid lint rules."""
+    diags: list[Diagnostic] = []
+    diags.extend(check_hy017(db, kb))
+    diags.extend(check_hy018(db, kb))
+    return diags
+
+
+# ============================================================
 # Main pipeline
 # ============================================================
 
@@ -655,6 +724,10 @@ def main() -> None:
         "--verbose",
         action="store_true",
         help="Show INFO-level diagnostics (default: only ERROR and WARNING)",
+    )
+    parser.add_argument(
+        "--kb", action="store_true",
+        help="Enable KB-backed hybrid rules (HY017-HY018). Requires knowledge.db.",
     )
     args = parser.parse_args()
 
@@ -692,7 +765,18 @@ def main() -> None:
     if args.scripts:
         script_diags = run_script_rules(db, args.scripts)
 
-    all_diags = schema_diags + data_diags + script_diags
+    # KB-backed rules (optional)
+    kb_diags: list[Diagnostic] = []
+    if args.kb:
+        from forgeds._shared.kb_accessor import get_kb
+        kb = get_kb()
+        if kb.available():
+            kb_diags = run_kb_rules(db, kb)
+            print(f"KB: {len(kb_diags)} diagnostic(s) from KB rules.", file=sys.stderr)
+        else:
+            print("WARNING: knowledge.db not found. KB rules disabled.", file=sys.stderr)
+
+    all_diags = schema_diags + data_diags + script_diags + kb_diags
 
     # Filter by verbosity
     if not args.verbose:
