@@ -39,3 +39,6 @@ web/dist/
 
 # Worktrees
 .worktrees/
+
+# Superpowers brainstorm/scratch sessions
+.superpowers/
