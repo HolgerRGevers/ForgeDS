@@ -1,0 +1,2919 @@
+/*
+ * Author       : holger.gevers360
+ * Generated on : 10-Apr-2026 12:13:50
+ * Version      : 1.0
+ */
+ application "Inventory Management System"
+ {
+ 	date format = "dd-MMM-yyyy"
+ 	time zone = "America/Los_Angeles"
+ 	time format = "24-hr"
+
+ 	forms
+	{
+		form inventory_dashboard
+		{
+			displayname = "Inventory Dashboard"
+			success message = "Inventory Dashboard Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			product
+			(
+				type = list	
+				displayname = "Product"
+				values  = products.ID
+    			displayformat = [product_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			warehouse
+			(
+				type = list	
+				displayname = "Warehouse"
+				values  = warehouses.ID
+    			displayformat = [warehouse_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			current_stock
+			(
+				type = number
+				displayname = "Current Stock"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			reorder_status
+			(
+				type = picklist
+				displayname = "Reorder Status"
+				values = {"Out of Stock","Low Stock","In Stock"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_updated
+			(
+    			type = datetime
+				displayname = "Last Updated"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Inventory Monitored","Reorder Triggered","Stock Verified","Purchase Order Created","Reorder Cancelled","Purchase Order Sent","Purchase Order Revised","Supplier Acknowledged","Purchase Order Follow-Up","Goods Received","Supplier Delayed","Supplier Follow-Up","Alternate Supplier Engaged","Quality Check In Progress","Goods Rejected","Quality Passed","Quality Failed","Inventory Updated","Return to Supplier","Partial Acceptance","Return Confirmed","Refund Processed","Replacement Shipped","Reorder Closed","Replacement Received"}
+			}
+		}
+		form items
+		{
+			displayname = "Items"
+			success message = "Item Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			brand
+			(
+    			type = text
+				displayname = "Brand"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			cost_price
+			(
+				type = decimal
+				displayname = "Cost Price"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			created_time
+			(
+    			type = datetime
+				displayname = "Created Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			dimension_unit
+			(
+    			type = text
+				displayname = "Dimension Unit"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			ean
+			(
+				type = number
+				displayname = "EAN"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			height
+			(
+				type = decimal
+				displayname = "Height"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			hsn_or_sac_code
+			(
+				type = number
+				displayname = "HSN Or SAC Code"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			isbn
+			(
+    			type = text
+				displayname = "ISBN"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			last_modified_time
+			(
+    			type = datetime
+				displayname = "Last Modified Time"
+				timedisplayoptions = "hh:mm:ss"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			length_field
+			(
+				type = decimal
+				displayname = "Length"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			manufacturer
+			(
+    			type = text
+				displayname = "Manufacturer"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			mpn
+			(
+    			type = text
+				displayname = "MPN"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			must have name
+			(
+    			type = text
+				displayname = "Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			opening_stock
+			(
+				type = decimal
+				displayname = "Opening Stock"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			opening_stock_rate_per_unit
+			(
+				type = decimal
+				displayname = "Opening Stock Rate Per Unit"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			purchase_account_name
+			(
+    			type = text
+				displayname = "Purchase Account Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			purchase_description
+			(
+    			type = textarea
+				displayname = "Purchase Description"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			reorder_point
+			(
+				type = decimal
+				displayname = "Reorder Point"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sales_account_name
+			(
+    			type = text
+				displayname = "Sales Account Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sales_description
+			(
+    			type = textarea
+				displayname = "Sales Description"
+				height = 100px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sat_item_key_code
+			(
+				type = number
+				displayname = "SAT Item Key Code"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sat_unit_code
+			(
+    			type = text
+				displayname = "SAT Unit Code"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			selling_price
+			(
+				type = decimal
+				displayname = "Selling Price"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sku
+			(
+    			type = text
+				displayname = "SKU"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			upc
+			(
+				type = number
+				displayname = "UPC"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			weight
+			(
+				type = decimal
+				displayname = "Weight"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			weight_unit
+			(
+    			type = text
+				displayname = "Weight Unit"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			width
+			(
+				type = decimal
+				displayname = "Width"
+				maxchar = 16
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form products
+		{
+			displayname = "Products"
+			success message = "Product Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			product_id
+			(
+    			type = autonumber
+				displayname = "Product ID"
+				start index = 1
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			product_name
+			(
+    			type = text
+				displayname = "Product Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			sku
+			(
+    			type = text
+				displayname = "SKU"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			category
+			(
+				type = picklist
+				displayname = "Category"
+				values = {"Office","Clothing","Electronics","Food","Other"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			unit_price
+			(
+				displayname = "Unit Price"
+				type = USD
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			quantity_on_hand
+			(
+				type = number
+				displayname = "Quantity On Hand"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			reorder_level
+			(
+				type = number
+				displayname = "Reorder Level"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			is_active
+			(
+    			type = checkbox
+				displayname = "Is Active"
+				initial value = false
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			item
+			(
+				type = picklist	
+				displayname = "Item"
+				values  = items.ID
+    			displayformat = [name]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+		form stock_movements
+		{
+			displayname = "Stock Movements"
+			success message = "Stock Movement Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			product
+			(
+				type = list	
+				displayname = "Product"
+				values  = products.ID
+    			displayformat = [product_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			warehouse
+			(
+				type = list	
+				displayname = "Warehouse"
+				values  = warehouses.ID
+    			displayformat = [warehouse_id]
+				allow new entries
+				[
+					displayname = "Add New"
+				]
+				sortorder = ascending
+				height = 13px
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			movement_type
+			(
+				type = picklist
+				displayname = "Movement Type"
+				values = {"Returned","Received","Shipped","Adjusted"}
+				others option = true
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			quantity
+			(
+				type = number
+				displayname = "Quantity"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			movement_date
+			(
+    			type = date
+				displayname = "Movement Date"
+				alloweddays = 0,1,2,3,4,5,6
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+			blueprint components
+			{
+				stages = {"Stock Movement Created","Movement Validated","Movement Rejected","Inventory Adjusted","Movement On Hold","Movement Confirmed","Movement Reversed","Movement Completed","Movement Archived"}
+			}
+		}
+		form warehouses
+		{
+			displayname = "Warehouses"
+			success message = "Warehouse Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0   
+				width = medium
+			)
+			warehouse_id
+			(
+    			type = autonumber
+				displayname = "Warehouse ID"
+				start index = 1
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			warehouse_name
+			(
+    			type = text
+				displayname = "Warehouse Name"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			location
+			(
+    			type = text
+				displayname = "Location"
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+			capacity
+			(
+				type = number
+				displayname = "Capacity"
+				maxchar = 19
+	 			row = 1
+	 			column = 1   
+				width = medium
+			)
+	
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+	}
+	reports
+	{
+		list stock_movements_Report
+		{
+			displayName = "All Stock Movements"
+			show all rows from stock_movements    
+			(
+				product as "Product"
+				warehouse as "Warehouse"
+				movement_type as "Movement Type"
+				quantity as "Quantity"
+				movement_date as "Movement Date"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (movement_type == "Received")
+				fields = [movement_type]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (movement_type == "Returned")
+				fields = [movement_type]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (movement_type == "Shipped")
+				fields = [movement_type]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+			)
+		}
+		kanban stock_movements_by_movement_type
+		{
+			displayName = "Movement Types"
+			show all rows from stock_movements    
+			(
+				product as "Product"
+				warehouse as "Warehouse"
+				movement_type as "Movement Type"
+				quantity as "Quantity"
+				movement_date as "Movement Date"
+			)
+			options
+			(
+	 			display field = movement_type
+	 		)
+		}
+		list inventory_dashboard_Report
+		{
+			displayName = "All Inventory Dashboards"
+			show all rows from inventory_dashboard    
+			(
+				product as "Product"
+				warehouse as "Warehouse"
+				current_stock as "Current Stock"
+				reorder_status as "Reorder Status"
+				last_updated as "Last Updated"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (reorder_status == "In Stock")
+				fields = [reorder_status]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (reorder_status == "Low Stock")
+				fields = [reorder_status]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (reorder_status == "Out of Stock")
+				fields = [reorder_status]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+			)
+		}
+		kanban inventory_dashboard_by_reorder_status
+		{
+			displayName = "Reorder Statuses"
+			show all rows from inventory_dashboard    
+			(
+				product as "Product"
+				warehouse as "Warehouse"
+				current_stock as "Current Stock"
+				reorder_status as "Reorder Status"
+				last_updated as "Last Updated"
+			)
+			options
+			(
+	 			display field = reorder_status
+	 		)
+		}
+		list products_Report
+		{
+			displayName = "All Products"
+			show all rows from products    
+			(
+				product_id as "Product ID"
+				product_name as "Product Name"
+				sku as "SKU"
+				category as "Category"
+				unit_price as "Unit Price"
+				(
+					display = total,average,min,max	
+				)
+				quantity_on_hand as "Quantity On Hand"
+				reorder_level as "Reorder Level"
+				is_active as "Is Active"
+				item as "Item"
+			)
+			conditional formatting
+			(
+				"New Formatting1"
+				{
+				condition = (category == "Clothing")
+				fields = [category]
+				format = "color:#ffffff;background-color:#765f89;"
+				}
+				"New Formatting2"
+				{
+				condition = (category == "Electronics")
+				fields = [category]
+				format = "color:#000000;background-color:#1bbc9b;"
+				}
+				"New Formatting3"
+				{
+				condition = (category == "Food")
+				fields = [category]
+				format = "color:#ffffff;background-color:#e84c3d;"
+				}
+				"New Formatting4"
+				{
+				condition = (category == "Office")
+				fields = [category]
+				format = "color:#ffffff;background-color:#3598db;"
+				}
+			)
+		}
+		kanban products_by_category
+		{
+			displayName = "Categories"
+			show all rows from products    
+			(
+				product_id as "Product ID"
+				product_name as "Product Name"
+				sku as "SKU"
+				category as "Category"
+				unit_price as "Unit Price"
+				(
+					display = total,average,min,max	
+				)
+				quantity_on_hand as "Quantity On Hand"
+				reorder_level as "Reorder Level"
+				is_active as "Is Active"
+				item as "Item"
+			)
+			options
+			(
+	 			display field = category
+	 		)
+		}
+		list warehouses_Report
+		{
+			displayName = "All Warehouses"
+			show all rows from warehouses    
+			(
+				warehouse_id as "Warehouse ID"
+				warehouse_name as "Warehouse Name"
+				location as "Location"
+				capacity as "Capacity"
+			)
+		}
+		list items_Report
+		{
+			displayName = "All Items"
+			show all rows from items    
+			(
+				brand as "Brand"
+				cost_price as "Cost Price"
+				created_time as "Created Time"
+				dimension_unit as "Dimension Unit"
+				ean as "EAN"
+				height as "Height"
+				hsn_or_sac_code as "HSN Or SAC Code"
+				isbn as "ISBN"
+				last_modified_time as "Last Modified Time"
+				length_field as "Length"
+				manufacturer as "Manufacturer"
+				mpn as "MPN"
+				name as "Name"
+				opening_stock as "Opening Stock"
+				opening_stock_rate_per_unit as "Opening Stock Rate Per Unit"
+				purchase_account_name as "Purchase Account Name"
+				purchase_description as "Purchase Description"
+				reorder_point as "Reorder Point"
+				sales_account_name as "Sales Account Name"
+				sales_description as "Sales Description"
+				sat_item_key_code as "SAT Item Key Code"
+				sat_unit_code as "SAT Unit Code"
+				selling_price as "Selling Price"
+				sku as "SKU"
+				upc as "UPC"
+				weight as "Weight"
+				weight_unit as "Weight Unit"
+				width as "Width"
+			)
+		}
+	}
+	pages
+	{
+		page DashBoard
+		{
+			displayname = "Dashboard"
+			Content="<zml    \t\t\n\t\t\n\t\t\n\t\t\n\t\t\n>\n\t<layout>\n\t<row>\n\t<column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel 1'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#F97164'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '64%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '0px' \n\tmarginTop = '8px'\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.products.unit_price.sum'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '0px'\n\tmarginRight = '8px' \n\tmarginTop = '0px'\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Total Unit Prices'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '36%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#C75A50'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'shopping-tag'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#EEA131'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '65%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.items.cost_price.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Average Cost Prices'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '35%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#BE8127'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'shopping-tag'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#00CFA9'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '65%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'transparent'\n\n\n\tdisplayType = 'actual'\n\tdecimalPlaces = '2'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.items.height.avg'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Average Heights'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '35%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#0BA385'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'weather-drops'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='26%'\n   \t>\n\t<panel elementName='Panel 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#3E99DE'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpaddingTop = '20px'\n\tpaddingLeft = '20px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '65%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\tpadding = '5px'\n\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '24px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t  value = 'thisapp.stock_movements.ID.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tcolor = '#FFFFFF'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Total Stock Movements'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '35%'\n\t\thAlign = 'right'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '10px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#0E78C9'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'shopping-bitcoin'\n\tsize = '22px'\n\tcornerRadius = '10px'\n\ticonType = 'outline'\n/>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<panel elementName='Grouped_Panel 1'\n \n\t\n\ttitle = 'Movement Type'\n\t\n\t\ttitleSize = '15px'\n            boldTitle = 'true'\n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '0px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '100%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#F97164'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'media-1-rotate-left'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginBottom = '0px'\n\tcolor = '#C75A50'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'movement_type == &quot;Returned&quot;'\n\t  value = 'thisapp.stock_movements.movement_type.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Returned'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = '#FFFFFF'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#EEA131'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'media-2-radio'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tcolor = '#BE8127'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'movement_type == &quot;Received&quot;'\n\t  value = 'thisapp.stock_movements.movement_type.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginTop = '0px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Received'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#00CFA9'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'shopping-delivery-track'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tcolor = '#0BA385'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'movement_type == &quot;Shipped&quot;'\n\t  value = 'thisapp.stock_movements.movement_type.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginTop = '0px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Shipped'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc><pc \n\t\tpadding = '20px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\twidth = '25%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginBottom = '0px'\n\tmarginTop = '0px'\n\n\tcolor = '#FFFFFF'\n\tbgColor = '#3E99DE'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'business-percentage-39'\n\tsize = '22px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\tpaddingLeft = '10px'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\t\thAlign = 'left'\n>\n\t<pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tcolor = '#0E78C9'\n\tsize = '28px'\n\tbold = 'true' \n\ttype = 'Form Data'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\tdisplayType = 'actual'\n\tthousandsSeperator = 'LOCALE'\n\tdecimalSeperator = 'DOT'\n\tnumberScale = 'none'\n\n\n\n\n\t\tcriteria = 'movement_type == &quot;Adjusted&quot;'\n\t  value = 'thisapp.stock_movements.movement_type.count'\n>\n</text>\n\n</pc>\n</pr><pr \n\t>\n\t<pc \n\t\n>\n\t<text \n\n\tmarginLeft = '10px'\n\tmarginRight = '0px' \n\tmarginTop = '0px'\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Adjusted'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel_Button 1'\n \n\t\n\ttitle = 'Quick Links'\n\t\n\t\ttitleSize = '15px'\n            boldTitle = 'true'\n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'stock_movements'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#595959'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Stock Movements'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='27%'\n   \t>\n\t<panel elementName='Panel_Button 2'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'inventory_dashboard'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#3F3F3F'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Inventory Dashboard'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='25%'\n   \t>\n\t<panel elementName='Panel_Button 3'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'products'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#3F3F3F'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Products'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column><column\n   \t\t width='24%'\n   \t>\n\t<panel elementName='Panel_Button 4'\n \n >\n\t<pr \n\t\t\twidth='fill'\n\t\theight='fill'\n>\n\t<pc \n\t\tbgColor = '#CB6711'\n\n\t\twidth = '2%'\n\t\thAlign = 'left'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t\n</pc>\n</pr>\n</pc><pc \n\t\tpaddingTop = '10px'\n\tpaddingLeft = '0px'\n\tpaddingRight = '0px'\n\tpaddingBottom = '10px'\n\tbgColor = '#FFFFFF'\n\n    action = 'OpenForm'\n\t\tcomponentLinkName = 'warehouses'\n\t\ttarget = 'new-window'\n\t\twidth = '98%'\n\t\thAlign = 'center'\n\t\tvAlign = 'middle'\n>\n\t<pr \n\t\t\twidth='auto'\n\t\theight='auto'\n>\n\t<pc \n\t\n>\n\t<image  \n\t\tmarginLeft = '0px'\n\tmarginRight = '6px' \n\n\tcolor = '#3F3F3F'\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\twidth = '40px'\n\theight = '40px'\n\ttype = 'icon'\n\tvalue = 'ui-2-square-add-08'\n\tsize = '14px'\n\tcornerRadius = '20px'\n\ticonType = 'outline'\n/>\n</pc><pc \n\t\n>\n\t<text \n\n\tcolor = '#3F3F3F'\n\tsize = '14px'\n\ttype = 'Text'\n\n\tbgColor = 'rgba(0, 0, 0, 0)'\n\n\n\n\n\n\n\t  value = 'Add New Warehouses'\n>\n</text>\n\n</pc>\n</pr>\n</pc>\n</pr>\n</panel>\n</column>\n</row><row>\n\t<column\n   \t\t width='50%'\n   \t>\n\t<chart \n\telementName='Chart 1'\n\n\t\n\ttitle = 'EAN by Reorder Point'\n\t\n\t\ttitleSize = '16px'\n\ttype = 'Scatter'\n\txtitle = 'EAN'\n\tytitle = 'Reorder Point'\n\tbgColor = 'rgb(255, 255, 255)'\n\ttheme = '#f37d16'\n\tlegendPos = 'none'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'items'\n\txfield = 'ean'\n\tyfields = 'value:reorder_point'\n\tgroupBy = 'brand'\n\t\tDelugeCriteria = 'ean is not null'\n/>\n\n</column><column\n   \t\t width='50%'\n   \t>\n\t<chart \n\telementName='Chart 2'\n\n\t\n\ttitle = 'Reorder Level by Quantity On Hand'\n\t\n\t\ttitleSize = '16px'\n\ttype = 'Scatter'\n\txtitle = 'Reorder Level'\n\tytitle = 'Quantity On Hand'\n\tbgColor = 'rgb(255, 255, 255)'\n\ttheme = 'theme1'\n\tlegendPos = 'none'\n\theightType = 'auto'\n\theightValue = '300px'\n\tappLinkName = 'thisapp'\n\tformLinkName = 'products'\n\txfield = 'reorder_level'\n\tyfields = 'value:quantity_on_hand'\n\tgroupBy = 'product_id'\n\t\tDelugeCriteria = 'reorder_level is not null'\n/>\n\n</column>\n</row><row>\n\t<column\n   \t\t width='100%'\n   \t>\n\t<report \n\telementName='Report'\n\n\t\tappLinkName = 'thisapp'\n\t\tlinkName = 'stock_movements_Report'\n\t\n\t\tiszreport = 'false'\n\t\t\t\t\tzc_AddRec = 'false'\n\t\t\t\t\tzc_EditRec = 'false'\n\t\t\t\t\tzc_Print = 'false'\n\t\t\t\t\tzc_Export = 'false'\n\t\t\t\t\tzc_DelRec = 'false'\n\t\t\t\t\tzc_DuplRec = 'false'\n\t\t\t\t\tzc_Search = 'false'\n\t\t\t\t\tzc_EditBulkRec = 'false'\n\t\t\t\t\tzc_BulkDelete = 'false'\n\t\t\t\t\tzc_BulkDuplicate = 'false'\n\theightType = 'auto'\n\theightValue = '700'\n\n/>\n</column>\n</row>\n</layout>\n</zml>"
+		}
+	}
+
+
+
+
+		workflow
+		{
+
+
+
+
+		blueprint
+		{
+    			stock_movement_tracking_process as "Stock Movement Tracking Process"
+    			{
+        			type = Blueprint
+        			form = stock_movements
+        			start
+        			{
+            			start stage = "Stock Movement Created"
+        			}
+        			stages
+        			{
+           			"Stock Movement Created"
+           			{
+           			}
+           			"Movement Validated"
+           			{
+           			}
+           			"Movement Rejected"
+           			{
+           			}
+           			"Inventory Adjusted"
+           			{
+           			}
+           			"Movement On Hold"
+           			{
+           			}
+           			"Movement Confirmed"
+           			{
+           			}
+           			"Movement Reversed"
+           			{
+           			}
+           			"Movement Completed"
+           			{
+           			}
+           			"Movement Archived"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				validate_movement as "Validate Stock Movement Details"
+    				{
+         				type = normal
+         				from stage = "Stock Movement Created"
+         				to stage = "Movement Validated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_movement as "Reject Stock Movement"
+    				{
+         				type = normal
+         				from stage = "Stock Movement Created"
+         				to stage = "Movement Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				adjust_inventory as "Adjust Inventory Levels"
+    				{
+         				type = normal
+         				from stage = "Movement Validated"
+         				to stage = "Inventory Adjusted"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				hold_movement as "Place Movement On Hold for Review"
+    				{
+         				type = normal
+         				from stage = "Movement Validated"
+         				to stage = "Movement On Hold"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				resume_validation as "Resume Validation"
+    				{
+         				type = normal
+         				from stage = "Movement On Hold"
+         				to stage = "Movement Validated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_movement as "Confirm Movement Execution"
+    				{
+         				type = normal
+         				from stage = "Inventory Adjusted"
+         				to stage = "Movement Confirmed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reverse_movement as "Reverse Inventory Adjustment"
+    				{
+         				type = normal
+         				from stage = "Inventory Adjusted"
+         				to stage = "Movement Reversed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				complete_movement as "Mark Movement as Completed"
+    				{
+         				type = normal
+         				from stage = "Movement Confirmed"
+         				to stage = "Movement Completed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reconfirm_movement as "Reconfirm Movement"
+    				{
+         				type = normal
+         				from stage = "Movement Reversed"
+         				to stage = "Movement Confirmed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				complete_reversed_movement as "Complete Reversed Movement"
+    				{
+         				type = normal
+         				from stage = "Movement Reversed"
+         				to stage = "Movement Completed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				archive_movement as "Archive Completed Movement"
+    				{
+         				type = normal
+         				from stage = "Movement Completed"
+         				to stage = "Movement Archived"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+    			inventory_replenishment_process as "Inventory Replenishment Process"
+    			{
+        			type = Blueprint
+        			form = inventory_dashboard
+        			start
+        			{
+            			start stage = "Inventory Monitored"
+        			}
+        			stages
+        			{
+           			"Inventory Monitored"
+           			{
+           			}
+           			"Reorder Triggered"
+           			{
+           			}
+           			"Stock Verified"
+           			{
+           			}
+           			"Purchase Order Created"
+           			{
+           			}
+           			"Reorder Cancelled"
+           			{
+           			}
+           			"Purchase Order Sent"
+           			{
+           			}
+           			"Purchase Order Revised"
+           			{
+           			}
+           			"Supplier Acknowledged"
+           			{
+           			}
+           			"Purchase Order Follow-Up"
+           			{
+           			}
+           			"Goods Received"
+           			{
+           			}
+           			"Supplier Delayed"
+           			{
+           			}
+           			"Supplier Follow-Up"
+           			{
+           			}
+           			"Alternate Supplier Engaged"
+           			{
+           			}
+           			"Quality Check In Progress"
+           			{
+           			}
+           			"Goods Rejected"
+           			{
+           			}
+           			"Quality Passed"
+           			{
+           			}
+           			"Quality Failed"
+           			{
+           			}
+           			"Inventory Updated"
+           			{
+           			}
+           			"Return to Supplier"
+           			{
+           			}
+           			"Partial Acceptance"
+           			{
+           			}
+           			"Return Confirmed"
+           			{
+           			}
+           			"Refund Processed"
+           			{
+           			}
+           			"Replacement Shipped"
+           			{
+           			}
+           			"Reorder Closed"
+           			{
+           			}
+           			"Replacement Received"
+           			{
+           			}
+        			}
+        			transitions
+        			{
+    				trigger_reorder as "Initiate Reorder Due to Low Stock"
+    				{
+         				type = normal
+         				from stage = "Inventory Monitored"
+         				to stage = "Reorder Triggered"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				verify_stock as "Verify Current Stock Levels"
+    				{
+         				type = normal
+         				from stage = "Inventory Monitored"
+         				to stage = "Stock Verified"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				create_po as "Create Purchase Order for Replenishment"
+    				{
+         				type = normal
+         				from stage = "Reorder Triggered"
+         				to stage = "Purchase Order Created"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				cancel_reorder as "Cancel Reorder Request"
+    				{
+         				type = normal
+         				from stage = "Reorder Triggered"
+         				to stage = "Reorder Cancelled"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				send_po as "Send Purchase Order to Supplier"
+    				{
+         				type = normal
+         				from stage = "Purchase Order Created"
+         				to stage = "Purchase Order Sent"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				revise_po as "Revise Purchase Order"
+    				{
+         				type = normal
+         				from stage = "Purchase Order Created"
+         				to stage = "Purchase Order Revised"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				acknowledge_po as "Confirm Supplier Receipt of PO"
+    				{
+         				type = normal
+         				from stage = "Purchase Order Sent"
+         				to stage = "Supplier Acknowledged"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				follow_up_po as "Send Follow-Up Reminder to Supplier"
+    				{
+         				type = normal
+         				from stage = "Purchase Order Sent"
+         				to stage = "Purchase Order Follow-Up"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				receive_goods as "Receive Shipment and Confirm Delivery"
+    				{
+         				type = normal
+         				from stage = "Supplier Acknowledged"
+         				to stage = "Goods Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				flag_delay as "Flag Delay in Supplier Delivery"
+    				{
+         				type = normal
+         				from stage = "Supplier Acknowledged"
+         				to stage = "Supplier Delayed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				escalate_delay as "Escalate Delay to Supplier Manager"
+    				{
+         				type = normal
+         				from stage = "Supplier Delayed"
+         				to stage = "Supplier Follow-Up"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				engage_alternate as "Engage Alternate Supplier"
+    				{
+         				type = normal
+         				from stage = "Supplier Delayed"
+         				to stage = "Alternate Supplier Engaged"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				start_quality_check as "Begin Quality Inspection of Received Goods"
+    				{
+         				type = normal
+         				from stage = "Goods Received"
+         				to stage = "Quality Check In Progress"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				reject_goods as "Reject Shipment Due to Defects"
+    				{
+         				type = normal
+         				from stage = "Goods Received"
+         				to stage = "Goods Rejected"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				approve_quality as "Approve Goods After Quality Check"
+    				{
+         				type = normal
+         				from stage = "Quality Check In Progress"
+         				to stage = "Quality Passed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				fail_quality as "Fail Quality Check and Initiate Return"
+    				{
+         				type = normal
+         				from stage = "Quality Check In Progress"
+         				to stage = "Quality Failed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				update_inventory as "Update Inventory with Received Stock"
+    				{
+         				type = normal
+         				from stage = "Quality Passed"
+         				to stage = "Inventory Updated"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				return_to_supplier as "Initiate Return Process for Defective Goods"
+    				{
+         				type = normal
+         				from stage = "Quality Failed"
+         				to stage = "Return to Supplier"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				accept_partial as "Accept Partial Shipment After Quality Check"
+    				{
+         				type = normal
+         				from stage = "Quality Failed"
+         				to stage = "Partial Acceptance"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				confirm_return as "Confirm Return Shipment Sent"
+    				{
+         				type = normal
+         				from stage = "Return to Supplier"
+         				to stage = "Return Confirmed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				process_refund as "Process Refund for Returned Goods"
+    				{
+         				type = normal
+         				from stage = "Return Confirmed"
+         				to stage = "Refund Processed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				ship_replacement as "Ship Replacement Goods"
+    				{
+         				type = normal
+         				from stage = "Return Confirmed"
+         				to stage = "Replacement Shipped"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				close_reorder as "Close Reorder Process After Refund"
+    				{
+         				type = normal
+         				from stage = "Refund Processed"
+         				to stage = "Reorder Closed"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+    				receive_replacement as "Confirm Receipt of Replacement Goods"
+    				{
+         				type = normal
+         				from stage = "Replacement Shipped"
+         				to stage = "Replacement Received"
+         				before
+         				{
+         				}
+         				after
+         				{
+         				}
+  				}
+        			}
+    			}
+		}
+
+
+	}
+	share_settings
+	{
+			"Read"
+			{
+				name = "Read"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have read permission for all components\n"
+			}
+			"Write"
+			{
+				name = "Write"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have write permission for all components\n"
+			}
+			"Operations Analyst"
+			{
+				name = "Operations Analyst"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Analyze inventory trends and stock turnover rates \n"
+				ModulePermissions
+				{
+					inventory_dashboard
+					{
+						enabled= Viewall,Export 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							inventory_dashboard_by_reorder_status={"View"}
+							inventory_dashboard_Report={"View"}
+						}
+					}
+					stock_movements
+					{
+						enabled= Viewall,Export 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							stock_movements_by_movement_type={"View"}
+							stock_movements_Report={"View"}
+						}
+					}
+					products
+					{
+						enabled= Viewall,Export 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							products_Report={"View"}
+							products_by_category={"View"}
+						}
+					}
+				}
+			}
+			"Inventory Manager"
+			{
+				name = "Inventory Manager"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Oversee real-time inventory levels across all warehouses \n"
+				ModulePermissions
+				{
+					warehouses
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							warehouses_Report={"View","Edit","Delete"}
+						}
+					}
+					inventory_dashboard
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							inventory_dashboard_by_reorder_status={"View","Edit","Delete"}
+							inventory_dashboard_Report={"View","Edit","Delete"}
+						}
+					}
+					stock_movements
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							stock_movements_by_movement_type={"View","Edit","Delete"}
+							stock_movements_Report={"View","Edit","Delete"}
+						}
+					}
+					items
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							items_Report={"View","Edit","Delete"}
+						}
+					}
+					products
+					{
+						enabled= Create,Viewall,Modifyall,Import,Export,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							products_Report={"View","Edit","Delete"}
+							products_by_category={"View","Edit","Delete"}
+						}
+					}
+				}
+			}
+			"Administrator"
+			{
+				name = "Administrator"
+				type = Users_Permissions
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This profile will have all the permissions.\n"
+			}
+			"Supply Chain Coordinator"
+			{
+				name = "Supply Chain Coordinator"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Coordinate inbound shipments and track delivery timelines \n"
+				ModulePermissions
+				{
+					inventory_dashboard
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							inventory_dashboard_by_reorder_status={"View"}
+							inventory_dashboard_Report={"View"}
+						}
+					}
+					stock_movements
+					{
+						enabled= Create,Viewall,Modifyall,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							stock_movements_by_movement_type={"View","Edit","Delete"}
+							stock_movements_Report={"View","Edit","Delete"}
+						}
+					}
+					products
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							products_Report={"View"}
+							products_by_category={"View"}
+						}
+					}
+				}
+			}
+			"Warehouse Supervisor"
+			{
+				name = "Warehouse Supervisor"
+				type = Users_Permissions
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Manage daily warehouse operations and staff assignments \n"
+				ModulePermissions
+				{
+					warehouses
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							warehouses_Report={"View"}
+						}
+					}
+					stock_movements
+					{
+						enabled= Create,Viewall,Modifyall,Tab 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							stock_movements_by_movement_type={"View","Edit","Delete"}
+							stock_movements_Report={"View","Edit","Delete"}
+						}
+					}
+					items
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							items_Report={"View"}
+						}
+					}
+				}
+			}
+			"Developer"
+			{
+				name = "Developer"
+				type = Developer
+				permissions = {Chat:false, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Developer Profile\n"
+			}
+			"Supplier"
+			{
+				name = "Supplier"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Receive and confirm purchase orders from the system \n"
+				ModulePermissions
+				{
+					inventory_dashboard
+					{
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							inventory_dashboard_by_reorder_status={"View"}
+							inventory_dashboard_Report={"View"}
+						}
+					}
+					stock_movements
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							stock_movements_by_movement_type={"View"}
+							stock_movements_Report={"View"}
+						}
+					}
+					products
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							products_Report={"View"}
+							products_by_category={"View"}
+						}
+					}
+				}
+			}
+			"Customer"
+			{
+				name = "Customer"
+				type = Customer_Portal
+				permissions = {Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "This is the default profile having only add and view permission.\n"
+			}
+			"Logistics Partner"
+			{
+				name = "Logistics Partner"
+				type = Customer_Portal
+				permissions = {Chat:false, Predefined:false, ApiAccess:true, PIIAccess:true, ePHIAccess:true}
+				description = "Track and report shipment status for inbound and outbound movements \n"
+				ModulePermissions
+				{
+					inventory_dashboard
+					{
+						enabled= Viewall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							inventory_dashboard_by_reorder_status={"View"}
+							inventory_dashboard_Report={"View"}
+						}
+					}
+					stock_movements
+					{
+						enabled= Viewall,Modifyall 
+						allFieldsVisible= true 
+						ReportPermissions
+						{
+							stock_movements_by_movement_type={"View","Edit","Delete"}
+							stock_movements_Report={"View","Edit","Delete"}
+						}
+					}
+				}
+			}
+			roles
+			{
+				"CEO"
+				{
+					description = "User belonging to this role can access data of all other users."
+				}
+			}
+	}
+
+
+	web
+	{
+		forms
+		{
+			form inventory_dashboard
+			{
+				label placement = left
+			}
+			form items
+			{
+				label placement = left
+			}
+			form products
+			{
+				label placement = left
+			}
+			form stock_movements
+			{
+				label placement = left
+			}
+			form warehouses
+			{
+				label placement = left
+			}
+		}
+		reports
+		{
+			report stock_movements_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+								movement_type as "Movement Type"
+								quantity as "Quantity"
+								movement_date as "Movement Date"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+								movement_type as "Movement Type"
+								quantity as "Quantity"
+								movement_date as "Movement Date"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Product"
+		     				related field = product
+							fields
+							(
+								product_id as "Product ID"
+								product_name as "Product Name"
+								sku as "SKU"
+								category as "Category"
+								unit_price as "Unit Price"
+								quantity_on_hand as "Quantity On Hand"
+								reorder_level as "Reorder Level"
+								is_active as "Is Active"
+								item as "Item"
+							)
+						)
+						datablock3
+						(
+							layout type = -2
+		     				title = "Warehouse"
+		     				related field = warehouse
+							fields
+							(
+								warehouse_id as "Warehouse ID"
+								warehouse_name as "Warehouse Name"
+								location as "Location"
+								capacity as "Capacity"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report stock_movements_by_movement_type
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+								movement_type as "Movement Type"
+								quantity as "Quantity"
+								movement_date as "Movement Date"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report inventory_dashboard_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+								current_stock as "Current Stock"
+								reorder_status as "Reorder Status"
+								last_updated as "Last Updated"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+								current_stock as "Current Stock"
+								reorder_status as "Reorder Status"
+								last_updated as "Last Updated"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Product"
+		     				related field = product
+							fields
+							(
+								product_id as "Product ID"
+								product_name as "Product Name"
+								sku as "SKU"
+								category as "Category"
+								unit_price as "Unit Price"
+								quantity_on_hand as "Quantity On Hand"
+								reorder_level as "Reorder Level"
+								is_active as "Is Active"
+								item as "Item"
+							)
+						)
+						datablock3
+						(
+							layout type = -2
+		     				title = "Warehouse"
+		     				related field = warehouse
+							fields
+							(
+								warehouse_id as "Warehouse ID"
+								warehouse_name as "Warehouse Name"
+								location as "Location"
+								capacity as "Capacity"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report inventory_dashboard_by_reorder_status
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								product as "Product"
+								warehouse as "Warehouse"
+								current_stock as "Current Stock"
+								reorder_status as "Reorder Status"
+								last_updated as "Last Updated"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report products_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								product_id as "Product ID"
+								product_name as "Product Name"
+								sku as "SKU"
+								category as "Category"
+								unit_price as "Unit Price"
+								quantity_on_hand as "Quantity On Hand"
+								reorder_level as "Reorder Level"
+								is_active as "Is Active"
+								item as "Item"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								product_id as "Product ID"
+								product_name as "Product Name"
+								sku as "SKU"
+								category as "Category"
+								unit_price as "Unit Price"
+								quantity_on_hand as "Quantity On Hand"
+								reorder_level as "Reorder Level"
+								is_active as "Is Active"
+								item as "Item"
+							)
+						)
+						datablock2
+						(
+							layout type = -2
+		     				title = "Item"
+		     				related field = item
+							fields
+							(
+								brand as "Brand"
+								cost_price as "Cost Price"
+								created_time as "Created Time"
+								dimension_unit as "Dimension Unit"
+								ean as "EAN"
+								height as "Height"
+								hsn_or_sac_code as "HSN Or SAC Code"
+								isbn as "ISBN"
+								last_modified_time as "Last Modified Time"
+								length_field as "Length"
+								manufacturer as "Manufacturer"
+								mpn as "MPN"
+								name as "Name"
+								opening_stock as "Opening Stock"
+								opening_stock_rate_per_unit as "Opening Stock Rate Per Unit"
+								purchase_account_name as "Purchase Account Name"
+								purchase_description as "Purchase Description"
+								reorder_point as "Reorder Point"
+								sales_account_name as "Sales Account Name"
+								sales_description as "Sales Description"
+								sat_item_key_code as "SAT Item Key Code"
+								sat_unit_code as "SAT Unit Code"
+								selling_price as "Selling Price"
+								sku as "SKU"
+								upc as "UPC"
+								weight as "Weight"
+								weight_unit as "Weight Unit"
+								width as "Width"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report products_by_category
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = 1
+							fields
+							(
+								product_name as "Product Name"
+								sku as "SKU"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+							fields
+							(
+								product_id as "Product ID"
+								product_name as "Product Name"
+								sku as "SKU"
+								category as "Category"
+								unit_price as "Unit Price"
+								quantity_on_hand as "Quantity On Hand"
+								reorder_level as "Reorder Level"
+								is_active as "Is Active"
+								item as "Item"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report warehouses_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								warehouse_id as "Warehouse ID"
+								warehouse_name as "Warehouse Name"
+								location as "Location"
+								capacity as "Capacity"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								warehouse_id as "Warehouse ID"
+								warehouse_name as "Warehouse Name"
+								location as "Location"
+								capacity as "Capacity"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+			report items_Report
+			{
+				quickview
+				(
+					layout
+					(
+		 				type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								brand as "Brand"
+								cost_price as "Cost Price"
+								created_time as "Created Time"
+								dimension_unit as "Dimension Unit"
+								ean as "EAN"
+								height as "Height"
+								hsn_or_sac_code as "HSN Or SAC Code"
+								isbn as "ISBN"
+								last_modified_time as "Last Modified Time"
+								length_field as "Length"
+								manufacturer as "Manufacturer"
+								mpn as "MPN"
+								name as "Name"
+								opening_stock as "Opening Stock"
+								opening_stock_rate_per_unit as "Opening Stock Rate Per Unit"
+								purchase_account_name as "Purchase Account Name"
+								purchase_description as "Purchase Description"
+								reorder_point as "Reorder Point"
+								sales_account_name as "Sales Account Name"
+								sales_description as "Sales Description"
+								sat_item_key_code as "SAT Item Key Code"
+								sat_unit_code as "SAT Unit Code"
+								selling_price as "Selling Price"
+								sku as "SKU"
+								upc as "UPC"
+								weight as "Weight"
+								weight_unit as "Weight Unit"
+								width as "Width"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    		 				Add 
+    		 				Import 
+    		 				Export 
+    	 				)
+						record
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+    					)
+    				)
+    				action
+    				(
+						on click
+						(
+							View Record   	   
+    					)
+						on right click
+						(
+							Edit   	   
+							Duplicate   	   
+							Delete   	   
+							Print   	   
+							View Record   	   
+    					)
+     				)
+				)
+
+				detailview
+				(
+					layout
+					(
+		 				type = 1
+						datablock1
+						(
+							layout type = -2
+		     				title = "Overview"
+							fields
+							(
+								brand as "Brand"
+								cost_price as "Cost Price"
+								created_time as "Created Time"
+								dimension_unit as "Dimension Unit"
+								ean as "EAN"
+								height as "Height"
+								hsn_or_sac_code as "HSN Or SAC Code"
+								isbn as "ISBN"
+								last_modified_time as "Last Modified Time"
+								length_field as "Length"
+								manufacturer as "Manufacturer"
+								mpn as "MPN"
+								name as "Name"
+								opening_stock as "Opening Stock"
+								opening_stock_rate_per_unit as "Opening Stock Rate Per Unit"
+								purchase_account_name as "Purchase Account Name"
+								purchase_description as "Purchase Description"
+								reorder_point as "Reorder Point"
+								sales_account_name as "Sales Account Name"
+								sales_description as "Sales Description"
+								sat_item_key_code as "SAT Item Key Code"
+								sat_unit_code as "SAT Unit Code"
+								selling_price as "Selling Price"
+								sku as "SKU"
+								upc as "UPC"
+								weight as "Weight"
+								weight_unit as "Weight Unit"
+								width as "Width"
+							)
+						)
+					)
+					menu
+    				(
+    	 				header
+    	 				(
+    		 				Edit 
+    		 				Duplicate 
+    		 				Delete 
+    		 				Print 
+    	 				)
+    				)
+				)
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "Dashboard"
+					icon = "ui-1-dashboard-half"
+					page DashBoard
+					{
+						icon = "ui-1-dashboard-half"
+					}
+				}
+				section Section_2
+				{
+					displayname = "Stock Movements"
+					icon = "business-stock"
+					form  stock_movements
+					{
+						icon = "ui-1-bold-add"
+					}
+					report stock_movements_Report
+					{
+						icon = "shopping-bitcoin"
+					}
+					report stock_movements_by_movement_type
+					{
+						icon = "business-stock"
+					}
+				}
+				section Section_3
+				{
+					displayname = "Inventory Dashboards"
+					icon = "shopping-stock"
+					form  inventory_dashboard
+					{
+						icon = "ui-1-bold-add"
+					}
+					report inventory_dashboard_Report
+					{
+						icon = "shopping-stock"
+					}
+					report inventory_dashboard_by_reorder_status
+					{
+						icon = "design-2-selection"
+					}
+				}
+				section Section_4
+				{
+					displayname = "Products"
+					icon = "shopping-gift"
+					form  products
+					{
+						icon = "ui-1-bold-add"
+					}
+					report products_Report
+					{
+						icon = "travel-world"
+					}
+					report products_by_category
+					{
+						icon = "design-2-selection"
+					}
+				}
+				section Section_5
+				{
+					displayname = "Warehouses"
+					icon = "weather-cloud-13"
+					form  warehouses
+					{
+						icon = "ui-1-bold-add"
+					}
+					report warehouses_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section Section_6
+				{
+					displayname = "Items"
+					icon = "design-2-selection"
+					form  items
+					{
+						icon = "ui-1-bold-add"
+					}
+					report items_Report
+					{
+						icon = "travel-world"
+					}
+				}
+				section ZC_App_Preferences
+				{
+					displayname = "App Preferences"
+					icon = "design-app"
+					systemcomponent
+					{
+						type = localization
+						displayname = "Language Selection"
+						icon = "education-language"
+					}
+					systemcomponent
+					{
+						type = connection
+						displayname = "Integrations"
+						icon = "tech-2-connection"
+					}
+				}
+				section ZC_Approvals
+				{
+					displayname = "Approvals"
+					icon = "ui-2-hourglass"
+					systemcomponent
+					{
+						type = approval
+						approval status = pending
+						displayname = "Pending Tasks"
+						icon = "ui-2-hourglass"
+					}
+					systemcomponent
+					{
+						type = approval
+						approval status = completed
+						displayname = "Completed Tasks"
+						icon = "design-todo"
+					}
+				}
+				section SharedAnalytics_Section
+				{
+					type = shared_user_report_section
+					displayname = "Reports"
+					icon = "business-chart-bar-33"
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 11
+			font = "poppins"
+			color options
+			{
+				color = "3"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+	phone
+	{
+		forms
+		{
+			form inventory_dashboard
+			{
+				label placement = auto
+			}
+			form items
+			{
+				label placement = auto
+			}
+			form products
+			{
+				label placement = auto
+			}
+			form stock_movements
+			{
+				label placement = auto
+			}
+			form warehouses
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = lightred
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	tablet
+	{
+		forms
+		{
+			form inventory_dashboard
+			{
+				label placement = auto
+			}
+			form items
+			{
+				label placement = auto
+			}
+			form products
+			{
+				label placement = auto
+			}
+			form stock_movements
+			{
+				label placement = auto
+			}
+			form warehouses
+			{
+				label placement = auto
+			}
+		}
+		customize
+		{
+			layout = slidingpane
+			font = "default"
+			style = "3"
+			color options
+			{
+				color = lightred
+			}
+			logo
+			{
+				preference = "none"
+			}
+		}
+	}
+	translation
+{
+{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}
+}
+}

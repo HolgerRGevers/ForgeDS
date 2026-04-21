@@ -13,7 +13,6 @@ import { ToastContainer } from "./components/ToastContainer";
 
 function App() {
   const connect = useBridgeStore((s) => s.connect);
-  const status = useBridgeStore((s) => s.status);
 
   // Connect to bridge only if available (optional — not required for GitHub features)
   useEffect(() => {
@@ -30,7 +29,7 @@ function App() {
           path="/*"
           element={
             <AuthGuard>
-              <AppShell bridgeStatus={status}>
+              <AppShell>
                 <Routes>
                   <Route path="/" element={<PromptPage />} />
                   <Route path="/ide" element={<IdePage />} />

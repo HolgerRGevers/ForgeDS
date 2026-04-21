@@ -21,13 +21,14 @@ Creator apps as code, not click-ops.
 
 | Capability | Tool | Rules/Features |
 |---|---|---|
-| **Lint Deluge** | `forgeds-lint` | 25 rules (DG000-DG027) |
-| **Lint Access SQL** | `forgeds-lint-access` | 9 rules (AV001-AV009) |
-| **Lint Hybrid** | `forgeds-lint-hybrid` | 18 rules (HY000-HY018) |
+| **Lint Deluge** | `forgeds-lint` | 41 rules (DG001-DG018+) |
+| **Lint Access SQL** | `forgeds-lint-access` | 8 rules (AV001-AV008) |
+| **Lint Hybrid** | `forgeds-lint-hybrid` | 16 rules (HY001-HY016) |
 | **Build language DBs** | `forgeds-build-db`, `forgeds-build-access-db` | SQLite reference data |
 | **Scaffold scripts** | `forgeds-scaffold` | Generate `.dg` from manifest |
 | **Parse .ds exports** | `forgeds-parse-ds` | Extract forms, scripts, field docs |
 | **Edit .ds files** | `forgeds-ds-editor` | Descriptions, reports, menus, dashboards |
+| **Validate .ds files** | `forgeds-validate-ds` | 17 rules (DS101-DS304): structure, references, Deluge fields |
 | **Validate imports** | `forgeds-validate` | Pre-flight CSV data validation |
 | **Upload to Creator** | `forgeds-upload` | REST API v2.1 (mock mode default) |
 | **Knowledge Base** | `forgeds-kb-init` | Scrape, tokenize, graph, validate |

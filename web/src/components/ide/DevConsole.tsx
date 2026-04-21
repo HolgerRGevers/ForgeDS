@@ -32,6 +32,17 @@ function SeverityIcon({ severity }: { severity: string }) {
   }
 }
 
+// --- Bridge required message ---
+
+function BridgeRequiredMessage({ feature }: { feature: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-1 text-sm text-gray-500">
+      <span>{feature} requires the bridge server</span>
+      <span className="font-mono text-xs text-gray-600">python -m bridge</span>
+    </div>
+  );
+}
+
 // --- Tab definitions ---
 
 const TAB_LABELS: Record<ConsoleTab, string> = {
@@ -407,16 +418,20 @@ export function DevConsole() {
       {!collapsed && (
         <div className="h-48 min-h-0">
           {activeConsoleTab === "lint" && (
-            <LintTab diagnostics={diagnostics} onFileClick={handleFileClick} />
+            bridgeStatus !== "connected"
+              ? <BridgeRequiredMessage feature="Lint" />
+              : <LintTab diagnostics={diagnostics} onFileClick={handleFileClick} />
           )}
           {activeConsoleTab === "build" && (
             <BuildTab entries={consoleEntries} />
           )}
           {activeConsoleTab === "relationships" && (
-            <RelationshipsTab
-              relationships={inspectorData?.relationships ?? []}
-              elementName={inspectorData?.name ?? null}
-            />
+            bridgeStatus !== "connected"
+              ? <BridgeRequiredMessage feature="Relationships" />
+              : <RelationshipsTab
+                  relationships={inspectorData?.relationships ?? []}
+                  elementName={inspectorData?.name ?? null}
+                />
           )}
           {activeConsoleTab === "ai" && (
             <AiChatTab bridgeStatus={bridgeStatus} onSend={handleAiSend} />

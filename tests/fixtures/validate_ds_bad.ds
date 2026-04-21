@@ -1,0 +1,323 @@
+/*
+ * Author       : test.user
+ * Generated on : 10-Apr-2026 09:14:14
+ * Version      : 1.0
+ */
+ application "Bad Test App"
+ {
+ 	date format = "dd-MMM-yyyy"
+ 	time zone = "America/Los_Angeles"
+ 	time format = "24-hr"
+
+ 	forms
+	{
+		form my_form
+		{
+			displayname = "My Form"
+			success message = "My Form Added Successfully"
+			Section
+			(
+				type = section
+	 			row = 1
+	 			column = 0
+				width = medium
+			)
+			good_field
+			(
+    			type = text
+				displayname = "Good Field"
+	 			row = 1
+	 			column = 1
+				width = medium
+			)
+			no_type_field
+			(
+				displayname = "No Type Field"
+	 			row = 1
+	 			column = 1
+				width = medium
+			)
+			bad_type_field
+			(
+				type = invalidtype
+				displayname = "Bad Type Field"
+	 			row = 1
+	 			column = 1
+				width = medium
+			)
+
+			actions
+			{
+				on add
+				{
+					submit
+					(
+   						type = submit
+   						displayname = "Submit"
+					)
+					reset
+					(
+   						type = reset
+   						displayname = "Reset"
+					)
+				}
+				on edit
+				{
+					update
+					(
+   						type = submit
+   						displayname = "Update"
+					)
+					cancel
+					(
+   						type = cancel
+   						displayname = "Cancel"
+					)
+				}
+			}
+		}
+	}
+	form orphan_form
+	{
+		displayname = "Orphan Form"
+		success message = "Orphan Added"
+		Section
+		(
+			type = section
+			row = 1
+			column = 0
+			width = medium
+		)
+		some_field
+		(
+			type = text
+			displayname = "Some Field"
+			row = 1
+			column = 1
+			width = medium
+		)
+
+		actions
+		{
+			on add
+			{
+				submit
+				(
+					type = submit
+					displayname = "Submit"
+				)
+			}
+			on edit
+			{
+				update
+				(
+					type = submit
+					displayname = "Update"
+				)
+			}
+		}
+	}
+	reports
+	{
+		list my_form_Report
+		{
+			displayName = "All My Forms"
+			show all rows from my_form
+			(
+				good_field as "Good Field"
+			)
+		}
+		list bad_ref_Report
+		{
+			displayName = "Bad Reference Report"
+			show all rows from nonexistent_form
+			(
+				some_field as "Some Field"
+			)
+		}
+	}
+	list orphan_report
+	{
+		displayName = "Orphan Report"
+		show all rows from my_form
+		(
+			good_field as "Good Field"
+		)
+	}
+	pages
+	{
+		page DashBoard
+		{
+			displayname = "Dashboard"
+			Content="<zml>\n<layout>\n<row>\n<column width='100%'>\n<text value='Dashboard'/>\n</column>\n</row>\n</layout>\n</zml>"
+		}
+	}
+
+
+
+		workflow
+		{
+
+
+
+		form
+		{
+			bad_workflow as "Bad Workflow"
+			{
+				type =  form
+				form = nonexistent_form
+
+				record event = on add
+
+				on success
+				{
+					actions
+					{
+						custom deluge script
+						(
+							input.totally_fake = "something";
+							info input.Good_Field;
+						)
+					}
+				}
+			}
+			case_mismatch_workflow as "Case Mismatch Workflow"
+			{
+				type =  form
+				form = my_form
+
+				record event = on add
+
+				on success
+				{
+					actions
+					{
+						custom deluge script
+						(
+							input.Good_Field = "test";
+						)
+					}
+				}
+			}
+		}
+
+		schedule
+		{
+			bad_schedule as "Bad Schedule"
+			{
+				type =  schedule
+				form = my_form
+				time zone = "America/Los_Angeles"
+				on start
+				{
+					actions
+					{
+					on load
+					(
+						allRecs = my_form[Good_Field == "Open"];
+						row = insert into my_form
+						[
+							fake_field = "bad"
+							Added_User = zoho.adminuser
+						];
+						info allRecs.count();
+					)
+					}
+				}
+			}
+		}
+		}
+	web
+	{
+		forms
+		{
+			form my_form
+			{
+				label placement = left
+			}
+			form ghost_form
+			{
+				label placement = left
+			}
+		}
+		reports
+		{
+			report my_form_Report
+			{
+				quickview
+				(
+					layout
+					(
+					 	type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								good_field as "Good Field"
+							)
+						)
+					)
+				)
+			}
+			report ghost_report
+			{
+				quickview
+				(
+					layout
+					(
+					 	type = -1
+						datablock1
+						(
+							layout type = -1
+							fields
+							(
+								some_field as "Some Field"
+							)
+						)
+					)
+				)
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "Dashboard"
+					icon = "ui-1-dashboard-half"
+					page DashBoard
+					{
+						icon = "ui-1-dashboard-half"
+					}
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 4
+			font = "lato"
+			color options
+			{
+				color = "5"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+}

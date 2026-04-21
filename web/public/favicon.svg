@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Trapezoidal base -->
+  <polygon points="18,56 46,56 42,44 22,44" fill="#4a4d52"/>
+  <!-- Waist -->
+  <rect x="24" y="32" width="16" height="12" fill="#4a4d52"/>
+  <!-- Striking face -->
+  <rect x="10" y="24" width="44" height="8" fill="#4a4d52"/>
+  <!-- Horn (tapered left) -->
+  <polygon points="4,28 10,24 10,32 4,30" fill="#4a4d52"/>
+  <!-- Heel (right nub) -->
+  <rect x="54" y="26" width="4" height="6" fill="#4a4d52"/>
+  <!-- Primary spark (rotated 45-deg diamond) -->
+  <rect x="30" y="18" width="4" height="4" transform="rotate(45 32 20)" fill="#c2662d"/>
+  <!-- Trailing spark 1 -->
+  <rect x="36.75" y="12.75" width="2.5" height="2.5" transform="rotate(45 38 14)" fill="#c2662d"/>
+  <!-- Trailing spark 2 -->
+  <rect x="41.25" y="9.25" width="1.5" height="1.5" transform="rotate(45 42 10)" fill="#c2662d"/>
+</svg>

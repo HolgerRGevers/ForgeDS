@@ -99,37 +99,6 @@ class ScheduleSpec:
     code: str
 
 
-@dataclass
-class BlueprintStage:
-    name: str
-    display_name: str
-
-
-@dataclass
-class BlueprintTransition:
-    link_name: str
-    display_name: str
-    from_stage: str
-    to_stage: str
-
-
-@dataclass
-class BlueprintSpec:
-    link_name: str
-    display_name: str
-    form: str  # form link_name this blueprint is on
-    status_field: str  # field that holds the state (usually "Status")
-    stages: list[BlueprintStage] = field(default_factory=list)
-    transitions: list[BlueprintTransition] = field(default_factory=list)
-
-
-@dataclass
-class PageSpec:
-    link_name: str
-    display_name: str
-    components: list[str] = field(default_factory=list)  # report link_names
-
-
 # ============================================================
 # YAML parser for forms.yaml
 # ============================================================
@@ -480,7 +449,7 @@ def _format_choices(choices_str: str) -> str:
     return "{" + ",".join(f'"{i}"' for i in items) + "}"
 
 
-def emit_forms(forms: list[FormSpec], blueprint_forms: dict[str, list[str]] | None = None) -> list[str]:
+def emit_forms(forms: list[FormSpec]) -> list[str]:
     """Generate the forms { ... } block matching real Zoho .ds export format."""
     lines = []
     lines.append(f" {T}forms")
@@ -560,439 +529,6 @@ def emit_forms(forms: list[FormSpec], blueprint_forms: dict[str, list[str]] | No
         lines.append(f"\t\t\t\t}}")
         lines.append(f"\t\t\t}}")
 
-        # Blueprint components (required for forms with blueprints)
-        if blueprint_forms and form.link_name in blueprint_forms:
-            bp_stages = blueprint_forms[form.link_name]
-            lines.append(f"\t\t\tblueprint components")
-            lines.append(f"\t\t\t{{")
-            stage_str = ",".join(f'"{s}"' for s in bp_stages)
-            lines.append(f"\t\t\t\tstages = {{{stage_str}}}")
-            lines.append(f"\t\t\t}}")
-
-        lines.append(f"\t\t}}")
-
-    lines.append(f"\t}}")
-    return lines
-
-
-def emit_blueprints(blueprints: list[BlueprintSpec]) -> list[str]:
-    """Generate blueprint block in .ds format (nested inside workflow block).
-
-    Uses the same syntax as real Zoho Creator .ds exports:
-    type = Blueprint, quoted stage names, from/to stage, before/after blocks.
-    """
-    if not blueprints:
-        return []
-
-    lines: list[str] = []
-    lines.append(f"\t\tblueprint")
-    lines.append(f"\t\t{{")
-
-    for bp in blueprints:
-        # Build stage name -> display name mapping for transitions
-        stage_display = {s.name: s.display_name for s in bp.stages}
-
-        lines.append(f'    \t\t\t{bp.link_name} as "{bp.display_name}"')
-        lines.append(f"    \t\t\t{{")
-        lines.append(f"        \t\t\ttype = Blueprint")
-        lines.append(f"        \t\t\tform = {bp.form}")
-        lines.append(f"        \t\t\tstart")
-        lines.append(f"        \t\t\t{{")
-        if bp.stages:
-            lines.append(f'            \t\t\tstart stage = "{bp.stages[0].display_name}"')
-        lines.append(f"        \t\t\t}}")
-        lines.append(f"        \t\t\tstages")
-        lines.append(f"        \t\t\t{{")
-        for stage in bp.stages:
-            lines.append(f'           \t\t\t"{stage.display_name}"')
-            lines.append(f"           \t\t\t{{")
-            lines.append(f"           \t\t\t}}")
-        lines.append(f"        \t\t\t}}")
-        lines.append(f"        \t\t\ttransitions")
-        lines.append(f"        \t\t\t{{")
-        for t in bp.transitions:
-            from_display = stage_display.get(t.from_stage, t.from_stage)
-            to_display = stage_display.get(t.to_stage, t.to_stage)
-            lines.append(f'    \t\t\t\t{t.link_name} as "{t.display_name}"')
-            lines.append(f"    \t\t\t\t{{")
-            lines.append(f'         \t\t\t\ttype = normal')
-            lines.append(f'         \t\t\t\tfrom stage = "{from_display}"')
-            lines.append(f'         \t\t\t\tto stage = "{to_display}"')
-            lines.append(f"         \t\t\t\tbefore")
-            lines.append(f"         \t\t\t\t{{")
-            lines.append(f"         \t\t\t\t}}")
-            lines.append(f"         \t\t\t\tafter")
-            lines.append(f"         \t\t\t\t{{")
-            lines.append(f"         \t\t\t\t}}")
-            lines.append(f"  \t\t\t\t}}")
-        lines.append(f"        \t\t\t}}")
-        lines.append(f"    \t\t\t}}")
-    lines.append(f"\t\t}}")
-    return lines
-
-
-def _build_dashboard_zml(
-    forms: list[FormSpec],
-    reports: list[ReportSpec],
-) -> str:
-    """Build ZML dashboard content matching Zoho Creator page format.
-
-    Generates:
-    - Row 1: Stat panels (up to 4) from numeric fields of the primary form
-    - Row 2: Chart + Quick Links panel
-    - Row 3: Embedded report view
-    """
-    # Find primary form (one with Status field, or first with most fields)
-    primary_form = forms[0]
-    for f in forms:
-        if any(fld.name.lower() == "status" for fld in f.fields):
-            primary_form = f
-            break
-
-    # Find numeric fields for stat panels
-    numeric_fields: list[FieldSpec] = []
-    for fld in primary_form.fields:
-        if fld.field_type in ("Decimal", "Number", "Currency", "Percent"):
-            numeric_fields.append(fld)
-    stat_fields = numeric_fields[:4]  # max 4 stat panels
-
-    # Find a picklist field for chart x-axis (prefer non-Status)
-    chart_field = None
-    for fld in primary_form.fields:
-        if fld.field_type == "Dropdown" and fld.name.lower() != "status":
-            chart_field = fld
-            break
-    if not chart_field:
-        for fld in primary_form.fields:
-            if fld.field_type == "Dropdown":
-                chart_field = fld
-                break
-
-    # Find chart y-axis (first numeric field)
-    chart_y_field = numeric_fields[0] if numeric_fields else None
-
-    # Pick the first report for embedding
-    embed_report = reports[0].link_name if reports else None
-
-    # Theme colors
-    panel_colors = ["#5A3D9B", "#734AD0", "#9366F9", "#734AD0"]
-    accent_colors = ["#9B69FB", "#9B69FB", "#AF8CFF", "#9B69FB"]
-    icons = [
-        "business-percentage-39",
-        "business-percentage-39",
-        "shopping-cash-register",
-        "media-1-volume-up",
-    ]
-
-    z: list[str] = []
-    z.append("<zml    \\t\\t")
-    z.append("\\t\\t")
-    z.append("\\t\\t")
-    z.append("\\t\\t")
-    z.append("\\t\\t")
-    z.append(">")
-    z.append("\\t<layout>")
-
-    # ---- Row 1: Stat Panels ----
-    if stat_fields:
-        z.append("\\t<row>")
-        widths = ["25%"] * len(stat_fields)
-        if len(stat_fields) <= 3:
-            widths = ["33%"] * len(stat_fields)
-        for i, fld in enumerate(stat_fields):
-            color = panel_colors[i % len(panel_colors)]
-            accent = accent_colors[i % len(accent_colors)]
-            icon = icons[i % len(icons)]
-            w = widths[i]
-            z.append(f"\\t<column")
-            z.append(f"   \\t\\t width='{w}'")
-            z.append(f"   \\t>")
-            z.append(f"\\t<panel elementName='Panel {i+1}'")
-            z.append(f" ")
-            z.append(f" >")
-            z.append(f"\\t<pr ")
-            z.append(f"\\t\\t\\twidth='fill'")
-            z.append(f"\\t\\theight='fill'")
-            z.append(f">")
-            z.append(f"\\t<pc ")
-            z.append(f"\\t\\t\\tpadding = '20px'")
-            z.append(f"\\tbgColor = '{color}'")
-            z.append(f"")
-            z.append(f"\\t\\twidth = '100%'")
-            z.append(f"\\t\\thAlign = 'left'")
-            z.append(f"\\t\\tvAlign = 'middle'")
-            z.append(f">")
-            z.append(f"\\t<pr ")
-            z.append(f"\\t\\t\\twidth='auto'")
-            z.append(f"\\t\\theight='auto'")
-            z.append(f">")
-            z.append(f"\\t<pc ")
-            z.append(f"\\t\\tpadding = '0px'")
-            z.append(f"")
-            z.append(f"\\t\\thAlign = 'left'")
-            z.append(f">")
-            z.append(f"\\t<pr ")
-            z.append(f"\\t>")
-            z.append(f"\\t<pc ")
-            z.append(f"\\t")
-            z.append(f">")
-            z.append(f"\\t<image  ")
-            z.append(f"\\t\\tmarginLeft = '0px'")
-            z.append(f"\\tmarginRight = '0px' ")
-            z.append(f"")
-            z.append(f"\\tcolor = '#FFFFFF'")
-            z.append(f"\\tbgColor = '{accent}'")
-            z.append(f"\\twidth = '52px'")
-            z.append(f"\\theight = '52px'")
-            z.append(f"\\ttype = 'icon'")
-            z.append(f"\\tvalue = '{icon}'")
-            z.append(f"\\tsize = '22px'")
-            z.append(f"\\tcornerRadius = '10px'")
-            z.append(f"\\ticonType = 'outline'")
-            z.append(f"/>")
-            z.append(f"</pc>")
-            z.append(f"</pr><pr ")
-            z.append(f"\\t>")
-            z.append(f"\\t<pc ")
-            z.append(f"\\t")
-            z.append(f">")
-            form_ln = primary_form.link_name
-            fld_ln = fld.name
-            z.append(f"\\t<text ")
-            z.append(f"")
-            z.append(f"\\tmarginTop = '12px'")
-            z.append(f"\\tcolor = '#FFFFFF'")
-            z.append(f"\\tsize = '24px'")
-            z.append(f"\\tbold = 'true' ")
-            z.append(f"\\ttype = 'Form Data'")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"\\tdisplayType = 'actual'")
-            z.append(f"\\tdecimalPlaces = '2'")
-            z.append(f"\\tthousandsSeperator = 'LOCALE'")
-            z.append(f"\\tdecimalSeperator = 'DOT'")
-            z.append(f"\\tnumberScale = 'none'")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"\\t  value = 'thisapp.{form_ln}.{fld_ln}.sum'")
-            z.append(f">")
-            z.append(f"</text>")
-            z.append(f"")
-            z.append(f"</pc>")
-            z.append(f"</pr><pr ")
-            z.append(f"\\t>")
-            z.append(f"\\t<pc ")
-            z.append(f"\\t")
-            z.append(f">")
-            z.append(f"\\t<text ")
-            z.append(f"")
-            z.append(f"\\tmarginTop = '5px'")
-            z.append(f"\\tcolor = '#FFFFFF'")
-            z.append(f"\\tsize = '15px'")
-            z.append(f"\\ttype = 'Text'")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"")
-            z.append(f"\\t  value = 'Total {fld.display_name}'")
-            z.append(f">")
-            z.append(f"</text>")
-            z.append(f"")
-            z.append(f"</pc>")
-            z.append(f"</pr>")
-            z.append(f"</pc>")
-            z.append(f"</pr>")
-            z.append(f"</pc>")
-            z.append(f"</pr>")
-            z.append(f"</panel>")
-            z.append(f"</column>")
-        z.append("</row>")
-
-    # ---- Row 2: Chart + Quick Links ----
-    z.append("<row>")
-
-    # Chart
-    if chart_field and chart_y_field:
-        z.append("<column")
-        z.append("   \\t\\t width='75%'")
-        z.append("   \\t>")
-        z.append("\\t<chart ")
-        z.append(f"\\telementName='Chart 1'")
-        z.append(f"")
-        z.append(f"\\t")
-        z.append(f"\\ttitle = '{chart_y_field.display_name} by {chart_field.display_name}'")
-        z.append(f"\\t")
-        z.append(f"\\ttype = 'Bar'")
-        z.append(f"\\txtitle = '{chart_field.display_name}'")
-        z.append(f"\\tytitle = '{chart_y_field.display_name}'")
-        z.append(f"\\tbgColor = '#FFFFFF'")
-        z.append(f"\\ttheme = 'theme'")
-        z.append(f"\\tlegendPos = 'none'")
-        z.append(f"\\theightType = 'auto'")
-        z.append(f"\\theightValue = '300px'")
-        z.append(f"\\tappLinkName = 'thisapp'")
-        z.append(f"\\tformLinkName = '{primary_form.link_name}'")
-        z.append(f"\\txfield = '{chart_field.name}'")
-        z.append(f"\\tyfields = 'sum:{chart_y_field.name}'")
-        z.append(f"\\tgroupBy = '{chart_field.name}'")
-        z.append(f"\\t\\tDelugeCriteria = '{chart_field.name} is not null &amp;&amp; {chart_field.name} != &quot;&quot;'")
-        z.append("/>")
-        z.append("")
-        z.append("</column>")
-    else:
-        z.append("<column")
-        z.append("   \\t\\t width='75%'")
-        z.append("   \\t>")
-        z.append("</column>")
-
-    # Quick Links panel
-    z.append("<column")
-    z.append("   \\t\\t width='25%'")
-    z.append("   \\t>")
-    z.append("\\t<panel elementName='Panel_Button 1'")
-    z.append(" ")
-    z.append("\\t")
-    z.append("\\ttitle = 'Quick Links'")
-    z.append("\\t")
-    z.append("\\t\\ttitleSize = '15px'")
-    z.append(" >")
-    z.append("\\t<pr ")
-    z.append("\\t\\t\\twidth='fill'")
-    z.append("\\t\\theight='fill'")
-    z.append(">")
-    z.append("\\t<pc ")
-    z.append("\\t\\tpaddingTop = '10px'")
-    z.append("\\tpaddingLeft = '10px'")
-    z.append("\\tpaddingRight = '0px'")
-    z.append("\\tpaddingBottom = '10px'")
-    z.append("\\tbgColor = '#FFFFFF'")
-    z.append("")
-    z.append("\\t\\twidth = '100%'")
-    z.append("\\t\\thAlign = 'left'")
-    z.append("\\t\\tvAlign = 'middle'")
-    z.append(">")
-
-    for fi, form in enumerate(forms[:6]):
-        z.append("\\t<pr ")
-        z.append("\\t\\t\\twidth='auto'")
-        z.append("\\t\\theight='auto'")
-        z.append(">")
-        z.append("\\t<pc ")
-        z.append("\\t")
-        z.append(">")
-        z.append("\\t<image  ")
-        z.append("\\t\\tmarginRight = '10px' ")
-        z.append("\\tmarginBottom = '0px'")
-        z.append("\\tmarginTop = '0px'")
-        z.append("")
-        z.append("\\tcolor = '#2C0D4A'")
-        z.append("\\tbgColor = '#F4F0FF'")
-        z.append("\\twidth = '36px'")
-        z.append("\\theight = '36px'")
-        z.append("\\ttype = 'icon'")
-        z.append("\\tvalue = 'ui-2-square-add-08'")
-        z.append("\\tsize = '16px'")
-        z.append("\\tcornerRadius = '18px'")
-        z.append("\\ticonType = 'outline'")
-        z.append("/>")
-        z.append("</pc><pc ")
-        z.append("\\t")
-        z.append("\\t\\thAlign = 'left'")
-        z.append(">")
-        z.append("\\t<text ")
-        z.append(f"    action = 'OpenForm'")
-        z.append(f"\\t\\tcomponentLinkName = '{form.link_name}'")
-        z.append(f"\\t\\ttarget = 'new-window'")
-        z.append("")
-        z.append("\\tcolor = '#6733AB'")
-        z.append("\\tsize = '15px'")
-        z.append("\\ttype = 'Text'")
-        z.append("")
-        z.append("")
-        z.append("")
-        z.append("")
-        z.append("")
-        z.append("")
-        z.append("")
-        disp = form.display_name
-        z.append(f"\\t  value = 'Add New {disp}'")
-        z.append(">")
-        z.append("</text>")
-        z.append("")
-        z.append("</pc>")
-        z.append("</pr>")
-
-    z.append("</pc>")
-    z.append("</pr>")
-    z.append("</panel>")
-    z.append("</column>")
-    z.append("</row>")
-
-    # ---- Row 3: Report Embed ----
-    if embed_report:
-        z.append("<row>")
-        z.append("\\t<column")
-        z.append("   \\t\\t width='100%'")
-        z.append("   \\t>")
-        z.append("\\t<report ")
-        z.append("\\telementName='Report'")
-        z.append("")
-        z.append(f"\\t\\tappLinkName = 'thisapp'")
-        z.append(f"\\t\\tlinkName = '{embed_report}'")
-        z.append("\\t")
-        z.append("\\t\\tiszreport = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_AddRec = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_EditRec = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_Print = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_Export = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_DelRec = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_DuplRec = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_Search = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_EditBulkRec = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_BulkDelete = 'false'")
-        z.append("\\t\\t\\t\\t\\tzc_BulkDuplicate = 'false'")
-        z.append("\\theightType = 'custom'")
-        z.append("\\theightValue = '500'")
-        z.append("")
-        z.append("/>")
-        z.append("</column>")
-        z.append("</row>")
-
-    z.append("</layout>")
-    z.append("</zml>")
-
-    return "\\n".join(z)
-
-
-def emit_pages(
-    pages: list[PageSpec],
-    forms: list[FormSpec],
-    reports: list[ReportSpec],
-) -> list[str]:
-    """Generate pages block with ZML Content matching real Zoho .ds export format.
-
-    The ZML dashboard includes stat panels, charts, quick-link buttons,
-    and an embedded report view — same as Zoho Creator's own page builder.
-    """
-    if not pages:
-        return []
-
-    lines: list[str] = []
-    lines.append(f"\tpages")
-    lines.append(f"\t{{")
-
-    for page in pages:
-        zml = _build_dashboard_zml(forms, reports)
-        lines.append(f"\t\tpage DashBoard")
-        lines.append(f"\t\t{{")
-        lines.append(f'\t\t\tdisplayname = "{page.display_name}"')
-        lines.append(f'\t\t\tContent="{zml}"')
         lines.append(f"\t\t}}")
 
     lines.append(f"\t}}")
@@ -1032,6 +568,87 @@ def emit_reports(reports: list[ReportSpec]) -> list[str]:
     return lines
 
 
+def emit_workflows(workflows: list[WorkflowSpec]) -> list[str]:
+    """Generate workflow block matching real Zoho .ds export format."""
+    if not workflows:
+        return []
+
+    lines = []
+    lines.append(f"\t\tworkflow")
+    lines.append(f"\t\t{{")
+    lines.append(f"\t\tform")
+    lines.append(f"\t\t{{")
+
+    for wf in workflows:
+        lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f"\t\t\t\ttype =  form")
+        lines.append(f"\t\t\t\tform = {wf.form}")
+        lines.append(f"")
+        lines.append(f"\t\t\t\trecord event = {wf.record_event}")
+        lines.append(f"")
+        lines.append(f"\t\t\t\t{wf.event_type}")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\tactions ")
+        lines.append(f"\t\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\t\tcustom deluge script")
+        lines.append(f"\t\t\t\t\t\t(")
+        lines.append(_indent_code(wf.code, 7))
+        lines.append(f"\t\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t\t}}")
+        lines.append(f"\t\t\t\t}}")
+        lines.append(f"")
+        lines.append(f"\t\t\t}}")
+
+    lines.append(f"\t\t}}")
+
+    # Schedules go inside the same workflow block
+    lines.append(f"")
+    lines.append(f"\t\tschedule")
+    lines.append(f"\t\t{{")
+
+    lines.append(f"\t\t}}")
+
+    lines.append(f"\t\t}}")
+    return lines
+
+
+def emit_schedules(schedules: list[ScheduleSpec]) -> list[str]:
+    """Generate schedule block matching real Zoho .ds export format.
+
+    In the real format, schedules live inside the workflow { } block,
+    but for simplicity we emit them as a top-level schedule section
+    which Zoho also accepts.
+    """
+    if not schedules:
+        return []
+
+    lines = []
+    lines.append(f"\t\tschedule")
+    lines.append(f"\t\t{{")
+
+    for sched in schedules:
+        lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f"\t\t\t\ttype =  schedule")
+        lines.append(f"\t\t\t\tform = {sched.form}")
+        lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
+        lines.append(f"\t\t\t\ton start")
+        lines.append(f"\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\tactions ")
+        lines.append(f"\t\t\t\t\t{{")
+        lines.append(f"\t\t\t\t\ton load")
+        lines.append(f"\t\t\t\t\t(")
+        lines.append(_indent_code(sched.code, 6))
+        lines.append(f"\t\t\t\t\t)")
+        lines.append(f"\t\t\t\t\t}}")
+        lines.append(f"\t\t\t\t}}")
+        lines.append(f"\t\t\t}}")
+
+    lines.append(f"\t\t}}")
+    return lines
+
+
 def emit_application(
     app_name: str,
     display_name: str,
@@ -1039,9 +656,6 @@ def emit_application(
     reports: list[ReportSpec],
     workflows: list[WorkflowSpec],
     schedules: list[ScheduleSpec],
-    *,
-    blueprints: list[BlueprintSpec] | None = None,
-    pages: list[PageSpec] | None = None,
 ) -> str:
     """Generate the complete .ds file content matching real Zoho export format."""
     from datetime import datetime
@@ -1064,116 +678,136 @@ def emit_application(
 
     # Forms
     lines.append("")
-    # Build blueprint_forms map for forms that participate in blueprints
-    blueprint_forms: dict[str, list[str]] = {}
-    if blueprints:
-        for bp in blueprints:
-            blueprint_forms[bp.form] = [s.display_name for s in bp.stages]
-    lines.extend(emit_forms(forms, blueprint_forms=blueprint_forms))
+    lines.extend(emit_forms(forms))
 
     # Reports
     if reports:
         lines.append("")
         lines.extend(emit_reports(reports))
 
-    # Pages / Dashboards (KB-adherent: required for app to load in Creator)
-    if pages:
-        lines.append("")
-        lines.extend(emit_pages(pages, forms, reports))
-
-    # Workflow block: contains form workflows, schedules, and blueprints
-    # In Zoho .ds format, workflow is at depth 1 (child of application),
-    # and blueprint is nested inside workflow at depth 2.
-    if workflows or schedules or blueprints:
+    # Workflows + Schedules (nested inside workflow block, like real exports)
+    if workflows or schedules:
         lines.append("")
         lines.append("")
         lines.append(f"\t\tworkflow")
         lines.append(f"\t\t{{")
+        lines.append(f"\t\tform")
+        lines.append(f"\t\t{{")
 
-        if workflows:
-            lines.append(f"\t\tform")
-            lines.append(f"\t\t{{")
-            for wf in workflows:
-                lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
-                lines.append(f"\t\t\t{{")
-                lines.append(f"\t\t\t\ttype =  form")
-                lines.append(f"\t\t\t\tform = {wf.form}")
-                lines.append(f"")
-                lines.append(f"\t\t\t\trecord event = {wf.record_event}")
-                lines.append(f"")
-                lines.append(f"\t\t\t\t{wf.event_type}")
-                lines.append(f"\t\t\t\t{{")
-                lines.append(f"\t\t\t\t\tactions ")
-                lines.append(f"\t\t\t\t\t{{")
-                lines.append(f"\t\t\t\t\t\tcustom deluge script")
-                lines.append(f"\t\t\t\t\t\t(")
-                lines.append(_indent_code(wf.code, 7))
-                lines.append(f"\t\t\t\t\t\t)")
-                lines.append(f"\t\t\t\t\t}}")
-                lines.append(f"\t\t\t\t}}")
-                lines.append(f"")
-                lines.append(f"\t\t\t}}")
-            lines.append(f"\t\t}}")
+        for wf in workflows:
+            lines.append(f'\t\t\t{wf.link_name} as "{wf.display_name}"')
+            lines.append(f"\t\t\t{{")
+            lines.append(f"\t\t\t\ttype =  form")
+            lines.append(f"\t\t\t\tform = {wf.form}")
+            lines.append(f"")
+            lines.append(f"\t\t\t\trecord event = {wf.record_event}")
+            lines.append(f"")
+            lines.append(f"\t\t\t\t{wf.event_type}")
+            lines.append(f"\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\tactions ")
+            lines.append(f"\t\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\t\tcustom deluge script")
+            lines.append(f"\t\t\t\t\t\t(")
+            lines.append(_indent_code(wf.code, 7))
+            lines.append(f"\t\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t}}")
+            lines.append(f"\t\t\t\t}}")
+            lines.append(f"")
+            lines.append(f"\t\t\t}}")
 
-        if schedules:
-            lines.append(f"")
-            lines.append(f"\t\tschedule")
-            lines.append(f"\t\t{{")
-            for sched in schedules:
-                lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
-                lines.append(f"\t\t\t{{")
-                lines.append(f"\t\t\t\ttype =  schedule")
-                lines.append(f"\t\t\t\tform = {sched.form}")
-                lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
-                lines.append(f"\t\t\t\ton start")
-                lines.append(f"\t\t\t\t{{")
-                lines.append(f"\t\t\t\t\tactions ")
-                lines.append(f"\t\t\t\t\t{{")
-                lines.append(f"\t\t\t\t\ton load")
-                lines.append(f"\t\t\t\t\t(")
-                lines.append(_indent_code(sched.code, 6))
-                lines.append(f"\t\t\t\t\t)")
-                lines.append(f"\t\t\t\t\t}}")
-                lines.append(f"\t\t\t\t}}")
-                lines.append(f"\t\t\t}}")
-            lines.append(f"\t\t}}")
+        lines.append(f"\t\t}}")
+        lines.append(f"")
 
-        # Blueprint block (nested inside workflow)
-        if blueprints:
-            lines.append(f"")
-            lines.append(f"")
-            lines.extend(emit_blueprints(blueprints))
+        # Schedules nested inside workflow block
+        lines.append(f"\t\tschedule")
+        lines.append(f"\t\t{{")
+
+        for sched in schedules:
+            lines.append(f'\t\t\t{sched.link_name} as "{sched.display_name}"')
+            lines.append(f"\t\t\t{{")
+            lines.append(f"\t\t\t\ttype =  schedule")
+            lines.append(f"\t\t\t\tform = {sched.form}")
+            lines.append(f'\t\t\t\ttime zone = "Africa/Johannesburg"')
+            lines.append(f"\t\t\t\ton start")
+            lines.append(f"\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\tactions ")
+            lines.append(f"\t\t\t\t\t{{")
+            lines.append(f"\t\t\t\t\ton load")
+            lines.append(f"\t\t\t\t\t(")
+            lines.append(_indent_code(sched.code, 6))
+            lines.append(f"\t\t\t\t\t)")
+            lines.append(f"\t\t\t\t\t}}")
+            lines.append(f"\t\t\t\t}}")
+            lines.append(f"\t\t\t}}")
+
+        lines.append(f"\t\t}}")
 
         lines.append(f"")
         lines.append(f"")
         lines.append(f"")
         lines.append(f"\t}}")
 
-    # share_settings — default profiles (must come BEFORE web in .ds format)
-    lines.append(f"\tshare_settings")
+    # Pages section — at least one page required for desktop Design view
+    # Without a page, the desktop preview crashes with "An internal error"
+    lines.append(f"\tpages")
     lines.append(f"\t{{")
-    for profile_name, profile_type, desc in [
-        ("Read", "Users_Permissions", "This profile will have read permission for all components\\n"),
-        ("Write", "Users_Permissions", "This profile will have write permission for all components\\n"),
-        ("Administrator", "Users_Permissions", "This profile will have all the permissions.\\n"),
-        ("Developer", "Developer", "Developer Profile\\n"),
-        ("Customer", "Customer_Portal", "This is the default profile having only add and view permission.\\n"),
-    ]:
-        lines.append(f'\t\t\t"{profile_name}"')
-        lines.append(f"\t\t\t{{")
-        lines.append(f'\t\t\t\tname = "{profile_name}"')
-        lines.append(f'\t\t\t\ttype = {profile_type}')
-        lines.append(f'\t\t\t\tpermissions = {{Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}}')
-        lines.append(f'\t\t\t\tdescription = "{desc}"')
-        lines.append(f"\t\t\t}}")
-    # roles
-    lines.append(f"\t\t\troles")
-    lines.append(f"\t\t\t{{")
-    lines.append(f'\t\t\t\t"CEO"')
-    lines.append(f"\t\t\t\t{{")
-    lines.append(f'\t\t\t\t\tdescription = "User belonging to this role can access data of all other users."')
-    lines.append(f"\t\t\t\t}}")
-    lines.append(f"\t\t\t}}")
+    lines.append(f"\t\tpage DashBoard")
+    lines.append(f"\t\t{{")
+    lines.append(f'\t\t\tdisplayname = "Dashboard"')
+    # Build Dashboard ZML — if a dashboard_zml.txt template exists in
+    # config/, use it. Otherwise generate a minimal embedded report page.
+    dashboard_zml_path = root / "config" / "dashboard_zml.txt" if 'root' in dir() else None
+    if dashboard_zml_path and dashboard_zml_path.exists():
+        zml = dashboard_zml_path.read_text(encoding="utf-8").strip()
+    elif reports:
+        first_report = reports[0].link_name
+        first_form = forms[0].link_name if forms else "form"
+        # Generate a dashboard with KPI panel + embedded report
+        zml = (
+            "<zml    \\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n>"
+            "\\n\\t<layout>"
+            "\\n\\t<row>"
+            "\\n\\t<column\\n   \\t\\t width='100%'\\n   \\t>"
+            "\\n\\t<panel elementName='Panel 1'\\n \\n >"
+            "\\n\\t<pr \\n\\t\\t\\twidth='fill'\\n\\t\\theight='fill'\\n>"
+            "\\n\\t<pc \\n\\t\\tpadding = '20px'\\n\\tbgColor = '#FFFFFF'"
+            "\\n\\n\\t\\twidth = '100%'\\n\\t\\thAlign = 'left'"
+            "\\n\\t\\tvAlign = 'middle'\\n>"
+            "\\n\\t<pr \\n\\t\\t\\twidth='auto'\\n\\t\\theight='auto'\\n>"
+            "\\n\\t<pc \\n\\t\\n>"
+            "\\n\\t<pr \\n\\t>\\n\\t<pc \\n\\t\\n>"
+            "\\n\\t<text \\n\\n\\tcolor = 'theme'\\n\\tsize = '20px'"
+            "\\n\\tbold = 'true' \\n\\ttype = 'Form Data'"
+            "\\n\\n\\tdisplayType = 'actual'"
+            "\\n\\tthousandsSeperator = 'LOCALE'"
+            "\\n\\tdecimalSeperator = 'DOT'"
+            "\\n\\tnumberScale = 'none'"
+            f"\\n\\n\\t  value = 'thisapp.{first_form}.ID.count'"
+            "\\n>\\n</text>\\n\\n</pc>\\n</pr>"
+            "\\n<pr \\n\\t>\\n\\t<pc \\n\\t\\n>"
+            "\\n\\t<text \\n\\n\\tmarginTop = '3px'"
+            "\\n\\tcolor = '#44404C'\\n\\tsize = '15px'"
+            "\\n\\ttype = 'Text'"
+            f"\\n\\n\\t  value = 'Total Records'\\n>"
+            "\\n</text>\\n\\n</pc>\\n</pr>"
+            "\\n</pc>\\n</pr>\\n</pc>\\n</pr>\\n</panel>"
+            "\\n</column>\\n</row>"
+            "\\n<row>\\n\\t<column\\n   \\t\\t width='100%'\\n   \\t>"
+            f"\\n\\t<report \\n\\telementName='Report'"
+            f"\\n\\n\\t\\tappLinkName = 'thisapp'"
+            f"\\n\\t\\tlinkName = '{first_report}'"
+            "\\n\\t\\n\\t\\tiszreport = 'false'"
+            "\\n\\theightType = 'auto'"
+            "\\n\\theightValue = '700'\\n\\n/>"
+            "\\n</column>\\n</row>"
+            "\\n</layout>\\n</zml>"
+        )
+    else:
+        zml = ("<zml    \\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n\\t\\t\\n>"
+               "\\n\\t<layout>\\n\\t<row>\\n\\t<column\\n   \\t\\t width='100%'\\n   \\t>"
+               "\\n</column>\\n</row>\\n</layout>\\n</zml>")
+    lines.append(f'\t\t\tContent="{zml}"')
+    lines.append(f"\t\t}}")
     lines.append(f"\t}}")
 
     # Web section — forms, reports, and menu (required for import)
@@ -1211,7 +845,7 @@ def emit_application(
             lines.append(f"\t\t\t\t\t\t\tfields")
             lines.append(f"\t\t\t\t\t\t\t(")
             for c in cols:
-                lines.append(f'\t\t\t\t\t\t\t\t{c} as "{c}"')
+                lines.append(f'\t\t\t\t\t\t\t\t{c}')
             lines.append(f"\t\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t)")
@@ -1266,7 +900,7 @@ def emit_application(
             lines.append(f"\t\t\t\t\t\t\tfields")
             lines.append(f"\t\t\t\t\t\t\t(")
             for c in cols:
-                lines.append(f'\t\t\t\t\t\t\t\t{c} as "{c}"')
+                lines.append(f'\t\t\t\t\t\t\t\t{c}')
             lines.append(f"\t\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t\t)")
             lines.append(f"\t\t\t\t\t)")
@@ -1293,27 +927,24 @@ def emit_application(
     lines.append(f'\t\t\t\tdisplayname = "Space"')
     lines.append(f'\t\t\t\ticon = "objects-spaceship"')
 
+    # Dashboard section first
+    lines.append(f"")
+    lines.append(f"\t\t\t\tsection Section_Dashboard")
+    lines.append(f"\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\tdisplayname = "Dashboard"')
+    lines.append(f'\t\t\t\t\ticon = "ui-1-dashboard-half"')
+    lines.append(f"\t\t\t\t\tpage DashBoard")
+    lines.append(f"\t\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\t\ticon = "ui-1-dashboard-half"')
+    lines.append(f"\t\t\t\t\t}}")
+    lines.append(f"\t\t\t\t}}")
+
     # Build menu sections — one per form with its reports
     form_reports: dict[str, list[ReportSpec]] = {}
     for rpt in reports:
         form_reports.setdefault(rpt.form, []).append(rpt)
 
     section_num = 0
-
-    # Dashboard page section (required: maps DashBoard to web menu)
-    if pages:
-        section_num += 1
-        lines.append(f"")
-        lines.append(f"\t\t\t\tsection Section_{section_num}")
-        lines.append(f"\t\t\t\t{{")
-        lines.append(f'\t\t\t\t\tdisplayname = "Dashboard"')
-        lines.append(f'\t\t\t\t\ticon = "ui-1-dashboard-half"')
-        lines.append(f"\t\t\t\t\tpage DashBoard")
-        lines.append(f"\t\t\t\t\t{{")
-        lines.append(f'\t\t\t\t\t\ticon = "ui-1-dashboard-half"')
-        lines.append(f"\t\t\t\t\t}}")
-        lines.append(f"\t\t\t\t}}")
-
     for form in forms:
         section_num += 1
         lines.append(f"")
@@ -1360,6 +991,36 @@ def emit_application(
     lines.append(f"\t\t}}")
     lines.append(f"\t}}")  # close web
 
+    # share_settings — default profiles
+    lines.append(f"\tshare_settings")
+    lines.append(f"\t{{")
+    for profile_name, profile_type, desc in [
+        ("Read", "Users_Permissions", "This profile will have read permission for all components\\n"),
+        ("Write", "Users_Permissions", "This profile will have write permission for all components\\n"),
+        ("Administrator", "Users_Permissions", "This profile will have all the permissions.\\n"),
+        ("Developer", "Developer", "Developer Profile\\n"),
+        ("Customer", "Customer_Portal", "This is the default profile having only add and view permission.\\n"),
+    ]:
+        lines.append(f'\t\t\t"{profile_name}"')
+        lines.append(f"\t\t\t{{")
+        lines.append(f'\t\t\t\tname = "{profile_name}"')
+        lines.append(f'\t\t\t\ttype = {profile_type}')
+        lines.append(f'\t\t\t\tpermissions = {{Chat:true, Predefined:true, ApiAccess:true, PIIAccess:true, ePHIAccess:true}}')
+        lines.append(f'\t\t\t\tdescription = "{desc}"')
+        lines.append(f"\t\t\t}}")
+    # roles
+    lines.append(f"\t\t\troles")
+    lines.append(f"\t\t\t{{")
+    lines.append(f'\t\t\t\t"CEO"')
+    lines.append(f"\t\t\t\t{{")
+    lines.append(f'\t\t\t\t\tdescription = "User belonging to this role can access data of all other users."')
+    lines.append(f"\t\t\t\t}}")
+    lines.append(f"\t\t\t}}")
+    # role Hierarchy — lists forms that participate in role-based access
+    form_list = ",".join(f.link_name for f in forms)
+    lines.append(f"\t\t\trole Hierarchy = {{{form_list}}}")
+    lines.append(f"\t}}")
+
     # phone section
     def _emit_device_section(device_name: str) -> list[str]:
         dl = []
@@ -1399,9 +1060,8 @@ def emit_application(
     lines.append('{"Language_Settings":{"LANGAGUE_WITH_LOGIN":"browser"}}')
     lines.append("}")
 
-    # Note: reports configuration block omitted — it contains an
-    # app-specific Version/Key that Zoho generates internally.
-    # Including fake values crashes the app on open.
+    # Note: reports configuration block only needed for Zoho Analytics
+    # pivot tables — omitted for standard apps.
 
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -1412,16 +1072,10 @@ def emit_application(
 # ============================================================
 
 def validate_ds(content: str, source: str = "<generated>") -> list[Diagnostic]:
-    """Validate a .ds file for structural correctness.
-
-    Two validation passes:
-      Pass 1 — Delimiter balance, form/report references, field checks
-      Pass 2 — Section-aware context validation (constructs in wrong section)
-    """
+    """Validate a .ds file for structural correctness."""
     diagnostics: list[Diagnostic] = []
     lines = content.splitlines()
 
-    # --- Pass 1: Balance + references ---
     brace_count = 0
     paren_count = 0
     form_names: set[str] = set()
@@ -1479,131 +1133,6 @@ def validate_ds(content: str, source: str = "<generated>") -> list[Diagnostic]:
                 severity=Severity.WARNING,
                 message=f"Form reference '{ref_name}' not found in form definitions",
             ))
-
-    # --- Pass 2: Section-aware context validation ---
-    diagnostics.extend(_validate_sections(lines, source))
-
-    return diagnostics
-
-
-# Top-level .ds section keywords that define structural blocks
-_SECTION_KEYWORDS = frozenset({
-    "forms", "workflow", "schedule", "approval",
-    "web", "share_settings", "phone", "tablet",
-})
-
-
-def _validate_sections(
-    lines: list[str], source: str,
-) -> list[Diagnostic]:
-    """Validate that .ds constructs appear in the correct section context.
-
-    Tracks a section stack using brace-depth matching to determine the
-    current context (forms, workflow, approval, etc.) and flags constructs
-    that appear in the wrong section.
-
-    Rules:
-      DS006 — 'on level N' found outside the approval section
-      DS007 — 'on approve' / 'on reject' found outside the approval section
-    """
-    diagnostics: list[Diagnostic] = []
-
-    # Section stack: (section_name, brace_depth_at_opening_brace)
-    # When brace_depth drops below this value, the section is closed.
-    section_stack: list[tuple[str, int]] = []
-    brace_depth = 0
-    paren_depth = 0
-
-    # Pending section: keyword detected, waiting for { to confirm
-    pending: str | None = None
-
-    # Block-comment tracking
-    in_block_comment = False
-
-    for i in range(len(lines)):
-        line_num = i + 1
-        stripped = lines[i].strip()
-
-        # Track block comments
-        if in_block_comment:
-            if "*/" in stripped:
-                in_block_comment = False
-            continue
-        if stripped.startswith("/*"):
-            if "*/" not in stripped:
-                in_block_comment = True
-            continue
-
-        # Skip single-line comments
-        if stripped.startswith("//"):
-            continue
-
-        if not stripped:
-            continue
-
-        # --- 1. Detect section-opening keywords BEFORE brace processing ---
-        # Extract the keyword portion (everything before { or ()
-        first_word = stripped.split("{")[0].split("(")[0].strip()
-
-        if paren_depth == 0:
-            if first_word in _SECTION_KEYWORDS:
-                pending = first_word
-            elif first_word == "actions":
-                if any(s[0].startswith("form:") for s in section_stack):
-                    pending = "form_actions"
-            else:
-                fm = re.match(r"^form\s+(\w+)$", first_word)
-                if fm and any(s[0] == "forms" for s in section_stack):
-                    pending = f"form:{fm.group(1)}"
-
-        # --- 2. Process delimiters character by character ---
-        for ch in stripped:
-            if ch == '(':
-                paren_depth += 1
-            elif ch == ')':
-                paren_depth = max(0, paren_depth - 1)
-            elif ch == '{' and paren_depth == 0:
-                brace_depth += 1
-                if pending:
-                    section_stack.append((pending, brace_depth))
-                    pending = None
-            elif ch == '}' and paren_depth == 0:
-                while section_stack and brace_depth == section_stack[-1][1]:
-                    section_stack.pop()
-                brace_depth -= 1
-
-        # --- 3. Validation rules ---
-        # Only validate outside of paren blocks (Deluge script code)
-        if paren_depth > 0:
-            continue
-
-        section_names = {s[0] for s in section_stack}
-        in_approval = "approval" in section_names
-        in_form_actions = "form_actions" in section_names
-
-        # DS006: "on level N" outside approval section
-        if re.match(r"on level \d+", stripped):
-            if not in_approval:
-                ctx = "form actions block" if in_form_actions else "non-approval context"
-                diagnostics.append(Diagnostic(
-                    file=source, line=line_num, rule="DS006",
-                    severity=Severity.ERROR,
-                    message=(
-                        f"'{stripped}' found in {ctx} — "
-                        f"approval levels must be inside the approval {{}} section"
-                    ),
-                ))
-
-        # DS007: "on approve" / "on reject" outside approval section
-        for kw in ("on approve", "on reject"):
-            if stripped == kw or stripped.startswith(kw + " "):
-                if not in_approval:
-                    diagnostics.append(Diagnostic(
-                        file=source, line=line_num, rule="DS007",
-                        severity=Severity.ERROR,
-                        message=f"'{kw}' found outside approval section",
-                    ))
-                break
 
     return diagnostics
 
@@ -1681,11 +1210,6 @@ def main() -> None:
         metavar="PATH",
         help="Validate an existing .ds file instead of generating",
     )
-    parser.add_argument(
-        "--kb-validate",
-        action="store_true",
-        help="After generating, ingest into KB and run projections to compute residual.",
-    )
     args = parser.parse_args()
 
     # Validate-only mode
@@ -1750,60 +1274,8 @@ def main() -> None:
     app_name = project.get("name", "") or config.get("name", "My_App")
     display_name = app_name
 
-    # KB-adherent: auto-generate blueprints for forms with a Status field
-    blueprints: list[BlueprintSpec] = []
-    for form in forms:
-        status_fields = [f for f in form.fields if f.name.lower() == "status"]
-        if status_fields:
-            sf = status_fields[0]
-            # Build stages from picklist choices if available
-            stages: list[BlueprintStage] = []
-            if sf.choices:
-                for choice in [c.strip() for c in sf.choices.split(",") if c.strip()]:
-                    stage_link = choice.replace(" ", "_").replace("-", "_")
-                    stages.append(BlueprintStage(name=stage_link, display_name=choice))
-
-            # Auto-generate sequential transitions between stages
-            transitions: list[BlueprintTransition] = []
-            for i in range(len(stages) - 1):
-                t_name = f"{stages[i].name}_to_{stages[i+1].name}".lower()
-                t_display = f"{stages[i].display_name} to {stages[i+1].display_name}"
-                transitions.append(BlueprintTransition(
-                    link_name=t_name,
-                    display_name=t_display,
-                    from_stage=stages[i].name,
-                    to_stage=stages[i+1].name,
-                ))
-
-            if stages:
-                bp = BlueprintSpec(
-                    link_name=f"{form.link_name}_workflow",
-                    display_name=f"{form.display_name} Workflow",
-                    form=form.link_name,
-                    status_field="Status",
-                    stages=stages,
-                    transitions=transitions,
-                )
-                blueprints.append(bp)
-                print(f"  Blueprint: {bp.display_name} ({len(stages)} stages, "
-                      f"{len(transitions)} transitions)", file=sys.stderr)
-
-    # KB-adherent: auto-generate default dashboard page
-    pages: list[PageSpec] = []
-    if reports:
-        page_components = [r.link_name for r in reports[:6]]  # max 6 per dashboard
-        pages.append(PageSpec(
-            link_name="Dashboard",
-            display_name="Dashboard",
-            components=page_components,
-        ))
-        print(f"  Page: Dashboard ({len(page_components)} components)", file=sys.stderr)
-
     # Generate .ds content
-    content = emit_application(
-        app_name, display_name, forms, reports, workflows, schedules,
-        blueprints=blueprints, pages=pages,
-    )
+    content = emit_application(app_name, display_name, forms, reports, workflows, schedules)
 
     # Validate output
     output_diags = validate_ds(content, args.output or "<stdout>")
@@ -1822,48 +1294,10 @@ def main() -> None:
         print(f"Generated: {out_path}")
         print(f"  Forms: {len(forms)}")
         print(f"  Reports: {len(reports)}")
-        print(f"  Blueprints: {len(blueprints)}")
-        print(f"  Pages: {len(pages)}")
         print(f"  Workflows: {len(workflows)}")
         print(f"  Schedules: {len(schedules)}")
     else:
         sys.stdout.write(content)
-
-    # KB post-build validation (optional)
-    if args.kb_validate:
-        from forgeds._shared.kb_accessor import get_kb
-        kb = get_kb()
-        if kb.available():
-            import tempfile
-            # Write .ds to a temp file if output was stdout
-            if args.output:
-                ds_for_ingest = Path(args.output)
-            else:
-                tmp = tempfile.NamedTemporaryFile(suffix=".ds", delete=False, mode="w", encoding="utf-8")
-                tmp.write(content)
-                tmp.close()
-                ds_for_ingest = Path(tmp.name)
-
-            try:
-                from forgeds.knowledge.app_ingest import ingest_ds_app
-                module = f"app:{app_name.replace(' ', '_')}"
-                ingest_ds_app(str(ds_for_ingest), str(kb.db_path), module_name=module)
-                report = kb.project(module)
-                if report:
-                    print(f"\n  KB Projection: R({app_name}) = {report.residual:.1f}", file=sys.stderr)
-                    print(f"  Gaps: {len(report.gaps)}", file=sys.stderr)
-                    for g in sorted(report.gaps, key=lambda x: -x.severity)[:10]:
-                        sev = {2.0: "CRITICAL", 1.5: "HIGH", 1.0: "MEDIUM", 0.5: "LOW"}.get(g.severity, "INFO")
-                        print(f"    [{sev}] {g.entity}: {g.message[:80]}", file=sys.stderr)
-                    if len(report.gaps) > 10:
-                        print(f"    ... and {len(report.gaps) - 10} more gap(s)", file=sys.stderr)
-            except Exception as e:
-                print(f"  KB validation error: {e}", file=sys.stderr)
-            finally:
-                if not args.output:
-                    ds_for_ingest.unlink(missing_ok=True)
-        else:
-            print("WARNING: knowledge.db not found. KB validation disabled.", file=sys.stderr)
 
     # Exit code
     warnings = len(input_diags) + len(output_diags) - len(input_errors) - len(output_errors)

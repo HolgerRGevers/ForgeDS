@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { ConnectionStatus } from "./ConnectionStatus";
+import { BridgePill } from "./ConnectionStatus";
 import { UserMenu } from "./UserMenu";
-import type { ConnectionStatus as ConnStatus } from "../types/bridge";
+import { Logo } from "../brand";
 
 interface AppShellProps {
   children: ReactNode;
-  bridgeStatus?: ConnStatus;
 }
 
 const navItems = [
@@ -16,16 +15,14 @@ const navItems = [
   { to: "/api", label: "API", phase: 4 },
 ];
 
-export function AppShell({ children, bridgeStatus }: AppShellProps) {
+export function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex h-screen flex-col bg-gray-950 text-gray-100">
       {/* Header */}
       <header className="flex items-center justify-between bg-gray-800 px-4 py-2 shadow-md">
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-2">
-          <span className="text-lg font-bold tracking-tight text-white">
-            ForgeDS<span className="text-blue-400">_IDE</span>
-          </span>
+          <Logo variant="color" layout="horizontal" size={28} />
         </NavLink>
 
         {/* Navigation */}
@@ -52,12 +49,7 @@ export function AppShell({ children, bridgeStatus }: AppShellProps) {
 
         {/* Right side: bridge status + user menu */}
         <div className="flex items-center gap-3">
-          {bridgeStatus === "connected" && <ConnectionStatus />}
-          {bridgeStatus === "connecting" && (
-            <span className="text-xs text-yellow-500" title="Bridge connecting...">
-              Bridge...
-            </span>
-          )}
+          <BridgePill />
           <UserMenu />
         </div>
       </header>

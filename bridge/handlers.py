@@ -22,37 +22,6 @@ SendFn = Callable[[dict], Coroutine[Any, Any, None]]
 
 
 # ---------------------------------------------------------------------------
-# Security: path validation to prevent traversal attacks
-# ---------------------------------------------------------------------------
-_PROJECT_ROOT: Path | None = None
-
-
-def _get_project_root() -> Path:
-    """Return the project root, caching on first call."""
-    global _PROJECT_ROOT
-    if _PROJECT_ROOT is None:
-        try:
-            from forgeds._shared.config import find_project_root
-            _PROJECT_ROOT = find_project_root().resolve()
-        except Exception:
-            _PROJECT_ROOT = Path.cwd().resolve()
-    return _PROJECT_ROOT
-
-
-def _is_safe_path(file_path: str) -> bool:
-    """Return True if *file_path* resolves inside the project root."""
-    if not file_path:
-        return False
-    try:
-        resolved = Path(file_path).resolve()
-        root = _get_project_root()
-        # Path.is_relative_to added in 3.9
-        return resolved == root or str(resolved).startswith(str(root) + os.sep)
-    except (OSError, ValueError):
-        return False
-
-
-# ---------------------------------------------------------------------------
 # refine_prompt -- mock implementation
 # ---------------------------------------------------------------------------
 async def handle_refine_prompt(data: dict) -> dict:
@@ -189,28 +158,17 @@ async def handle_lint_check(data: dict) -> dict:
     """
     files = data.get("files", [])
     directory = data.get("directory", "")
+    target = directory if directory else " ".join(files)
 
-    # Security: validate all paths resolve within the project root
-    targets: list[str] = []
-    if directory:
-        if not _is_safe_path(directory):
-            return {"error": "Directory path is outside the project root."}
-        targets = [directory]
-    else:
-        for f in files:
-            if not _is_safe_path(f):
-                return {"error": f"File path is outside the project root: {Path(f).name}"}
-            targets.append(f)
-
-    if not targets:
+    if not target:
         return {"error": "No files or directory specified for lint check."}
 
-    # Determine how to call the linter — pass each target as a separate arg
+    # Determine how to call the linter
     lint_cmd = shutil.which("forgeds-lint")
     if lint_cmd:
-        cmd = [lint_cmd] + targets
+        cmd = [lint_cmd, target]
     else:
-        cmd = [sys.executable, "-m", "forgeds.core.lint_deluge"] + targets
+        cmd = [sys.executable, "-m", "forgeds.core.lint_deluge", target]
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -331,127 +289,40 @@ async def handle_get_status() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# parse_ds -- parse a .ds export and return app structure (mock)
+# parse_ds -- parse a .ds export and return app structure
 # ---------------------------------------------------------------------------
 async def handle_parse_ds(data: dict) -> dict:
-    """Parse a .ds export and return app structure. Mock implementation."""
-    file_path = data.get("file_path", "")
-    await asyncio.sleep(0.2)
+    """Parse a .ds export and return app structure as TreeNode hierarchy."""
+    import sys
+    from pathlib import Path as _Path
 
-    return {
-        "name": "expense_reimbursement",
-        "displayName": "Expense Reimbursement Management",
-        "tree": [
-            {
-                "id": "app-root",
-                "label": "Expense Reimbursement Management",
-                "type": "application",
-                "isExpanded": True,
-                "children": [
-                    {
-                        "id": "forms-section",
-                        "label": "Forms",
-                        "type": "section",
-                        "isExpanded": True,
-                        "children": [
-                            {
-                                "id": "form-expense-claims",
-                                "label": "Expense Claims",
-                                "type": "form",
-                                "isExpanded": False,
-                                "children": [
-                                    {"id": "field-section", "label": "Fields", "type": "section", "isExpanded": False, "children": [
-                                        {"id": "field-claim-id", "label": "Claim_ID", "type": "field", "fieldType": "Auto Number"},
-                                        {"id": "field-employee", "label": "Employee_Name", "type": "field", "fieldType": "Text"},
-                                        {"id": "field-amount", "label": "Amount_ZAR", "type": "field", "fieldType": "Decimal"},
-                                        {"id": "field-department", "label": "Department", "type": "field", "fieldType": "Lookup"},
-                                        {"id": "field-gl-account", "label": "GL_Account", "type": "field", "fieldType": "Lookup"},
-                                        {"id": "field-status", "label": "Status", "type": "field", "fieldType": "Picklist"},
-                                        {"id": "field-esg-category", "label": "ESG_Category", "type": "field", "fieldType": "Text"},
-                                        {"id": "field-carbon-kg", "label": "Estimated_Carbon_KG", "type": "field", "fieldType": "Decimal"},
-                                    ]},
-                                    {"id": "wf-section-ec", "label": "Workflows", "type": "section", "isExpanded": False, "children": [
-                                        {"id": "wf-on-validate", "label": "On Validate (hard stops)", "type": "workflow", "trigger": "on_validate", "filePath": "src/deluge/form-workflows/expense_claim.on_validate.dg"},
-                                        {"id": "wf-on-success", "label": "Self-approval prevention + routing", "type": "workflow", "trigger": "on_success", "filePath": "src/deluge/form-workflows/expense_claim.on_success.dg"},
-                                        {"id": "wf-on-load", "label": "Employee Name auto-populate", "type": "workflow", "trigger": "on_load", "filePath": "src/deluge/form-workflows/expense_claim.on_load.auto_populate.dg"},
-                                    ]},
-                                ],
-                            },
-                            {
-                                "id": "form-approval-history",
-                                "label": "Approval History",
-                                "type": "form",
-                                "isExpanded": False,
-                                "children": [
-                                    {"id": "field-section-ah", "label": "Fields", "type": "section", "children": [
-                                        {"id": "field-ah-claim", "label": "Claim", "type": "field", "fieldType": "Lookup"},
-                                        {"id": "field-ah-action", "label": "action_1", "type": "field", "fieldType": "Picklist"},
-                                        {"id": "field-ah-actor", "label": "Actor", "type": "field", "fieldType": "Text"},
-                                        {"id": "field-ah-added-user", "label": "Added_User", "type": "field", "fieldType": "Text"},
-                                    ]},
-                                ],
-                            },
-                            {
-                                "id": "form-gl-accounts",
-                                "label": "GL Accounts",
-                                "type": "form",
-                                "isExpanded": False,
-                                "children": [
-                                    {"id": "field-section-gl", "label": "Fields", "type": "section", "children": [
-                                        {"id": "field-gl-code", "label": "GL_Code", "type": "field", "fieldType": "Text"},
-                                        {"id": "field-gl-name", "label": "Account_Name", "type": "field", "fieldType": "Text"},
-                                        {"id": "field-gl-esg", "label": "ESG_Category", "type": "field", "fieldType": "Text"},
-                                        {"id": "field-gl-carbon", "label": "Carbon_Factor", "type": "field", "fieldType": "Decimal"},
-                                    ]},
-                                ],
-                            },
-                        ],
-                    },
-                    {
-                        "id": "reports-section",
-                        "label": "Reports",
-                        "type": "section",
-                        "isExpanded": False,
-                        "children": [
-                            {"id": "report-all-claims", "label": "All Expense Claims", "type": "report"},
-                            {"id": "report-my-claims", "label": "My Claims", "type": "report"},
-                            {"id": "report-pending", "label": "Pending Approvals Manager", "type": "report"},
-                            {"id": "report-audit", "label": "AuditTrail", "type": "report"},
-                        ],
-                    },
-                    {
-                        "id": "pages-section",
-                        "label": "Pages",
-                        "type": "section",
-                        "isExpanded": False,
-                        "children": [
-                            {"id": "page-mgmt-dash", "label": "Management Dashboard", "type": "page"},
-                            {"id": "page-emp-dash", "label": "Employee Dashboard", "type": "page"},
-                        ],
-                    },
-                    {
-                        "id": "schedules-section",
-                        "label": "Schedules",
-                        "type": "section",
-                        "isExpanded": False,
-                        "children": [
-                            {"id": "schedule-sla", "label": "SLA Enforcement Daily", "type": "schedule", "trigger": "daily", "filePath": "src/deluge/scheduled/sla_enforcement_daily.dg"},
-                        ],
-                    },
-                    {
-                        "id": "apis-section",
-                        "label": "Custom APIs",
-                        "type": "section",
-                        "isExpanded": False,
-                        "children": [
-                            {"id": "api-dashboard", "label": "Get_Dashboard_Summary", "type": "api", "filePath": "src/deluge/custom-api/get_dashboard_summary.dg"},
-                            {"id": "api-claim-status", "label": "Get_Claim_Status", "type": "api", "filePath": "src/deluge/custom-api/get_claim_status.dg"},
-                        ],
-                    },
-                ],
-            },
-        ],
-    }
+    # Ensure forgeds is importable
+    src_dir = str(_Path(__file__).parent.parent / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+
+    from forgeds.core.parse_ds_export import DSParser
+    from bridge.tree_builder import build_tree_response
+
+    file_path = data.get("file_path", "")
+    content = data.get("content", "")
+
+    if not content and not file_path:
+        return {"error": "file_path or content is required"}
+
+    if not content:
+        try:
+            content = _Path(file_path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            return {"error": f"Failed to read file: {e}"}
+
+    try:
+        parser = DSParser(content)
+        parser.parse()
+    except Exception as e:
+        return {"error": f"Parse error: {e}"}
+
+    return build_tree_response(parser.forms, parser.scripts, file_path)
 
 
 # ---------------------------------------------------------------------------
@@ -494,10 +365,6 @@ async def handle_read_file(data: dict) -> dict:
 
     ext = Path(file_path).suffix.lower() if file_path else ""
     language = _EXTENSION_LANGUAGE_MAP.get(ext, "text")
-
-    # Security: reject paths outside the project root
-    if file_path and not _is_safe_path(file_path):
-        return {"error": "File path is outside the project root.", "content": "", "language": language}
 
     if file_path and os.path.isfile(file_path):
         try:
