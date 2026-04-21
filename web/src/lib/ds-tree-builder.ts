@@ -6,7 +6,7 @@ import type { FormDef, ScriptDef } from "./ds-parser";
 export function buildAppTree(
   forms: FormDef[],
   scripts: ScriptDef[],
-  appName: string,
+  _appName: string,
   appDisplayName: string
 ): TreeNode[] {
   const root: TreeNode = {
