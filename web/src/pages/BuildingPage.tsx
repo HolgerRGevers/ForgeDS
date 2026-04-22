@@ -5,6 +5,7 @@ import { useAuthStore } from "../stores/authStore";
 import { useRepoStore } from "../stores/repoStore";
 import { useIdeStore } from "../stores/ideStore";
 import { useToastStore } from "../stores/toastStore";
+import { useDashboardStore } from "../stores/dashboardStore";
 import { BuildProgress } from "../components/BuildProgress";
 import { buildProject } from "../services/claude-api";
 import { dropManifest } from "../services/github-repos";
@@ -209,12 +210,16 @@ export default function BuildingPage() {
                 attachmentNames: attachments.map((f) => f.name),
               });
             } catch (err) {
-              log(
-                err instanceof Error
-                  ? `Manifest drop failed: ${err.message}`
-                  : "Manifest drop failed",
-                "warning",
-              );
+              const msg =
+                err instanceof Error ? err.message : "Manifest drop failed";
+              log(`Manifest drop failed: ${msg}`, "warning");
+              // Post a toast that survives navigation so the user sees it in the IDE.
+              useToastStore
+                .getState()
+                .error(
+                  "Manifest drop failed",
+                  `${msg}. The repo won't auto-surface on the dashboard.`,
+                );
             }
           }
 
@@ -226,6 +231,9 @@ export default function BuildingPage() {
               "Build complete",
               `${files.length} file(s) committed to ${branch}`,
             );
+          // I3: Fire-and-forget refresh so the newly-provisioned repo surfaces on
+          // the dashboard next time the user returns, without waiting for the TTL.
+          void useDashboardStore.getState().refresh(true);
           reset();
           navigate("/ide");
         } else {
