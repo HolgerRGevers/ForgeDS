@@ -42,3 +42,6 @@ web/dist/
 
 # Superpowers brainstorm/scratch sessions
 .superpowers/
+
+# Anthropic credentials (defence-in-depth; canonical path is ~/.forgeds/anthropic.yaml)
+config/anthropic.yaml

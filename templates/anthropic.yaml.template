@@ -1,0 +1,4 @@
+# ForgeDS - Anthropic API credentials
+# Copy to ~/.forgeds/anthropic.yaml and fill in your key.
+# Alternatively, set the ANTHROPIC_API_KEY environment variable.
+api_key: YOUR_ANTHROPIC_API_KEY_HERE
