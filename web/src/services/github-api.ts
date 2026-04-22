@@ -468,3 +468,69 @@ export async function createPullRequest(
     body: JSON.stringify({ title, body, head, base, draft }),
   });
 }
+
+// ── Discovery helpers (used by dashboardStore) ────────────────────────────
+
+export interface UserRepoSummary {
+  full_name: string;
+  name: string;
+  description: string | null;
+  updated_at: string;
+  private: boolean;
+}
+
+export async function listUserRepos(
+  token: string,
+  pageCap = 5,
+): Promise<UserRepoSummary[]> {
+  const all: UserRepoSummary[] = [];
+  for (let page = 1; page <= pageCap; page++) {
+    const batch = await request<Array<Record<string, unknown>>>(
+      token,
+      `/user/repos?per_page=100&sort=updated&page=${page}`,
+    );
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    all.push(
+      ...batch.map((r) => ({
+        full_name: r.full_name as string,
+        name: r.name as string,
+        description: (r.description as string | null) ?? null,
+        updated_at: r.updated_at as string,
+        private: r.private as boolean,
+      })),
+    );
+    if (batch.length < 100) break;
+  }
+  return all;
+}
+
+export async function hasManifest(
+  token: string,
+  fullName: string,
+): Promise<boolean> {
+  const [owner, repo] = fullName.split("/");
+  const res = await fetch(
+    `${API}/repos/${owner}/${repo}/contents/forgeds.yaml`,
+    { method: "HEAD", headers: headers(token) },
+  );
+  updateRateLimits(res);
+  return res.status === 200;
+}
+
+export interface RepoEventRaw {
+  type: string;
+  created_at: string;
+  payload: Record<string, unknown>;
+}
+
+export async function listRepoEvents(
+  token: string,
+  fullName: string,
+  perPage = 5,
+): Promise<RepoEventRaw[]> {
+  const [owner, repo] = fullName.split("/");
+  return request<RepoEventRaw[]>(
+    token,
+    `/repos/${owner}/${repo}/events?per_page=${perPage}`,
+  );
+}

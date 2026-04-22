@@ -8,12 +8,6 @@ export type {
 } from "./bridge";
 
 export type {
-  RefinedSection,
-  RefinedPromptProps,
-  PromptInputProps,
-} from "./prompt";
-
-export type {
   TreeNode,
   AppStructure,
   EditorTab,
@@ -64,3 +58,26 @@ export type {
   AuthStore,
   RepoStore,
 } from "./github";
+
+export type {
+  WizardDepth,
+  EntryTab,
+  PairedQuestion,
+  FreeTextQuestion,
+  WizardQuestion,
+  QuestionBatchResponse,
+  DataAnalysis,
+  BuildMessage,
+  GeneratedFile,
+  BuildProgressProps,
+  CodeFile,
+  CodePreviewProps,
+  ProjectHistoryItem,
+  ProjectHistoryProps,
+} from "./wizard";
+
+export type {
+  RepoEvent,
+  RepoActivity,
+  DashboardApp,
+} from "./dashboard";
