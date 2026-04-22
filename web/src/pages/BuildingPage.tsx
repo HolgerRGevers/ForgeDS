@@ -8,6 +8,8 @@ import { useToastStore } from "../stores/toastStore";
 import { BuildProgress } from "../components/BuildProgress";
 import { buildProject } from "../services/claude-api";
 import { dropManifest } from "../services/github-repos";
+import { fanoutSpec, personaRoundTable } from "../services/multi-agent";
+import type { PairedQuestion } from "../types/wizard";
 
 export default function BuildingPage() {
   const navigate = useNavigate();
@@ -31,6 +33,8 @@ export default function BuildingPage() {
   const midSeedAnswers = useWizardStore((s) => s.midSeedAnswers);
   const dataAnalysis = useWizardStore((s) => s.dataAnalysis);
   const reset = useWizardStore((s) => s.reset);
+  const setFanoutDrafts = useWizardStore((s) => s.setFanoutDrafts);
+  const setPersonaCritiques = useWizardStore((s) => s.setPersonaCritiques);
 
   const startedRef = useRef(false);
 
@@ -81,8 +85,8 @@ export default function BuildingPage() {
         return;
       }
 
-      // Build the spec payload from wizard state
-      const spec = JSON.stringify({
+      // Build the final spec — for Heavy/Dev, run fanout (and optionally round-table) first.
+      let finalSpec = JSON.stringify({
         coreIdea,
         depth,
         entryTab,
@@ -91,6 +95,66 @@ export default function BuildingPage() {
         answers,
         dataAnalysis,
       });
+
+      if (depth === "heavy" || depth === "dev") {
+        log("Heavy mode: dispatching parallel-agent fanout…");
+        try {
+          const pairedOnly = questions.filter(
+            (q): q is PairedQuestion => q.kind === "paired",
+          );
+          const fanout = await fanoutSpec({
+            token,
+            coreIdea,
+            depth,
+            midSeedAnswers,
+            questions: pairedOnly,
+            answers,
+            dataAnalysis,
+            onProgress: (msg) =>
+              log(
+                `[${msg.agent}] ${msg.phase}${msg.preview ? `: ${msg.preview}` : ""}`,
+              ),
+          });
+          setFanoutDrafts(fanout.drafts);
+          finalSpec = fanout.synthesised;
+          if (fanout.divergences.length > 0) {
+            log(
+              `Synthesis flagged ${fanout.divergences.length} divergence(s).`,
+              "warning",
+            );
+          }
+        } catch (err) {
+          log(
+            err instanceof Error ? `Fanout failed: ${err.message}` : "Fanout failed",
+            "error",
+          );
+          return;
+        }
+      }
+
+      if (depth === "dev") {
+        log("Dev mode: persona round-table critique…");
+        try {
+          const rt = await personaRoundTable({
+            token,
+            spec: finalSpec,
+            onProgress: (msg) =>
+              log(
+                `[${msg.persona}] ${msg.phase}${msg.critique ? `: ${msg.critique}` : ""}`,
+              ),
+          });
+          setPersonaCritiques(rt.critiques);
+          finalSpec = rt.revisedSpec;
+        } catch (err) {
+          log(
+            err instanceof Error
+              ? `Round-table partial: ${err.message}`
+              : "Round-table failed",
+            "warning",
+          );
+          // Don't return — fall through with whatever spec we have.
+        }
+      }
 
       try {
         // buildProject(token, BuildRequest, onChunk) — SSE streaming
@@ -102,7 +166,7 @@ export default function BuildingPage() {
                 id: "spec",
                 title: "Wizard Spec",
                 icon: "🛠",
-                content: spec,
+                content: finalSpec,
                 items: [],
                 isEditable: false,
               },
@@ -187,7 +251,9 @@ export default function BuildingPage() {
     repoCreationPromise,
     reset,
     setBuildMessages,
+    setFanoutDrafts,
     setGeneratedFiles,
+    setPersonaCritiques,
     setStep,
     targetMode,
     targetRepoFullName,
