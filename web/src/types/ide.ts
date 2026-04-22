@@ -114,6 +114,32 @@ export interface ConsoleEntry {
 /** Active tab in the dev console */
 export type ConsoleTab = "lint" | "build" | "relationships" | "ai";
 
+// === Shell Overhaul Types ===
+
+/** A sub-tab within the Scripts category of the bottom console. */
+export type ScriptsTab =
+  | "complete"
+  | "form-workflows"
+  | "schedules"
+  | "approvals"
+  | "payments"
+  | "blueprints"
+  | "batch-workflows"
+  | "functions";
+
+/** A top-level category in the bottom console (two-level tab structure). */
+export type ConsoleCategory = "scripts" | "devtools";
+
+/** Remembered drop location for a panel hidden via the activity bar.
+ *  Used when re-adding the panel so it returns to where the user last had it. */
+export interface PanelDockHint {
+  referencePanelId?: string;
+  direction?: "left" | "right" | "above" | "below" | "within";
+}
+
+/** How the currently-loaded app arrived. Drives first-load UI behavior. */
+export type AppLoadSource = "wizard" | "repo" | "upload" | "bridge-auto" | null;
+
 // === IDE Store Types ===
 
 export interface IdeStore {
@@ -130,9 +156,15 @@ export interface IdeStore {
   // Inspector
   inspectorData: InspectorData | null;
 
-  // Dev console
+  // Dev console / Bottom panel
   consoleEntries: ConsoleEntry[];
-  activeConsoleTab: ConsoleTab;
+  activeConsoleCategory: ConsoleCategory;
+  activeScriptsTab: ScriptsTab;
+  activeDevToolsTab: ConsoleTab;
+
+  // App acquisition tracking (drives first-load UI)
+  appLoadSource: AppLoadSource;
+  completeScriptShownForApps: Set<string>;
 
   // Actions
   loadAppStructure: (structure: AppStructure) => void;
@@ -151,5 +183,10 @@ export interface IdeStore {
 
   addConsoleEntry: (entry: Omit<ConsoleEntry, "id" | "timestamp">) => void;
   clearConsole: () => void;
-  setActiveConsoleTab: (tab: ConsoleTab) => void;
+  setActiveConsoleCategory: (cat: ConsoleCategory) => void;
+  setActiveScriptsTab: (tab: ScriptsTab) => void;
+  setActiveDevToolsTab: (tab: ConsoleTab) => void;
+
+  setAppLoadSource: (src: AppLoadSource) => void;
+  markCompleteScriptShown: (appName: string) => void;
 }
