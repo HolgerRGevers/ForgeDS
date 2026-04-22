@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ActivityBar } from "../../../src/components/ide/ActivityBar";
 
 describe("ActivityBar", () => {
@@ -40,13 +41,13 @@ describe("ActivityBar", () => {
     expect(onConsoleCategory).toHaveBeenCalledWith("devtools");
   });
 
-  it("Enter key on an icon button triggers onToggle", () => {
+  it("Enter key on a focused icon button triggers onToggle", async () => {
+    const user = userEvent.setup();
     const onToggle = vi.fn();
     render(<ActivityBar onToggle={onToggle} onConsoleCategory={() => {}} />);
     const btn = screen.getByRole("button", { name: /inspector/i });
     btn.focus();
-    fireEvent.keyDown(btn, { key: "Enter", code: "Enter" });
-    fireEvent.click(btn);
-    expect(onToggle).toHaveBeenCalled();
+    await user.keyboard("{Enter}");
+    expect(onToggle).toHaveBeenCalledWith("inspector");
   });
 });
