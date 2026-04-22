@@ -9,7 +9,6 @@ interface AppShellProps {
 }
 
 const navItems = [
-  { to: "/ide", label: "Prompt", phase: 1 },
   { to: "/ide", label: "IDE", phase: 2 },
   { to: "/database", label: "Database", phase: 3 },
   { to: "/api", label: "API", phase: 4 },
