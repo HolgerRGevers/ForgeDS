@@ -18,10 +18,12 @@ interface DashboardState {
   loading: boolean;
   error: string | null;
   lastFetchedAt: number | null;
+  hasRepoScope: boolean | null;
 
   refresh: (force?: boolean) => Promise<void>;
   pinRepo: (fullName: string) => Promise<void>;
   unpinRepo: (fullName: string) => Promise<void>;
+  checkScopes: () => Promise<void>;
 }
 
 function loadPinned(): string[] {
@@ -104,6 +106,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   loading: false,
   error: null,
   lastFetchedAt: null,
+  hasRepoScope: null,
 
   refresh: async (force = false) => {
     const last = get().lastFetchedAt;
@@ -180,5 +183,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({ pinnedRepos: list });
     savePinned(list);
     await get().refresh(true);
+  },
+
+  checkScopes: async () => {
+    const { checkScopes } = await import("../services/github-repos");
+    const { hasRepoScope } = await checkScopes();
+    set({ hasRepoScope });
   },
 }));

@@ -10,12 +10,14 @@ export default function DashboardPage() {
   const activity = useDashboardStore((s) => s.activity);
   const loading = useDashboardStore((s) => s.loading);
   const refresh = useDashboardStore((s) => s.refresh);
+  const checkScopes = useDashboardStore((s) => s.checkScopes);
   const fetchRepos = useRepoStore((s) => s.fetchRepos);
 
   useEffect(() => {
     fetchRepos();
     refresh();
-  }, [fetchRepos, refresh]);
+    checkScopes();
+  }, [fetchRepos, refresh, checkScopes]);
 
   return (
     <div className="flex h-full">

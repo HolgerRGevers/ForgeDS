@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWizardStore } from "../../stores/wizardStore";
 import { useRepoStore } from "../../stores/repoStore";
+import { useDashboardStore } from "../../stores/dashboardStore";
+import { eagerCreateRepo } from "../../services/github-repos";
 import { EntryTabs } from "./EntryTabs";
 import type { EntryTab } from "../../types/wizard";
 
@@ -9,12 +11,23 @@ export function RailWizard() {
   const navigate = useNavigate();
   const setEntryParams = useWizardStore((s) => s.setEntryParams);
   const reset = useWizardStore((s) => s.reset);
+  const setRepoCreationStatus = useWizardStore((s) => s.setRepoCreationStatus);
+  const setRepoCreationPromise = useWizardStore((s) => s.setRepoCreationPromise);
+  const setCreatedRepoFullName = useWizardStore((s) => s.setCreatedRepoFullName);
   const repos = useRepoStore((s) => s.repos);
+  const hasRepoScope = useDashboardStore((s) => s.hasRepoScope);
+  const canCreateNew = hasRepoScope !== false; // null = unknown → optimistic enabled
 
   const [tab, setTab] = useState<EntryTab>("prototype");
   const [name, setName] = useState("");
   const [target, setTarget] = useState<"create-new" | "use-existing">("create-new");
   const [existingRepo, setExistingRepo] = useState<string>("");
+
+  useEffect(() => {
+    if (!canCreateNew && target === "create-new") {
+      setTarget("use-existing");
+    }
+  }, [canCreateNew, target]);
 
   const onContinue = () => {
     if (!name.trim()) {
@@ -33,6 +46,27 @@ export function RailWizard() {
       targetRepoFullName: target === "use-existing" ? existingRepo : null,
       attachments: [],
     });
+    if (target === "create-new") {
+      setRepoCreationStatus("pending");
+      const promise = eagerCreateRepo({
+        projectName: name.trim(),
+        description: `ForgeDS prototype: ${name.trim()}`,
+        isPrivate: true,
+      })
+        .then((fullName) => {
+          setCreatedRepoFullName(fullName);
+          setRepoCreationStatus("ready");
+          return fullName;
+        })
+        .catch((err) => {
+          setRepoCreationStatus(
+            "failed",
+            err instanceof Error ? err.message : "Repo creation failed",
+          );
+          throw err;
+        });
+      setRepoCreationPromise(promise);
+    }
     navigate("/new/idea");
   };
 
@@ -57,17 +91,19 @@ export function RailWizard() {
       </label>
       <div className="flex flex-col gap-1">
         <label
-          className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer ${
+          className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${canCreateNew ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${
             target === "create-new"
               ? "border-[#c2662d] bg-[#c2662d]/10 text-white"
               : "border-white/10 text-gray-300"
           }`}
+          title={canCreateNew ? undefined : "The GitHub OAuth app needs the 'repo' scope to create new repos. Re-authenticate to enable."}
         >
           <input
             type="radio"
             name="target"
             checked={target === "create-new"}
-            onChange={() => setTarget("create-new")}
+            onChange={() => canCreateNew && setTarget("create-new")}
+            disabled={!canCreateNew}
             className="accent-[#c2662d]"
           />
           Create new repo
