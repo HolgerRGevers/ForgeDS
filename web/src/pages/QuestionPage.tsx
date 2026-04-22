@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWizardStore } from "../stores/wizardStore";
 import { useAuthStore } from "../stores/authStore";
@@ -34,10 +34,15 @@ export default function QuestionPage() {
   const recordAnswer = useWizardStore((s) => s.recordAnswer);
   const setStep = useWizardStore((s) => s.setStep);
   const setCurrentQuestionIdx = useWizardStore((s) => s.setCurrentQuestionIdx);
+  const questionsComplete = useWizardStore((s) => s.questionsComplete);
+  const setQuestionsComplete = useWizardStore((s) => s.setQuestionsComplete);
 
   const [loading, setLoading] = useState(false);
-  const [doneFlag, setDoneFlag] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // I2: Guard against StrictMode double-fire — track which question indices we
+  // have already initiated a fetch for so the effect never fires twice.
+  const fetchedRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     setStep("questions");
@@ -47,6 +52,11 @@ export default function QuestionPage() {
   // Lazy-load the next batch when needed.
   useEffect(() => {
     if (questions[n - 1] || !depth || !token) return;
+
+    // I2: Skip if we already fired a fetch for this index.
+    if (fetchedRef.current.has(n)) return;
+    fetchedRef.current.add(n);
+
     setLoading(true);
     setError(null);
     generateQuestionBatch({
@@ -60,8 +70,17 @@ export default function QuestionPage() {
       needsFreeTextSeed: depth === "mid" && questions.length === 0,
     })
       .then((batch) => {
+        // C2: If the server returns an empty batch and says done, the wizard is
+        // finished — navigate immediately rather than trying to render a missing
+        // question which would spin on "Generating question…" forever.
+        if (batch.questions.length === 0 && batch.done) {
+          navigate("/new/building");
+          return;
+        }
         appendQuestions(batch.questions);
-        setDoneFlag(batch.done);
+        if (batch.done) {
+          setQuestionsComplete(true);
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load questions"))
       .finally(() => setLoading(false));
@@ -73,7 +92,9 @@ export default function QuestionPage() {
     depth,
     midSeedAnswers,
     n,
+    navigate,
     questions,
+    setQuestionsComplete,
     token,
   ]);
 
@@ -82,8 +103,10 @@ export default function QuestionPage() {
   const progressLabel = `${(depth ?? "").charAt(0).toUpperCase()}${(depth ?? "").slice(1)} · Question ${n}`;
 
   const advance = () => {
+    // C2: Terminal condition — the user just answered the last stored question
+    // AND the most recent fetch told us there are no more batches.
     const isLastInBatch = n === questions.length;
-    if (doneFlag && isLastInBatch) {
+    if (questionsComplete && isLastInBatch) {
       navigate("/new/building");
     } else {
       navigate(`/new/q/${n + 1}`);
@@ -121,8 +144,18 @@ export default function QuestionPage() {
           initialValue={(answers[q.id] as string) ?? ""}
           onAnswer={(text) => {
             recordAnswer(q.id, text);
+            // I1: Replace by index rather than blindly appending, so that
+            // navigating Back and re-answering a seed question doesn't grow the
+            // array with duplicate entries.
             if (depth === "mid") {
-              setMidSeedAnswers([...midSeedAnswers, text]);
+              const seedQuestions = questions.filter((sq) => sq.kind === "free-text");
+              const seedIdx = seedQuestions.findIndex((sq) => sq.id === q.id);
+              if (seedIdx >= 0) {
+                const next = [...midSeedAnswers];
+                while (next.length <= seedIdx) next.push("");
+                next[seedIdx] = text;
+                setMidSeedAnswers(next);
+              }
             }
             advance();
           }}

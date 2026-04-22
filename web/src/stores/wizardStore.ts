@@ -35,6 +35,7 @@ interface WizardState {
   questions: WizardQuestion[];
   currentQuestionIdx: number;
   answers: Record<string, "A" | "B" | string>;
+  questionsComplete: boolean;
 
   // building
   buildMessages: BuildMessage[];
@@ -73,6 +74,7 @@ interface WizardState {
   appendQuestions: (qs: WizardQuestion[]) => void;
   recordAnswer: (qid: string, value: "A" | "B" | string) => void;
   setCurrentQuestionIdx: (i: number) => void;
+  setQuestionsComplete: (v: boolean) => void;
   addBuildMessage: (msg: BuildMessage) => void;
   setBuildMessages: (msgs: BuildMessage[]) => void;
   setGeneratedFiles: (files: GeneratedFile[]) => void;
@@ -158,6 +160,7 @@ const initialState = {
   questions: [] as WizardQuestion[],
   currentQuestionIdx: 0,
   answers: {} as Record<string, "A" | "B" | string>,
+  questionsComplete: false,
   buildMessages: [] as BuildMessage[],
   generatedFiles: [] as GeneratedFile[],
   fanoutDrafts: [] as Array<{ agent: string; spec: string; rationale: string }>,
@@ -211,6 +214,9 @@ export const useWizardStore = create<WizardState>((set, get) => {
     setCurrentQuestionIdx: (i) => {
       set({ currentQuestionIdx: i });
       persist(get());
+    },
+    setQuestionsComplete: (v) => {
+      set({ questionsComplete: v });
     },
     addBuildMessage: (msg) => {
       set({ buildMessages: [...get().buildMessages, msg] });
