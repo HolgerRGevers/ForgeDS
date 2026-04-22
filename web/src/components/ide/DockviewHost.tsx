@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   DockviewReact,
   type DockviewApi,
@@ -22,7 +22,8 @@ export interface PanelRegistryEntry {
 export type PanelRegistry = Record<string, PanelRegistryEntry>;
 
 interface DockviewHostProps {
-  /** Component registry (panel ID -> factory). */
+  /** Component registry (panel ID -> factory).
+   *  Must be referentially stable across renders — callers should wrap in `useMemo`. */
   registry: PanelRegistry;
   /** Called once after dockview mounts + default/restored layout is applied. */
   onReady?: (api: DockviewApi) => void;
@@ -97,6 +98,7 @@ function hintForPanel(api: DockviewApi, panelId: string): PanelDockHint {
 export function DockviewHost({ registry, onReady }: DockviewHostProps) {
   const apiRef = useRef<DockviewApi | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const layoutChangeDisposableRef = useRef<{ dispose: () => void } | null>(null);
 
   const { setLayoutJson, recordLastKnownPosition, visiblePanels } =
     useLayoutStore();
@@ -122,7 +124,7 @@ export function DockviewHost({ registry, onReady }: DockviewHostProps) {
       }
       onReady?.(event.api);
 
-      event.api.onDidLayoutChange(() => {
+      layoutChangeDisposableRef.current = event.api.onDidLayoutChange(() => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
           try {
@@ -136,6 +138,18 @@ export function DockviewHost({ registry, onReady }: DockviewHostProps) {
     },
     [registry, onReady, setLayoutJson],
   );
+
+  // Cleanup on unmount: cancel pending save timer and dispose layout-change listener.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      layoutChangeDisposableRef.current?.dispose();
+      layoutChangeDisposableRef.current = null;
+    };
+  }, []);
 
   // Reconcile visiblePanels from the store with dockview's actual panels.
   // Called whenever visiblePanels changes — usually from ActivityBar clicks.
@@ -175,12 +189,15 @@ export function DockviewHost({ registry, onReady }: DockviewHostProps) {
     }
   }, [visiblePanels, registry, recordLastKnownPosition]);
 
-  // Build dockview `components` map from registry.
-  // DockviewReact requires Record<string, React.FunctionComponent<IDockviewPanelProps>>.
-  const components: Record<string, React.FunctionComponent<IDockviewPanelProps>> =
-    Object.fromEntries(
-      Object.entries(registry).map(([id, entry]) => [id, entry.component]),
-    );
+  // Build dockview `components` map from registry — memoised to avoid a new
+  // object reference on every render (DockviewReact uses referential equality).
+  const components = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(registry).map(([id, entry]) => [id, entry.component]),
+      ),
+    [registry],
+  );
 
   return (
     <div className="h-full w-full">
