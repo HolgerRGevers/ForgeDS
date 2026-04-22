@@ -11,6 +11,17 @@ import { deriveBadgeInitials, hashToBadgeColor } from "../lib/badge-utils";
 const PINNED_KEY = "forgeds-pinned-repos";
 const TTL_MS = 5 * 60 * 1000;
 
+const LEGACY_HISTORY_KEY = "forgeds-project-history";
+const SUNSET_KEY = "forgeds-legacy-history-sunset";
+const SUNSET_DAYS = 30;
+
+export interface LegacyHistoryItem {
+  id: string;
+  prompt: string;
+  timestamp: number;
+  fileCount: number;
+}
+
 interface DashboardState {
   apps: DashboardApp[];
   activity: RepoActivity[];
@@ -19,6 +30,7 @@ interface DashboardState {
   error: string | null;
   lastFetchedAt: number | null;
   hasRepoScope: boolean | null;
+  legacyPrompts: LegacyHistoryItem[];
 
   refresh: (force?: boolean) => Promise<void>;
   pinRepo: (fullName: string) => Promise<void>;
@@ -40,6 +52,41 @@ function savePinned(list: string[]) {
     localStorage.setItem(PINNED_KEY, JSON.stringify(list));
   } catch {
     // ignore
+  }
+}
+
+function readLegacyHistory(): LegacyHistoryItem[] {
+  try {
+    const raw = localStorage.getItem(LEGACY_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed as LegacyHistoryItem[];
+  } catch {
+    return [];
+  }
+}
+
+function isSunset(): boolean {
+  try {
+    const sunset = localStorage.getItem(SUNSET_KEY);
+    if (!sunset) {
+      // First time we read → set the sunset date now.
+      localStorage.setItem(
+        SUNSET_KEY,
+        String(Date.now() + SUNSET_DAYS * 24 * 3600 * 1000),
+      );
+      return false;
+    }
+    const ts = parseInt(sunset, 10);
+    if (Date.now() > ts) {
+      localStorage.removeItem(LEGACY_HISTORY_KEY);
+      localStorage.removeItem(SUNSET_KEY);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
   }
 }
 
@@ -107,6 +154,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   error: null,
   lastFetchedAt: null,
   hasRepoScope: null,
+  legacyPrompts: isSunset() ? [] : readLegacyHistory(),
 
   refresh: async (force = false) => {
     const last = get().lastFetchedAt;
