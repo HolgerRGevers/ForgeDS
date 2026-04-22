@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { BuildProgressProps } from "../types/prompt";
+import type { BuildProgressProps } from "../types/wizard";
 
 const TYPE_COLORS: Record<string, string> = {
   info: "text-gray-400",

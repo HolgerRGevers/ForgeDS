@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="72" viewBox="0 0 280 72" fill="none">
+  <title>ForgeDS</title>
+  <g transform="translate(4 4)">
+    <path d="M32.00 5.33 C 34.67 13.33, 40.00 21.33, 44.00 30.67 C 48.00 40.00, 49.33 46.67, 48.00 52.00 L 41.33 48.00 C 39.33 46.67, 36.67 46.67, 34.67 48.67 L 32.00 52.00 L 29.33 48.67 C 27.33 46.67, 24.67 46.67, 22.67 48.00 L 16.00 52.00 C 14.67 46.67, 16.00 40.00, 20.00 30.67 C 24.00 21.33, 29.33 13.33, 32.00 5.33 Z" fill="#c2662d"></path>
+    <path d="M32.00 21.33 C 33.33 26.67, 36.00 32.00, 37.33 37.33 C 38.00 41.33, 37.33 44.00, 36.00 45.33 L 33.33 42.67 C 32.67 42.00, 31.33 42.00, 30.67 42.67 L 28.00 45.33 C 26.67 44.00, 26.00 41.33, 26.67 37.33 C 28.00 32.00, 30.67 26.67, 32.00 21.33 Z" fill="#e08a4f"></path>
+  </g>
+  <text x="84" y="50" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="42" font-weight="500" letter-spacing="-1">
+    <tspan fill="#f3f4f6">Forge</tspan><tspan fill="#c2662d">DS</tspan>
+  </text>
+</svg>

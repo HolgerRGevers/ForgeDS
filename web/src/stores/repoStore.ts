@@ -63,6 +63,7 @@ interface RepoState {
   createNewRepo: (name: string, description: string, isPrivate: boolean, autoInit: boolean) => Promise<void>;
   batchUploadFiles: (files: Array<{ path: string; content: string; isBinary: boolean }>, commitMessage: string) => Promise<void>;
   batchUploadToBranch: (branchName: string, files: Array<{ path: string; content: string; isBinary: boolean }>, commitMessage: string) => Promise<void>;
+  setSelectedRepoByFullName: (fullName: string) => Promise<void>;
 }
 
 /** Get token or throw. */
@@ -551,6 +552,16 @@ export const useRepoStore = create<RepoState>((set, get) => ({
 
     await get().fetchTree();
     await get().fetchCommits();
+  },
+
+  setSelectedRepoByFullName: async (fullName) => {
+    const existing = get().repos.find((r) => r.full_name === fullName);
+    if (existing) {
+      await get().selectRepo(existing.owner, existing.name);
+      return;
+    }
+    const [owner, repo] = fullName.split("/");
+    await get().selectRepo(owner, repo);
   },
 
   batchUploadToBranch: async (branchName, files, commitMessage) => {

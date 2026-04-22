@@ -19,13 +19,6 @@ export class ClaudeApiNotConfiguredError extends Error {
 
 // ── Types ────────────────────────────────────────────────────────────────
 
-export interface RefineRequest {
-  prompt: string;
-  files: string[];
-  repoContext: Array<{ path: string; content: string; source: string }>;
-  mode: "plan" | "code";
-}
-
 export interface RefinedSectionRaw {
   id: string;
   title: string;
@@ -33,11 +26,6 @@ export interface RefinedSectionRaw {
   content: string;
   items: string[];
   isEditable: boolean;
-}
-
-export interface RefineResponse {
-  sections: RefinedSectionRaw[];
-  planSteps?: string[];
 }
 
 export interface BuildRequest {
@@ -61,6 +49,7 @@ export interface BuildResponse {
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 function ensureConfigured() {
+  if (import.meta.env.DEV) return;
   if (!CLAUDE_PROXY) {
     throw new ClaudeApiNotConfiguredError();
   }
@@ -82,28 +71,6 @@ async function handleErrorResponse(res: Response): Promise<never> {
 }
 
 // ── API Functions ────────────────────────────────────────────────────────
-
-export async function refinePrompt(
-  token: string,
-  data: RefineRequest,
-): Promise<RefineResponse> {
-  ensureConfigured();
-
-  const res = await fetch(`${CLAUDE_PROXY}/api/refine`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    return handleErrorResponse(res);
-  }
-
-  return res.json();
-}
 
 export async function buildProject(
   token: string,

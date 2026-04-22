@@ -80,15 +80,14 @@ export default function IdePage() {
     }
   }, [send, loadAppStructure, addConsoleEntry]);
 
-  const loadDsFromFile = useCallback(
-    async (file: File) => {
+  const loadDsFromContent = useCallback(
+    (fileName: string, content: string) => {
       try {
-        const content = await file.text();
         const parser = new DSParser(content);
         parser.parse();
 
         // Derive app name from filename (strip .ds extension)
-        const appName = file.name.replace(/\.ds$/i, "");
+        const appName = fileName.replace(/\.ds$/i, "");
         const appDisplayName = appName;
 
         const tree = buildAppTree(
@@ -111,7 +110,7 @@ export default function IdePage() {
         loadAppStructure(structure);
         addConsoleEntry({
           type: "info",
-          message: `Loaded .ds file: ${file.name} — ${parser.forms.length} form(s), ${parser.scripts.length} script(s)`,
+          message: `Loaded .ds file: ${fileName} — ${parser.forms.length} form(s), ${parser.scripts.length} script(s)`,
         });
       } catch (err) {
         addConsoleEntry({
@@ -121,6 +120,14 @@ export default function IdePage() {
       }
     },
     [loadAppStructure, addConsoleEntry],
+  );
+
+  const loadDsFromFile = useCallback(
+    async (file: File) => {
+      const content = await file.text();
+      loadDsFromContent(file.name, content);
+    },
+    [loadDsFromContent],
   );
 
   const runLint = useCallback(async () => {
@@ -239,7 +246,7 @@ export default function IdePage() {
   const handleRepoFileSelect = useCallback(
     (path: string, content: string) => {
       const name = path.split("/").pop() ?? path;
-      const ext = name.split(".").pop() ?? "";
+      const ext = (name.split(".").pop() ?? "").toLowerCase();
       const langMap: Record<string, string> = {
         dg: "deluge",
         ds: "plaintext",
@@ -263,8 +270,13 @@ export default function IdePage() {
       // Open the tab in the IDE editor
       const { openTab } = useIdeStore.getState();
       openTab(tab);
+
+      // Auto-load .ds files into the app structure tree (.ds Tree + Inspector)
+      if (ext === "ds") {
+        loadDsFromContent(name, content);
+      }
     },
-    [],
+    [loadDsFromContent],
   );
 
   return (

@@ -1,5 +1,5 @@
 import Editor from "@monaco-editor/react";
-import type { CodePreviewProps } from "../types/prompt";
+import type { CodePreviewProps } from "../types/wizard";
 import { useDelugeLanguage } from "../hooks/useMonaco";
 import { DELUGE_THEME } from "../lib/deluge-language";
 
