@@ -13,6 +13,15 @@ function resetStoreAndStorage() {
 describe("layoutStore", () => {
   beforeEach(resetStoreAndStorage);
 
+  it("recordLastKnownPosition merges hints without clobbering others", () => {
+    const { recordLastKnownPosition } = useLayoutStore.getState();
+    recordLastKnownPosition("inspector", { referencePanelId: "editor", direction: "right" });
+    recordLastKnownPosition("console", { referencePanelId: "editor", direction: "below" });
+    const { lastKnownPositions } = useLayoutStore.getState();
+    expect(lastKnownPositions.inspector?.direction).toBe("right");
+    expect(lastKnownPositions.console?.direction).toBe("below");
+  });
+
   it("setLayoutJson updates state and writes to localStorage", () => {
     const json = '{"panels":[]}';
     useLayoutStore.getState().setLayoutJson(json);
