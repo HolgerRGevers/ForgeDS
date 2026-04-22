@@ -22,3 +22,32 @@ def resolve_api_key() -> str | None:
         except yaml.YAMLError:
             return None
     return None
+
+
+# ---------------------------------------------------------------------------
+# Effort-level mapping - single source of truth
+# ---------------------------------------------------------------------------
+EFFORT_LEVELS: dict[str, dict] = {
+    "low":    {"model": "claude-haiku-4-5-20251001", "thinking": None,  "max_tokens": 2048},
+    "medium": {"model": "claude-haiku-4-5-20251001", "thinking": 4096,  "max_tokens": 4096},
+    "high":   {"model": "claude-sonnet-4-6",         "thinking": None,  "max_tokens": 4096},
+    "max":    {"model": "claude-opus-4-7",           "thinking": 16384, "max_tokens": 8192},
+}
+DEFAULT_IDE_EFFORT = "high"
+DEFAULT_APP_CREATION_EFFORT = "max"
+
+
+def get_effort_config(effort: str | None) -> dict:
+    """Return the effort config for *effort*, falling back to DEFAULT_IDE_EFFORT."""
+    if effort is None:
+        return EFFORT_LEVELS[DEFAULT_IDE_EFFORT]
+    return EFFORT_LEVELS.get(effort, EFFORT_LEVELS[DEFAULT_IDE_EFFORT])
+
+
+def build_anthropic_client():
+    """Return an AsyncAnthropic client, or None if no API key is configured."""
+    key = resolve_api_key()
+    if not key:
+        return None
+    from anthropic import AsyncAnthropic  # deferred import so tests without SDK still parse
+    return AsyncAnthropic(api_key=key)
