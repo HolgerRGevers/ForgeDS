@@ -211,6 +211,8 @@ def load_config(start: str = None) -> dict:
             "exclude_fields": ["ID", "Added_User"],
         },
         "seed_data_dir": "config/seed-data",
+        "custom_apis": [],
+        "widgets": {},
     }
 
 
