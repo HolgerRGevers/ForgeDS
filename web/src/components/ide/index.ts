@@ -2,7 +2,7 @@ export { AppTreeExplorer } from "./AppTreeExplorer";
 export { BranchManager } from "./BranchManager";
 export { CollaboratorsList } from "./CollaboratorsList";
 export { CreatePRModal } from "./CreatePRModal";
-export { DevConsole } from "./DevConsole";
+export { DevToolsCategory } from "./DevToolsCategory";
 export { IdeEditor } from "./IdeEditor";
 export { InspectorPanel } from "./InspectorPanel";
 export { RepoExplorer } from "./RepoExplorer";
