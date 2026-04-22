@@ -49,6 +49,7 @@ export interface BuildResponse {
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 function ensureConfigured() {
+  if (import.meta.env.DEV) return;
   if (!CLAUDE_PROXY) {
     throw new ClaudeApiNotConfiguredError();
   }
