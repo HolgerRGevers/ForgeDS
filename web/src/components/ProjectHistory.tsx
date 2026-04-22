@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { ProjectHistoryProps } from "../types/prompt";
+import type { ProjectHistoryProps } from "../types/wizard";
 
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();

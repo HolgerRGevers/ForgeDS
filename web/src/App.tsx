@@ -4,7 +4,7 @@ import { AppShell } from "./components/AppShell";
 import { AuthGuard } from "./components/AuthGuard";
 import { useBridgeStore } from "./stores/bridgeStore";
 import LoginPage from "./pages/LoginPage";
-import PromptPage from "./pages/PromptPage";
+import IdeaPage from "./pages/IdeaPage";
 import IdePage from "./pages/IdePage";
 import DatabasePage from "./pages/DatabasePage";
 import ApiPage from "./pages/ApiPage";
@@ -31,7 +31,7 @@ function App() {
             <AuthGuard>
               <AppShell>
                 <Routes>
-                  <Route path="/" element={<PromptPage />} />
+                  <Route path="/" element={<IdeaPage />} />
                   <Route path="/ide" element={<IdePage />} />
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/api" element={<ApiPage />} />

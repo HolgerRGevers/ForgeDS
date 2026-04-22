@@ -60,3 +60,42 @@ export interface GeneratedFile {
   content: string;
   language: string;
 }
+
+/** Props for the BuildProgress component. */
+export interface BuildProgressProps {
+  messages: BuildMessage[];
+  isBuilding: boolean;
+  isComplete: boolean;
+  onOpenIDE: () => void;
+}
+
+/** A generated code file for preview. */
+export interface CodeFile {
+  name: string;
+  path: string;
+  content: string;
+  language: string;
+}
+
+/** Props for the CodePreview component. */
+export interface CodePreviewProps {
+  files: CodeFile[];
+  activeFileIndex: number;
+  onFileSelect: (index: number) => void;
+}
+
+/** A saved project generation entry. */
+export interface ProjectHistoryItem {
+  id: string;
+  prompt: string;
+  timestamp: number;
+  fileCount: number;
+}
+
+/** Props for the ProjectHistory component. */
+export interface ProjectHistoryProps {
+  items: ProjectHistoryItem[];
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onClearAll: () => void;
+}

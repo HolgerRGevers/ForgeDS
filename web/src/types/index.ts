@@ -69,6 +69,11 @@ export type {
   DataAnalysis,
   BuildMessage,
   GeneratedFile,
+  BuildProgressProps,
+  CodeFile,
+  CodePreviewProps,
+  ProjectHistoryItem,
+  ProjectHistoryProps,
 } from "./wizard";
 
 export type {
