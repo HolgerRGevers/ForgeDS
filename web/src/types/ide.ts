@@ -133,11 +133,11 @@ export type ConsoleCategory = "scripts" | "devtools";
 /** Remembered drop location for a panel hidden via the activity bar.
  *  Used when re-adding the panel so it returns to where the user last had it. */
 export interface PanelDockHint {
-  referencePanelId?: string;
-  direction?: "left" | "right" | "above" | "below" | "within";
+  referencePanelId: string;
+  direction: "left" | "right" | "above" | "below" | "within";
 }
 
-/** How the currently-loaded app arrived. Drives first-load UI behavior. */
+/** How the currently-loaded app arrived. `null` = no app loaded yet. Drives first-load UI behavior. */
 export type AppLoadSource = "wizard" | "repo" | "upload" | "bridge-auto" | null;
 
 // === IDE Store Types ===

@@ -1,5 +1,13 @@
 import { create } from "zustand";
-import type { ConsoleEntry, EditorTab, IdeStore } from "../types/ide";
+import type {
+  AppLoadSource,
+  ConsoleCategory,
+  ConsoleEntry,
+  ConsoleTab,
+  EditorTab,
+  IdeStore,
+  ScriptsTab,
+} from "../types/ide";
 
 let consoleSeq = 0;
 
@@ -16,7 +24,12 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
   inspectorData: null,
 
   consoleEntries: [],
-  activeConsoleTab: "lint",
+  activeConsoleCategory: "scripts",
+  activeScriptsTab: "complete",
+  activeDevToolsTab: "lint",
+
+  appLoadSource: null,
+  completeScriptShownForApps: new Set<string>(),
 
   // --- Actions ---
 
@@ -33,7 +46,6 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
     const node = appStructure.nodeIndex.get(nodeId);
     if (!node?.filePath) return;
 
-    // If the file is already open, just activate its tab
     const existing = tabs.find((t) => t.path === node.filePath);
     if (existing) {
       if (activeTabId !== existing.id) {
@@ -42,13 +54,12 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
       return;
     }
 
-    // Open a new tab for this file
     const lang = node.filePath.endsWith(".dg") ? "deluge" : "plaintext";
     const newTab: EditorTab = {
       id: `tab-${nodeId}`,
       name: node.label,
       path: node.filePath,
-      content: "", // content loaded asynchronously by consumers
+      content: "",
       language: lang,
       isDirty: false,
     };
@@ -66,7 +77,6 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
     const node = appStructure.nodeIndex.get(nodeId);
     if (node) {
       node.isExpanded = !node.isExpanded;
-      // Trigger re-render by replacing the structure reference
       set({ appStructure: { ...appStructure } });
     }
   },
@@ -163,7 +173,27 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
     set({ consoleEntries: [] });
   },
 
-  setActiveConsoleTab: (tab) => {
-    set({ activeConsoleTab: tab });
+  setActiveConsoleCategory: (cat: ConsoleCategory) => {
+    set({ activeConsoleCategory: cat });
+  },
+
+  setActiveScriptsTab: (tab: ScriptsTab) => {
+    set({ activeScriptsTab: tab });
+  },
+
+  setActiveDevToolsTab: (tab: ConsoleTab) => {
+    set({ activeDevToolsTab: tab });
+  },
+
+  setAppLoadSource: (src: AppLoadSource) => {
+    set({ appLoadSource: src });
+  },
+
+  markCompleteScriptShown: (appName: string) => {
+    const prev = get().completeScriptShownForApps;
+    if (prev.has(appName)) return;
+    const next = new Set(prev);
+    next.add(appName);
+    set({ completeScriptShownForApps: next });
   },
 }));
