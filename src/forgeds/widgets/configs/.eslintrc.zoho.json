@@ -1,0 +1,16 @@
+{
+  "extends": ["eslint:recommended"],
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "globals": {
+    "ZOHO": "readonly",
+    "Creator": "readonly",
+    "$": "readonly"
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  }
+}
