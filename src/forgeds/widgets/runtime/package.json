@@ -1,0 +1,7 @@
+{
+  "name": "forgeds-widget-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "type": "commonjs",
+  "description": "ForgeDS Phase 2B widget runtime harness and generated SDK mock. Do not publish."
+}
