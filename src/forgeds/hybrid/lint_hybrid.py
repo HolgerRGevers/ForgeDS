@@ -798,6 +798,9 @@ def run_widget_rules(
 
 def main() -> int:
     """CLI entry point. Returns exit code (0=clean, 1=warnings, 2=errors)."""
+    from forgeds._shared.envelope import to_json_v1
+    from forgeds._shared.output_format import UnknownFormatError, resolve_format
+
     parser = argparse.ArgumentParser(
         description="Cross-environment linter: Access-to-Zoho Creator integration",
         epilog="Exit codes: 0=clean, 1=warnings, 2=errors",
@@ -821,7 +824,17 @@ def main() -> int:
         "--kb", action="store_true",
         help="Enable KB-backed hybrid rules (HY017-HY018). Requires knowledge.db.",
     )
+    parser.add_argument(
+        "--format", dest="format", default=None, choices=["text", "json-v1"],
+        help="Output format (default: text; FORGEDS_OUTPUT env also honored).",
+    )
     args = parser.parse_args()
+
+    try:
+        fmt = resolve_format(args.format)
+    except UnknownFormatError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     # Validate paths
     if args.data and not os.path.isdir(args.data):
@@ -885,29 +898,30 @@ def main() -> int:
     severity_order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
     all_diags.sort(key=lambda d: (severity_order[d.severity], d.file, d.line))
 
-    # Print diagnostics
-    for diag in all_diags:
-        print(diag)
-
-    # Summary
-    schema_count = len(schema_diags)
-    data_count = len(data_diags)
-    script_count = len(script_diags)
-
     errors = sum(1 for d in all_diags if d.severity == Severity.ERROR)
     warnings = sum(1 for d in all_diags if d.severity == Severity.WARNING)
     infos = sum(1 for d in all_diags if d.severity == Severity.INFO)
 
-    print(
-        f"\n--- Hybrid lint: "
-        f"{schema_count} schema checks, "
-        f"{data_count} data checks, "
-        f"{script_count} script checks ---"
-    )
-    print(
-        f"--- Results: "
-        f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
-    )
+    if fmt == "json-v1":
+        print(to_json_v1("forgeds-lint-hybrid", all_diags))
+    else:
+        for diag in all_diags:
+            print(diag)
+
+        schema_count = len(schema_diags)
+        data_count = len(data_diags)
+        script_count = len(script_diags)
+
+        print(
+            f"\n--- Hybrid lint: "
+            f"{schema_count} schema checks, "
+            f"{data_count} data checks, "
+            f"{script_count} script checks ---"
+        )
+        print(
+            f"--- Results: "
+            f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
+        )
 
     return 2 if errors > 0 else 1 if warnings > 0 else 0
 

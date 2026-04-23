@@ -21,6 +21,8 @@ from pathlib import Path
 
 from forgeds._shared.config import find_project_root, load_config
 from forgeds._shared.diagnostics import Diagnostic, Severity
+from forgeds._shared.envelope import to_json_v1
+from forgeds._shared.output_format import UnknownFormatError, resolve_format
 
 CONFIG_PATH = Path(__file__).parent / "configs" / ".eslintrc.zoho.json"
 ESLINT_CMD = ["npx", "--yes", "eslint"]  # --yes: auto-accept npx prompt
@@ -96,22 +98,8 @@ def _discover_js_files(widget_root: Path) -> list[str]:
 
 
 def _emit(diagnostics: list[Diagnostic], fmt: str) -> None:
-    if fmt == "json":
-        payload = {
-            "tool": "forgeds-lint-widgets",
-            "version": "1",
-            "diagnostics": [
-                {
-                    "file": d.file,
-                    "line": d.line,
-                    "rule": d.rule,
-                    "severity": d.severity.value.lower(),
-                    "message": d.message,
-                }
-                for d in diagnostics
-            ],
-        }
-        print(json.dumps(payload))
+    if fmt == "json-v1":
+        print(to_json_v1("forgeds-lint-widgets", diagnostics))
     else:
         for d in diagnostics:
             print(str(d))
@@ -123,12 +111,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("paths", nargs="*", help="Optional explicit file/dir paths. "
                         "If omitted, widget roots are discovered from forgeds.yaml config['widgets'].")
-    parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument("--format", dest="format", default=None,
+                        choices=["text", "json-v1"],
+                        help="Output format (default: text; FORGEDS_OUTPUT env also honored).")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress INFO diagnostics.")
     parser.add_argument("--errors-only", action="store_true", help="Suppress WARNING and INFO diagnostics.")
     parser.add_argument("--no-args-discover", action="store_true",
                         help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+
+    try:
+        fmt = resolve_format(args.format)
+    except UnknownFormatError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     if not _eslint_available():
         print(INSTALL_HINT, file=sys.stderr)
@@ -149,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.errors_only:
         diagnostics = [d for d in diagnostics if d.severity == Severity.ERROR]
 
-    _emit(diagnostics, fmt=args.format)
+    _emit(diagnostics, fmt=fmt)
 
     if any(d.severity == Severity.ERROR for d in diagnostics):
         return 2
