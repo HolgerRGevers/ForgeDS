@@ -1,4 +1,5 @@
 export { AppTreeExplorer } from "./AppTreeExplorer";
+export { ConsolePanel } from "./ConsolePanel";
 export { BranchManager } from "./BranchManager";
 export { CollaboratorsList } from "./CollaboratorsList";
 export { CreatePRModal } from "./CreatePRModal";
