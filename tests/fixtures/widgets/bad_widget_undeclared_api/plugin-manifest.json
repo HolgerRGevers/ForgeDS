@@ -1,0 +1,10 @@
+{
+  "name": "bad_widget_undeclared_api",
+  "version": "1.0.0",
+  "config": {
+    "widgets": [
+      {"location": "sidebar", "url": "index.html"}
+    ]
+  },
+  "permissions": ["ZOHO.CREATOR.API.read"]
+}
