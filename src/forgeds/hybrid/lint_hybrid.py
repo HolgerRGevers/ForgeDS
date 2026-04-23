@@ -32,7 +32,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from forgeds._shared.config import load_config, get_db_dir
+from forgeds._shared.config import load_config, get_db_dir, find_project_root
 from forgeds._shared.diagnostics import Severity, Diagnostic
 
 
@@ -756,11 +756,34 @@ def check_wg002(
     return diags
 
 
+def check_wg003(
+    widgets: dict,
+    custom_apis: list,
+) -> list:
+    """WG003: widget `consumes_apis[i]` not declared in config `custom_apis`."""
+    known = set(custom_apis or [])
+    diags = []
+    for name, decl in (widgets or {}).items():
+        for api in decl.get("consumes_apis", []) or []:
+            if api not in known:
+                diags.append(Diagnostic(
+                    file="forgeds.yaml",
+                    line=1,
+                    rule="WG003",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"widget '{name}' declares consumes_apis entry '{api}' "
+                        "which is not in config custom_apis"
+                    ),
+                ))
+    return diags
+
+
 # ============================================================
 # Main pipeline
 # ============================================================
 
-def main() -> None:
+def main() -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Cross-environment linter: Access-to-Zoho Creator integration",
@@ -834,6 +857,15 @@ def main() -> None:
 
     all_diags = schema_diags + data_diags + script_diags + kb_diags
 
+    # --- Widget hybrid checks (WG001-WG003) ---
+    cfg = load_config()
+    widgets_cfg = cfg.get("widgets") or {}
+    custom_apis_cfg = cfg.get("custom_apis") or []
+    project_root = find_project_root()
+    all_diags.extend(check_wg001(widgets_cfg, project_root))
+    all_diags.extend(check_wg002(widgets_cfg, project_root))
+    all_diags.extend(check_wg003(widgets_cfg, custom_apis_cfg))
+
     # Filter by verbosity
     if not args.verbose:
         all_diags = [d for d in all_diags if d.severity != Severity.INFO]
@@ -866,8 +898,8 @@ def main() -> None:
         f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
     )
 
-    sys.exit(2 if errors > 0 else 1 if warnings > 0 else 0)
+    return 2 if errors > 0 else 1 if warnings > 0 else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
