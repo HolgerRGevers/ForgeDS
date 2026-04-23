@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from "react";
 import type { DockviewApi, IDockviewPanelProps } from "dockview-react";
 import { ActivityBar } from "./ActivityBar";
 import { DockviewHost, type PanelRegistry } from "./DockviewHost";
+import { DockviewErrorBoundary } from "./DockviewErrorBoundary";
 import { ConsolePanel } from "./ConsolePanel";
 import { EditorPanel } from "./EditorPanel";
 import { RepoExplorer } from "./RepoExplorer";
@@ -162,7 +163,9 @@ export function IdeShell() {
       <div className="flex min-h-0 flex-1">
         <ActivityBar onToggle={togglePanel} onConsoleCategory={handleConsoleCategory} />
         <div className="min-w-0 flex-1">
-          <DockviewHost registry={registry} onReady={handleReady} />
+          <DockviewErrorBoundary>
+            <DockviewHost registry={registry} onReady={handleReady} />
+          </DockviewErrorBoundary>
         </div>
       </div>
     </div>
