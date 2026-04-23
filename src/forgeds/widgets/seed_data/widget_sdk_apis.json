@@ -1,0 +1,50 @@
+{
+  "namespaces": [
+    {"name": "ZOHO.CREATOR.API",   "description": "Zoho Creator data access API surface."},
+    {"name": "ZOHO.CREATOR.UTIL",  "description": "Widget utility helpers (navigation, UI)."},
+    {"name": "ZOHO.embeddedApp",   "description": "Lifecycle/init surface for embedded widgets."},
+    {"name": "ZOHO.CREATOR.PUBLISH", "description": "Publish/embed management surface."}
+  ],
+  "methods": [
+    {"namespace": "ZOHO.CREATOR.API", "name": "getRecords",         "signature": "(reportName, criteria, page, pageSize) => Promise<Response>", "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Fetch records from a report."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "getRecordById",      "signature": "(reportName, recordId) => Promise<Response>",                 "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Fetch one record by ID."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "addRecords",         "signature": "(formName, payload) => Promise<Response>",                    "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.write",  "deprecated_in": null, "notes": "Create one or more records."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "updateRecord",       "signature": "(reportName, recordId, payload) => Promise<Response>",        "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.write",  "deprecated_in": null, "notes": "Update a single record."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "deleteRecord",       "signature": "(reportName, recordId) => Promise<Response>",                 "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.write",  "deprecated_in": null, "notes": "Delete a single record."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "bulkUpdateRecords",  "signature": "(reportName, criteria, payload) => Promise<Response>",        "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.write",  "deprecated_in": null, "notes": "Update many records matching criteria."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "uploadFile",         "signature": "(reportName, recordId, fieldName, file) => Promise<Response>","returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.write",  "deprecated_in": null, "notes": "Attach file to a record's file field."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "downloadFile",       "signature": "(reportName, recordId, fieldName) => Promise<Blob>",          "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Download file field content."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "getFileContent",     "signature": "(filepath) => Promise<Blob>",                                 "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Get file content by path."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "invokeConnection",   "signature": "(connectionName, payload) => Promise<Response>",              "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Invoke a Creator connection."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "invokeApi",          "signature": "(apiName, payload) => Promise<Response>",                     "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Invoke a server-side Custom API by name."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "invokeCustomApi",    "signature": "(apiName, payload) => Promise<Response>",                     "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Alias of invokeApi; used by newer SDKs."},
+    {"namespace": "ZOHO.CREATOR.API", "name": "callFunction",       "signature": "(functionName, payload) => Promise<Response>",                "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.read",   "deprecated_in": null, "notes": "Call a public Deluge function."},
+    {"namespace": "ZOHO.CREATOR.UTIL","name": "navigateTo",         "signature": "(pageLinkName) => void",                                      "returns_promise": 0, "required_permissions": null,                         "deprecated_in": null, "notes": "Navigate the embedding Creator app to a page."},
+    {"namespace": "ZOHO.CREATOR.UTIL","name": "showAlert",          "signature": "(message) => void",                                           "returns_promise": 0, "required_permissions": null,                         "deprecated_in": null, "notes": "Display an alert modal to the user."},
+    {"namespace": "ZOHO.CREATOR.UTIL","name": "showPrompt",         "signature": "(message) => Promise<string>",                                "returns_promise": 1, "required_permissions": null,                         "deprecated_in": null, "notes": "Prompt the user for a text value."},
+    {"namespace": "ZOHO.CREATOR.UTIL","name": "closeWidget",        "signature": "() => void",                                                  "returns_promise": 0, "required_permissions": null,                         "deprecated_in": null, "notes": "Close the current widget pane."},
+    {"namespace": "ZOHO.embeddedApp", "name": "init",               "signature": "() => Promise<void>",                                         "returns_promise": 1, "required_permissions": null,                         "deprecated_in": null, "notes": "Initialise the embedded app; call once on widget load."},
+    {"namespace": "ZOHO.embeddedApp", "name": "on",                 "signature": "(eventName, handler) => void",                                "returns_promise": 0, "required_permissions": null,                         "deprecated_in": null, "notes": "Subscribe to a widget lifecycle event."},
+    {"namespace": "ZOHO.embeddedApp", "name": "getInitParams",      "signature": "() => object",                                                "returns_promise": 0, "required_permissions": null,                         "deprecated_in": null, "notes": "Get params the host page provided at init."},
+    {"namespace": "ZOHO.embeddedApp", "name": "getUserInfo",        "signature": "() => Promise<UserInfo>",                                     "returns_promise": 1, "required_permissions": null,                         "deprecated_in": null, "notes": "Get current user's profile."},
+    {"namespace": "ZOHO.embeddedApp", "name": "logout",             "signature": "() => Promise<void>",                                         "returns_promise": 1, "required_permissions": null,                         "deprecated_in": null, "notes": "Log user out of the embedding session."},
+    {"namespace": "ZOHO.CREATOR.PUBLISH","name": "publish",         "signature": "(targetEnv) => Promise<Response>",                            "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.publish","deprecated_in": null, "notes": "Publish widget to target environment."},
+    {"namespace": "ZOHO.CREATOR.PUBLISH","name": "unpublish",       "signature": "() => Promise<Response>",                                     "returns_promise": 1, "required_permissions": "ZOHO.CREATOR.API.publish","deprecated_in": null, "notes": "Unpublish widget from all environments."}
+  ],
+  "events": [
+    {"name": "PageLoad",    "trigger": "on widget iframe load",            "payload_shape": "{page: string}",                 "notes": "Fires once per navigation."},
+    {"name": "RecordSave",  "trigger": "after record successfully saved",  "payload_shape": "{recordId: string, form: string}","notes": "Fires in embedded-form context only."},
+    {"name": "RecordDelete","trigger": "after record deletion",            "payload_shape": "{recordId: string}",             "notes": "Fires in embedded-form context only."},
+    {"name": "FieldChange", "trigger": "when a bound field value changes", "payload_shape": "{field: string, value: any}",    "notes": "Rate-limited; debounce in handler."}
+  ],
+  "permissions": [
+    {"scope": "ZOHO.CREATOR.API.read",    "description": "Read records from Creator apps."},
+    {"scope": "ZOHO.CREATOR.API.write",   "description": "Create/update/delete records."},
+    {"scope": "ZOHO.CREATOR.API.publish", "description": "Publish/unpublish widget versions."}
+  ],
+  "globals": [
+    {"name": "ZOHO",    "kind": "namespace"},
+    {"name": "Creator", "kind": "object"},
+    {"name": "$",       "kind": "object"}
+  ]
+}
