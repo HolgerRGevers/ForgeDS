@@ -424,6 +424,26 @@ def load_config_with_diagnostics(start: str = None) -> tuple[dict, list[Diagnost
     return normalize_custom_apis(raw), diags
 
 
+def resolve_widget_entry_point(widget_def: dict, project_root: Path) -> Path:
+    """Resolve a widget's runtime entry point to an absolute Path.
+
+    If `entry_point` is declared under the widget definition it is
+    interpreted relative to the widget's `root`. Otherwise falls back
+    to `<root>/index.js`. Returns an absolute, `.resolve()`-d path
+    regardless of whether the target exists on disk.
+    """
+    project_root = Path(project_root)
+    root_rel = (widget_def.get("root") or "").rstrip("/\\")
+    if root_rel:
+        widget_root = (project_root / root_rel).resolve()
+    else:
+        widget_root = project_root.resolve()
+    override = widget_def.get("entry_point")
+    if override:
+        return (widget_root / override).resolve()
+    return (widget_root / "index.js").resolve()
+
+
 def get_db_dir() -> Path:
     """Return the directory where ForgeDS stores generated .db files.
 
