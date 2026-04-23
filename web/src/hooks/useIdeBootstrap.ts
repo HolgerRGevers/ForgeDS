@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useIdeStore } from "../stores/ideStore";
 import { useBridgeStore } from "../stores/bridgeStore";
-import type { AppStructure, EditorTab, InspectorData, TreeNode } from "../types/ide";
+import type { AppLoadSource, AppStructure, EditorTab, InspectorData, TreeNode } from "../types/ide";
 import { DSParser } from "../lib/ds-parser";
 import { buildAppTree } from "../lib/ds-tree-builder";
 
@@ -224,7 +224,7 @@ export function useIdeBootstrap() {
 
   // Helper for manual .ds file upload (preserves current AppTreeExplorer behavior)
   const loadDsFromContent = useCallback(
-    (fileName: string, content: string) => {
+    (fileName: string, content: string, source: AppLoadSource = "upload") => {
       try {
         const parser = new DSParser(content);
         parser.parse();
@@ -237,7 +237,7 @@ export function useIdeBootstrap() {
           nodeIndex: buildNodeIndex(tree),
           enrichmentLevel: "local",
         };
-        setAppLoadSource("upload");
+        setAppLoadSource(source);
         loadAppStructure(structure);
         addConsoleEntry({
           type: "info",

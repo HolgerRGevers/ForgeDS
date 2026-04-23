@@ -32,8 +32,6 @@ export function IdeShell() {
   const appStructure = useIdeStore((s) => s.appStructure);
   const activeConsoleCategory = useIdeStore((s) => s.activeConsoleCategory);
   const setActiveConsoleCategory = useIdeStore((s) => s.setActiveConsoleCategory);
-  const setAppLoadSource = useIdeStore((s) => s.setAppLoadSource);
-
   const togglePanel = useLayoutStore((s) => s.togglePanel);
   const resetLayout = useLayoutStore((s) => s.resetLayout);
   const visiblePanels = useLayoutStore((s) => s.visiblePanels);
@@ -60,11 +58,10 @@ export function IdeShell() {
       useIdeStore.getState().openTab(tab);
 
       if (ext === "ds") {
-        setAppLoadSource("repo");
-        loadDsFromContent(name, content);
+        loadDsFromContent(name, content, "repo");
       }
     },
-    [loadDsFromContent, setAppLoadSource],
+    [loadDsFromContent],
   );
 
   const handleUpload = useCallback(
