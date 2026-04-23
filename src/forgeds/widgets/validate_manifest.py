@@ -42,37 +42,37 @@ def _validate(
     if t is not None:
         py = _JSON_TYPES.get(t)
         if t == "integer" and isinstance(instance, bool):
-            out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+            out.append(_diag(file, 1, Severity.ERROR, "WG004",
                              f"{path}: expected integer, got boolean"))
             return
         if py is not None and not isinstance(instance, py):
-            out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+            out.append(_diag(file, 1, Severity.ERROR, "WG004",
                              f"{path}: expected {t}, got {type(instance).__name__}"))
             return
 
     if "enum" in schema and instance not in schema["enum"]:
-        out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+        out.append(_diag(file, 1, Severity.ERROR, "WG004",
                          f"{path}: value {instance!r} not in enum {schema['enum']}"))
 
     if isinstance(instance, str):
         if "minLength" in schema and len(instance) < schema["minLength"]:
-            out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+            out.append(_diag(file, 1, Severity.ERROR, "WG004",
                              f"{path}: string shorter than minLength {schema['minLength']}"))
         if "pattern" in schema and not re.search(schema["pattern"], instance):
-            out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+            out.append(_diag(file, 1, Severity.ERROR, "WG004",
                              f"{path}: does not match pattern {schema['pattern']!r} (value: {instance!r})"))
 
     if isinstance(instance, dict):
         for req in schema.get("required", []):
             if req not in instance:
-                out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+                out.append(_diag(file, 1, Severity.ERROR, "WG004",
                                  f"{path}: missing required property {req!r}"))
         props = schema.get("properties", {})
         for key, val in instance.items():
             if key in props:
                 _validate(val, props[key], f"{path}.{key}" if path else key, file, out)
             elif schema.get("additionalProperties") is False:
-                out.append(_diag(file, 1, Severity.ERROR, "WG-SCHEMA",
+                out.append(_diag(file, 1, Severity.ERROR, "WG004",
                                  f"{path}: additional property {key!r} not allowed"))
 
     if isinstance(instance, list):
@@ -86,24 +86,24 @@ def validate_manifest_file(path: str) -> list[Diagnostic]:
     """Validate one plugin-manifest.json file. Returns list of Diagnostics."""
     p = Path(path)
     if not p.exists():
-        return [_diag(path, 1, Severity.ERROR, "WG-SCHEMA",
+        return [_diag(path, 1, Severity.ERROR, "WG004",
                       f"plugin-manifest.json not found at {path}")]
 
     try:
         with open(SCHEMA_PATH, encoding="utf-8") as f:
             schema = json.load(f)
     except OSError as exc:
-        return [_diag(path, 1, Severity.ERROR, "WG-SCHEMA",
+        return [_diag(path, 1, Severity.ERROR, "WG004",
                       f"failed to load schema: {exc}")]
 
     try:
         with open(p, encoding="utf-8") as f:
             instance = json.load(f)
     except json.JSONDecodeError as exc:
-        return [_diag(path, exc.lineno, Severity.ERROR, "WG-SCHEMA",
+        return [_diag(path, exc.lineno, Severity.ERROR, "WG004",
                       f"invalid JSON: {exc.msg}")]
     except OSError as exc:
-        return [_diag(path, 1, Severity.ERROR, "WG-SCHEMA",
+        return [_diag(path, 1, Severity.ERROR, "WG004",
                       f"could not read file: {exc}")]
 
     diagnostics: list[Diagnostic] = []
@@ -111,12 +111,12 @@ def validate_manifest_file(path: str) -> list[Diagnostic]:
     return diagnostics
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Validate Zoho Creator plugin-manifest.json files against the ForgeDS schema."
     )
     parser.add_argument("paths", nargs="+", help="plugin-manifest.json file paths")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     all_diags: list[Diagnostic] = []
     for path in args.paths:
