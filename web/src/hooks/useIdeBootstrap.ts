@@ -53,9 +53,11 @@ export function useIdeBootstrap() {
   // Bridge-auto parse_ds when bridge transitions to connected
   useEffect(() => {
     if (status !== "connected") return;
+    let cancelled = false;
     (async () => {
       try {
         const result = await send("parse_ds", {});
+        if (cancelled) return;
         const data = result as unknown as {
           name: string;
           displayName: string;
@@ -74,12 +76,19 @@ export function useIdeBootstrap() {
           message: `App structure loaded: ${structure.displayName}`,
         });
       } catch (err) {
+        if (cancelled) return;
         addConsoleEntry({
           type: "error",
           message: `Failed to load app structure: ${err instanceof Error ? err.message : String(err)}`,
         });
       }
     })();
+    return () => {
+      cancelled = true;
+    };
+    // Why: intentionally fires only on status transitions — send / loadAppStructure /
+    // addConsoleEntry / setAppLoadSource are stable store actions, omitting them
+    // prevents spurious re-runs on reference churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
@@ -140,8 +149,10 @@ export function useIdeBootstrap() {
     if (status !== "connected" || !selectedNodeId || !appStructure) return;
     const node = appStructure.nodeIndex.get(selectedNodeId);
     if (!node) return;
+    let cancelled = false;
     send("inspect_element", { element_id: selectedNodeId, element_type: node.type })
       .then((response) => {
+        if (cancelled) return;
         const data = response as unknown as {
           properties: Record<string, unknown>;
           relationships: Array<{ target: string; type: string }>;
@@ -171,11 +182,15 @@ export function useIdeBootstrap() {
         setInspectorData(inspectorData);
       })
       .catch((err) => {
+        if (cancelled) return;
         addConsoleEntry({
           type: "error",
           message: `Inspector failed: ${err instanceof Error ? err.message : String(err)}`,
         });
       });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedNodeId, status, appStructure, send, setInspectorData, addConsoleEntry]);
 
   // Helper exposed for consumers that want to run an ad-hoc lint check
