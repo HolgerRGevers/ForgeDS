@@ -1,0 +1,6 @@
+project:
+  name: broken
+  version: 0.0.1
+this line: has a colon but
+is not well-formed: in ways  that confuse: minimal parsers
+   bad_indent_here
