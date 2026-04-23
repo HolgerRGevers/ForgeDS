@@ -1,0 +1,10 @@
+project:
+  name: "unknown_type_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  typed_api:
+    params:
+      - { name: "x", type: "UnknownType" }
+    returns: "AlsoUnknown[]"
+    permissions: ["api.read"]

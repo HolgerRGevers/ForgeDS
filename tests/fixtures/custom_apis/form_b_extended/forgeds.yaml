@@ -1,0 +1,17 @@
+project:
+  name: "form_b_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  get_pending_claims:
+    params:
+      - { name: "status", type: "string", required: true }
+      - { name: "limit", type: "integer", required: false, default: 50 }
+    returns: "PendingClaim[]"
+    permissions: ["api.read"]
+    description: "Lists claims awaiting approval."
+  approve_claim:
+    params:
+      - { name: "claim_id", type: "integer", required: true }
+    returns: "ApprovalResult"
+    permissions: ["api.write"]

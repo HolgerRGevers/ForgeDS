@@ -1,0 +1,7 @@
+project:
+  name: "form_a_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  - get_pending_claims
+  - approve_claim
