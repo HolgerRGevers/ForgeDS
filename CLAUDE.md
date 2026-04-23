@@ -92,7 +92,8 @@ All linters emit `Diagnostic` objects with a `rule` field using these prefixes:
 | `AV###` / `AC###` | `forgeds.access.lint_access` | Access / VBA rules |
 | `HY###` | `forgeds.hybrid.lint_hybrid` | Deluge↔Access cross-checks |
 | `WG###` | `forgeds.hybrid.lint_hybrid` (WG001-003) and `forgeds.widgets.validate_manifest` (WG004) | Widget↔Deluge cross-checks + manifest-schema violations |
-| `JS:<rule>` | `forgeds.widgets.lint_widgets` | ESLint rule ID, foreign provenance |
+| `WGR###` | `forgeds.widgets.run_widget` | Widget runtime verification (mocked-SDK execution) |
+| `JS:<rule>` | `forgeds.widgets.lint_widgets` | ESLint rule ID, foreign provenance (includes `JS:zoho-widget/...` from the local plugin) |
 | `CFG###` | `forgeds._shared.config` | Config-schema diagnostics (custom_apis, widgets, types) |
 | `STA###` | `forgeds.status.*` | `forgeds-status` aggregate-check diagnostics |
 
@@ -110,6 +111,13 @@ Config rule allocation (`CFG###`, reserved range CFG001-CFG099):
 - `CFG013` — `custom_apis.<name>.returns` or `params[i].type` references unknown named type (WARNING)
 - `CFG014` — `custom_apis.<name>.params[i]` missing required key `name` or `type` (ERROR)
 - `CFG015` — `custom_apis.<name>.permissions` is not a list of strings (ERROR)
+
+Widget runtime rule allocation (`WGR###`, Phase 2B):
+- `WGR001` — widget invoked an undeclared Custom API (ERROR) OR declared a Custom API in `consumes_apis` but never invoked it during runtime (WARNING)
+- `WGR002` — widget entry point or `init()` threw / rejected
+- `WGR003` — response-shape mismatch vs a declared Custom API schema (stubbed in 2B; emits zero diagnostics until Phase 2A response-map extension lands)
+- `WGR004` — widget invoked an SDK method whose `required_permissions` are not listed in `plugin-manifest.json` `permissions`
+- `WGR-meta` — entry-point missing, harness timeout, SDK method reached via Proxy fallback (mock drift), or harness crash; non-numbered bucket for operator-facing warnings
 
 Status rule allocation (`STA###`):
 - `STA001` — `forgeds.yaml` missing or unparseable (fatal for text mode)
@@ -161,3 +169,30 @@ npm i --save-dev eslint
 ```
 
 Minimum supported: Node ≥ 18, ESLint 8+.
+
+## Widget runtime toolchain (Phase 2B)
+
+`forgeds-run-widget` loads each widget declared in `forgeds.yaml` under
+Node, against a mocked `ZOHO` SDK generated from `zoho_widget_sdk.db`.
+The harness records every SDK call, and the Python orchestrator diffs
+the call log against declarations to emit `WGR###` diagnostics.
+
+Two-step regeneration of the mock (do not combine):
+
+```bash
+forgeds-build-widget-db
+forgeds-gen-sdk-mock        # writes src/forgeds/widgets/runtime/sdk_mock.js
+```
+
+Node posture mirrors the Phase 1 widget-lint toolchain:
+
+- `node --version` succeeds → `forgeds-run-widget` runs normally.
+- Node absent → exit **3** with an install hint; no partial diagnostics.
+
+Every widget runs in its own Node subprocess — no daemon, no shared
+global state between widgets. Default per-widget timeout is 10 s
+(`--timeout-ms` to override).
+
+Entry-point discovery: default `<widget.root>/index.js`. Optional
+`entry_point:` under each widget in `forgeds.yaml` (relative to the
+widget's `root`) overrides the default.

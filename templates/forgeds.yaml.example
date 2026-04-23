@@ -166,6 +166,8 @@ widgets:
     consumes_apis:
       - get_pending_claims
       - approve_claim
+    # Optional Phase 2B override; relative to `root`. Defaults to <root>/index.js.
+    # entry_point: src/main.js
 
 # Extended custom_apis form (Phase 2A, opt-in per project — do not mix with bare-list form above).
 # Uncomment and replace the bare list above to enable per-api parameter / return typing.
