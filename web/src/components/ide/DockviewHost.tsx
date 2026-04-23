@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
+  DockviewDefaultTab,
   DockviewReact,
   type DockviewApi,
   type DockviewReadyEvent,
+  type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
 } from "dockview-react";
 import { useLayoutStore, LAYOUT_STORAGE_KEY } from "../../stores/layoutStore";
@@ -199,10 +201,28 @@ export function DockviewHost({ registry, onReady }: DockviewHostProps) {
     [registry],
   );
 
+  // Build a `tabComponents` map for panels that declare `closable: false`.
+  // For those panels we wrap DockviewDefaultTab with hideClose={true} so the
+  // close button is suppressed at the dockview level.
+  const tabComponents = useMemo(() => {
+    const map: Record<string, React.FunctionComponent<IDockviewPanelHeaderProps>> = {};
+    for (const [id, entry] of Object.entries(registry)) {
+      if (entry.closable === false) {
+        const NoCloseTab = (props: IDockviewPanelHeaderProps) => (
+          <DockviewDefaultTab {...props} hideClose={true} />
+        );
+        NoCloseTab.displayName = `NoCloseTab(${id})`;
+        map[id] = NoCloseTab;
+      }
+    }
+    return map;
+  }, [registry]);
+
   return (
     <div className="h-full w-full">
       <DockviewReact
         components={components}
+        tabComponents={tabComponents}
         onReady={handleReady}
         className="dockview-theme-forgeds"
       />
