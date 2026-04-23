@@ -1,0 +1,10 @@
+{
+  "name": "eslint-plugin-zoho-widget",
+  "version": "1.0.0",
+  "description": "Local ForgeDS ESLint plugin: static complement to WGR001 runtime rule.",
+  "main": "index.js",
+  "private": true,
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
+  }
+}

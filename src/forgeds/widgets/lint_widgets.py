@@ -19,7 +19,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from forgeds._shared.config import find_project_root, load_config
+import sqlite3
+
+from forgeds._shared.config import find_project_root, get_db_dir, load_config
 from forgeds._shared.diagnostics import Diagnostic, Severity
 from forgeds._shared.envelope import to_json_v1
 from forgeds._shared.output_format import UnknownFormatError, resolve_format
@@ -97,6 +99,59 @@ def _discover_js_files(widget_root: Path) -> list[str]:
     return [str(p) for p in sorted(widget_root.rglob("*.js"))]
 
 
+def _known_sdk_methods() -> list[str]:
+    """Read the full SDK-method catalog from zoho_widget_sdk.db.
+
+    Returns an empty list when the DB is absent — the sidecar is still valid
+    (the plugin falls back to hard-coded INVOKE_METHODS when knownSdkMethods
+    is empty).
+    """
+    db = get_db_dir() / "zoho_widget_sdk.db"
+    if not db.exists():
+        return []
+    try:
+        conn = sqlite3.connect(str(db))
+        rows = conn.execute(
+            "SELECT namespace, name FROM sdk_methods ORDER BY namespace, name"
+        ).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return []
+    return [f"{ns}.{name}" for ns, name in rows]
+
+
+def write_sidecar(cfg: dict, project_root: Path) -> Path | None:
+    """Write `.forgeds/eslint_plugin_manifest.json` for the plugin to read.
+
+    Shape per spec §6.3. Returns the sidecar path, or None if no widgets
+    are declared (nothing to describe).
+    """
+    widgets_cfg = cfg.get("widgets") or {}
+    if not widgets_cfg:
+        return None
+
+    cache_dir = project_root / ".forgeds"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    sidecar_path = cache_dir / "eslint_plugin_manifest.json"
+
+    known_methods = _known_sdk_methods()
+    payload: dict = {"version": "1", "widgets": {}}
+    for name, decl in widgets_cfg.items():
+        if not isinstance(decl, dict):
+            continue
+        w_root = (project_root / (decl.get("root") or "")).resolve()
+        entry_rel = decl.get("entry_point")
+        entry = (w_root / entry_rel).resolve() if entry_rel else (w_root / "index.js").resolve()
+        payload["widgets"][name] = {
+            "root": str(w_root),
+            "entryPoint": str(entry),
+            "consumesApis": list(decl.get("consumes_apis") or []),
+            "knownSdkMethods": known_methods,
+        }
+    sidecar_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return sidecar_path
+
+
 def _emit(diagnostics: list[Diagnostic], fmt: str) -> None:
     if fmt == "json-v1":
         print(to_json_v1("forgeds-lint-widgets", diagnostics))
@@ -131,12 +186,16 @@ def main(argv: list[str] | None = None) -> int:
         return 3
 
     targets: list[str] = list(args.paths)
+    cfg = load_config()
+    root = find_project_root()
     if not targets and not args.no_args_discover:
-        cfg = load_config()
-        root = find_project_root()
         for _widget_name, decl in (cfg.get("widgets") or {}).items():
             w_root = root / decl.get("root", "")
             targets.extend(_discover_js_files(w_root))
+
+    # Emit the Phase 2B sidecar manifest for the local ESLint plugin
+    # before invoking ESLint. The plugin reads it via FORGEDS_ESLINT_SIDECAR.
+    write_sidecar(cfg, root)
 
     diagnostics = _run_eslint_on(targets) if targets else []
 
