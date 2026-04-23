@@ -724,6 +724,38 @@ def check_wg001(
     return diags
 
 
+def check_wg002(
+    widgets: dict,
+    project_root: Path,
+) -> list:
+    """WG002: Widget's plugin-manifest.json is missing or fails schema validation."""
+    from forgeds.widgets.validate_manifest import validate_manifest_file
+
+    diags = []
+    for name, decl in (widgets or {}).items():
+        root_rel = decl.get("root", "")
+        manifest_path = project_root / root_rel / "plugin-manifest.json"
+        if not manifest_path.exists():
+            diags.append(Diagnostic(
+                file="forgeds.yaml",
+                line=1,
+                rule="WG002",
+                severity=Severity.ERROR,
+                message=f"widget '{name}' is missing plugin-manifest.json at {root_rel}",
+            ))
+            continue
+        sub_diags = validate_manifest_file(str(manifest_path))
+        for sd in sub_diags:
+            diags.append(Diagnostic(
+                file=sd.file,
+                line=sd.line,
+                rule="WG002",
+                severity=Severity.ERROR,
+                message=f"widget '{name}': {sd.message}",
+            ))
+    return diags
+
+
 # ============================================================
 # Main pipeline
 # ============================================================
