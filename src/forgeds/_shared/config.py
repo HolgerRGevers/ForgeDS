@@ -276,6 +276,7 @@ def load_config(start: str = None) -> dict:
         "seed_data_dir": "config/seed-data",
         "custom_apis": [],
         "widgets": {},
+        "deploy": {},
     }
 
 
