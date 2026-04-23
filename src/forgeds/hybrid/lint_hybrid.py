@@ -750,8 +750,8 @@ def check_wg002(
                 file=sd.file,
                 line=sd.line,
                 rule="WG002",
-                severity=Severity.ERROR,
-                message=f"widget '{name}': {sd.message}",
+                severity=sd.severity,
+                message=f"widget '{name}' [{sd.rule}]: {sd.message}",
             ))
     return diags
 
@@ -796,8 +796,8 @@ def run_widget_rules(
 # Main pipeline
 # ============================================================
 
-def main() -> None:
-    """CLI entry point."""
+def main() -> int:
+    """CLI entry point. Returns exit code (0=clean, 1=warnings, 2=errors)."""
     parser = argparse.ArgumentParser(
         description="Cross-environment linter: Access-to-Zoho Creator integration",
         epilog="Exit codes: 0=clean, 1=warnings, 2=errors",
@@ -826,10 +826,10 @@ def main() -> None:
     # Validate paths
     if args.data and not os.path.isdir(args.data):
         print(f"Error: Not a directory: {args.data}", file=sys.stderr)
-        sys.exit(1)
+        return 1
     if args.scripts and not os.path.isdir(args.scripts):
         print(f"Error: Not a directory: {args.scripts}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     # Check DB availability
     missing_dbs: list[str] = []
@@ -909,8 +909,8 @@ def main() -> None:
         f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
     )
 
-    sys.exit(2 if errors > 0 else 1 if warnings > 0 else 0)
+    return 2 if errors > 0 else 1 if warnings > 0 else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

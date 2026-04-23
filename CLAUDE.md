@@ -90,8 +90,14 @@ All linters emit `Diagnostic` objects with a `rule` field using these prefixes:
 | `DG###` | `forgeds.core.lint_deluge` | Deluge lint rules |
 | `AV###` / `AC###` | `forgeds.access.lint_access` | Access / VBA rules |
 | `HY###` | `forgeds.hybrid.lint_hybrid` | Deluge↔Access cross-checks |
-| `WG###` | `forgeds.hybrid.lint_hybrid` | Widget↔Deluge cross-checks |
+| `WG###` | `forgeds.hybrid.lint_hybrid` (WG001-003) and `forgeds.widgets.validate_manifest` (WG004) | Widget↔Deluge cross-checks + manifest-schema violations |
 | `JS:<rule>` | `forgeds.widgets.lint_widgets` | ESLint rule ID, foreign provenance |
+
+Widget rule allocation:
+- `WG001` — widget root directory missing
+- `WG002` — widget `plugin-manifest.json` missing or fails schema validation
+- `WG003` — widget `consumes_apis[i]` not declared in `custom_apis`
+- `WG004` — schema violation inside a widget's `plugin-manifest.json` (emitted by standalone `forgeds-validate-widget-manifest`; wrapped as `WG002` when surfaced via `lint_hybrid`)
 
 When adding a new rule: pick the next unused number in the prefix's range, add a
 test fixture under `tests/fixtures/`, and document the rule's intent in a
