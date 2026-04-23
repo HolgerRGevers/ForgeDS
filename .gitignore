@@ -23,6 +23,7 @@ Thumbs.db
 # Project secrets & local config
 config/zoho-api.yaml
 forgeds.yaml
+!tests/fixtures/**/forgeds.yaml
 .env
 web/.env
 web/.env.*

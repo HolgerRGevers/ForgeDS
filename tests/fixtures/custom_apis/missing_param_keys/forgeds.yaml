@@ -1,0 +1,9 @@
+project:
+  name: "missing_keys_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  broken_api:
+    params:
+      - { required: true }
+    returns: "string"
