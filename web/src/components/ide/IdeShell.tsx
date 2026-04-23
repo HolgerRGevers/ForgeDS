@@ -126,6 +126,10 @@ export function IdeShell() {
     [visiblePanels, activeConsoleCategory, togglePanel, setActiveConsoleCategory],
   );
 
+  const handleReady = useCallback((api: DockviewApi) => {
+    apiRef.current = api;
+  }, []);
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-900 text-gray-100">
       <div className="flex h-9 items-center gap-2 border-b border-gray-700 bg-gray-800 px-2">
@@ -158,7 +162,7 @@ export function IdeShell() {
       <div className="flex min-h-0 flex-1">
         <ActivityBar onToggle={togglePanel} onConsoleCategory={handleConsoleCategory} />
         <div className="min-w-0 flex-1">
-          <DockviewHost registry={registry} onReady={(api) => { apiRef.current = api; }} />
+          <DockviewHost registry={registry} onReady={handleReady} />
         </div>
       </div>
     </div>
