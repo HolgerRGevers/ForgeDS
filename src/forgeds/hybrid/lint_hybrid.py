@@ -32,7 +32,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from forgeds._shared.config import load_config, get_db_dir
+from forgeds._shared.config import load_config, get_db_dir, find_project_root
 from forgeds._shared.diagnostics import Severity, Diagnostic
 
 
@@ -701,6 +701,98 @@ def run_kb_rules(db: HybridDB, kb) -> list[Diagnostic]:
 
 
 # ============================================================
+# Widget hybrid rules (WG001-WG003)
+# ============================================================
+
+def check_wg001(
+    widgets: dict[str, dict],
+    project_root: Path,
+) -> list[Diagnostic]:
+    """WG001: Widget `root` directory missing on disk."""
+    diags: list[Diagnostic] = []
+    for name, decl in (widgets or {}).items():
+        root_rel = decl.get("root", "")
+        root_path = project_root / root_rel
+        if not root_path.is_dir():
+            diags.append(Diagnostic(
+                file="forgeds.yaml",
+                line=1,
+                rule="WG001",
+                severity=Severity.ERROR,
+                message=f"widget '{name}' root directory does not exist: {root_rel}",
+            ))
+    return diags
+
+
+def check_wg002(
+    widgets: dict[str, dict],
+    project_root: Path,
+) -> list[Diagnostic]:
+    """WG002: Widget's plugin-manifest.json is missing or fails schema validation."""
+    from forgeds.widgets.validate_manifest import validate_manifest_file
+
+    diags: list[Diagnostic] = []
+    for name, decl in (widgets or {}).items():
+        root_rel = decl.get("root", "")
+        manifest_path = project_root / root_rel / "plugin-manifest.json"
+        if not manifest_path.exists():
+            diags.append(Diagnostic(
+                file="forgeds.yaml",
+                line=1,
+                rule="WG002",
+                severity=Severity.ERROR,
+                message=f"widget '{name}' is missing plugin-manifest.json at {root_rel}",
+            ))
+            continue
+        sub_diags = validate_manifest_file(str(manifest_path))
+        for sd in sub_diags:
+            diags.append(Diagnostic(
+                file=sd.file,
+                line=sd.line,
+                rule="WG002",
+                severity=Severity.ERROR,
+                message=f"widget '{name}': {sd.message}",
+            ))
+    return diags
+
+
+def check_wg003(
+    widgets: dict[str, dict],
+    custom_apis: list[str],
+) -> list[Diagnostic]:
+    """WG003: widget `consumes_apis[i]` not declared in config `custom_apis`."""
+    known = set(custom_apis or [])
+    diags: list[Diagnostic] = []
+    for name, decl in (widgets or {}).items():
+        for api in decl.get("consumes_apis", []) or []:
+            if api not in known:
+                diags.append(Diagnostic(
+                    file="forgeds.yaml",
+                    line=1,
+                    rule="WG003",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"widget '{name}' declares consumes_apis entry '{api}' "
+                        "which is not in config custom_apis"
+                    ),
+                ))
+    return diags
+
+
+def run_widget_rules(
+    widgets: dict[str, dict],
+    custom_apis: list[str],
+    project_root: Path,
+) -> list[Diagnostic]:
+    """Run all widget hybrid lint rules."""
+    diags: list[Diagnostic] = []
+    diags.extend(check_wg001(widgets, project_root))
+    diags.extend(check_wg002(widgets, project_root))
+    diags.extend(check_wg003(widgets, custom_apis))
+    return diags
+
+
+# ============================================================
 # Main pipeline
 # ============================================================
 
@@ -776,7 +868,14 @@ def main() -> None:
         else:
             print("WARNING: knowledge.db not found. KB rules disabled.", file=sys.stderr)
 
-    all_diags = schema_diags + data_diags + script_diags + kb_diags
+    # --- Widget hybrid checks (WG001-WG003) ---
+    cfg = load_config()
+    widgets_cfg = cfg.get("widgets") or {}
+    custom_apis_cfg = cfg.get("custom_apis") or []
+    project_root = find_project_root()
+    widget_diags = run_widget_rules(widgets_cfg, custom_apis_cfg, project_root)
+
+    all_diags = schema_diags + data_diags + script_diags + kb_diags + widget_diags
 
     # Filter by verbosity
     if not args.verbose:
