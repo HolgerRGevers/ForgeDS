@@ -148,3 +148,21 @@ knowledge:
       module: creator-api
       follow_links: true
       max_depth: 3
+
+# Custom API registry — the Custom APIs this project exposes server-side.
+# Widget lint (WG003) cross-checks widgets[*].consumes_apis against this list.
+# Phase 2 may autodiscover from .ds / custom-api/*.dg; Phase 1 is declare-first.
+custom_apis:
+  - get_pending_claims
+  - approve_claim
+
+# Widget declarations — dict keyed by widget name.
+# Each entry declares the directory root (containing plugin-manifest.json) and
+# the list of custom_apis this widget is allowed to consume.
+# Permissions/roles/entry point are read from plugin-manifest.json at lint time.
+widgets:
+  expense_dashboard:
+    root: src/widgets/expense_dashboard/
+    consumes_apis:
+      - get_pending_claims
+      - approve_claim
