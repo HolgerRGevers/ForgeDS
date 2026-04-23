@@ -224,6 +224,7 @@ export default function BuildingPage() {
           }
 
           // Load files into IDE, show toast, reset wizard, navigate to IDE
+          useIdeStore.getState().setAppLoadSource("wizard");
           useIdeStore.getState().loadGeneratedFiles(files);
           useToastStore
             .getState()
