@@ -68,7 +68,7 @@ def run(start: str | None = None) -> list[StatusCheck]:
                 id=tool,
                 status="warn",
                 message=f"{label}: toolchain unavailable (exit 3)",
-                rule="STA004",
+                rule="STA005",
             ))
             continue
 

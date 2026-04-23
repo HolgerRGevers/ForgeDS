@@ -153,3 +153,27 @@ def test_status_rejects_invalid_format(capsys):
     with pytest.raises(SystemExit) as exc_info:
         cli.main(["--format", "xml"])
     assert exc_info.value.code == 2  # argparse exits 2 on invalid choice
+
+
+def test_status_missing_db_exits_2_end_to_end(monkeypatch, tmp_path, capsys):
+    """Integration: real db_freshness + mocked lint_summary → STA002 miss → exit 2."""
+    monkeypatch.setenv("FORGEDS_DB_DIR", str(tmp_path))  # empty dir → all DBs miss
+
+    from forgeds.status.checks import config_sanity as cs, toolchain as tc, lint_summary as ls
+
+    # Keep config_sanity / toolchain / lint_summary quiet so STA002 is what drives exit.
+    monkeypatch.setattr(cs, "run", lambda start=None: [StatusCheck(
+        category="config_sanity", id="forgeds.yaml", status="ok", message="", rule=None)])
+    monkeypatch.setattr(tc, "run", lambda start=None: [StatusCheck(
+        category="toolchain", id="python", status="ok", message="x", rule=None)])
+    monkeypatch.setattr(ls, "run", lambda start=None: [StatusCheck(
+        category="lint_summary", id="forgeds-lint", status="ok", message="", rule=None)])
+
+    rc = cli.main(["--format", "json-v1"])
+    payload = json.loads(capsys.readouterr().out)
+    sta002 = [c for c in payload["checks"] if c.get("rule") == "STA002"]
+    assert len(sta002) == 3  # three required DBs, all missing
+    for c in sta002:
+        assert c["status"] == "miss"
+    assert payload["overall"] == "fail"
+    assert rc == 2

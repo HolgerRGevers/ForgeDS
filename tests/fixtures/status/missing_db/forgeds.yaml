@@ -1,0 +1,5 @@
+project:
+  name: "missing_db_fixture"
+  version: "0.0.1"
+
+custom_apis: []
