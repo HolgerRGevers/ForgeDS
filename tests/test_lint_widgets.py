@@ -45,7 +45,7 @@ def test_emit_json_envelope_shape(capsys):
     diags = [
         lw._mk_diag("a.js", 2, "JS:semi", "ERROR", "missing semicolon"),
     ]
-    lw._emit(diags, fmt="json")
+    lw._emit(diags, fmt="json-v1")
     payload = json.loads(capsys.readouterr().out)
     assert payload["tool"] == "forgeds-lint-widgets"
     assert payload["version"] == "1"

@@ -1068,8 +1068,11 @@ def resolve_files(paths: list[str]) -> list[str]:
     return files
 
 
-def main() -> None:
-    """CLI entry point."""
+def main() -> int:
+    """CLI entry point. Returns exit code (0=clean, 1=warnings, 2=errors)."""
+    from forgeds._shared.envelope import to_json_v1
+    from forgeds._shared.output_format import UnknownFormatError, resolve_format
+
     parser = argparse.ArgumentParser(
         description="Deluge script linter for .dg files",
         epilog="Exit codes: 0=clean, 1=warnings, 2=errors",
@@ -1091,12 +1094,22 @@ def main() -> None:
         "--kb", action="store_true",
         help="Enable KB-backed lint rules (DG025-DG027). Requires knowledge.db.",
     )
+    parser.add_argument(
+        "--format", dest="format", default=None, choices=["text", "json-v1"],
+        help="Output format (default: text; FORGEDS_OUTPUT env also honored).",
+    )
     args = parser.parse_args()
+
+    try:
+        fmt = resolve_format(args.format)
+    except UnknownFormatError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     files = resolve_files(args.paths)
     if not files:
         print("No .dg files found.", file=sys.stderr)
-        sys.exit(0)
+        return 0
 
     db = DelugeDB(DB_PATH)
 
@@ -1134,24 +1147,26 @@ def main() -> None:
     elif args.quiet:
         all_diags = [d for d in all_diags if d.severity != Severity.INFO]
 
-    # Sort and output
+    # Sort
     severity_order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
     all_diags.sort(key=lambda d: (d.file, d.line, severity_order[d.severity]))
-    for diag in all_diags:
-        print(diag)
 
-    # Summary
     errors = sum(1 for d in all_diags if d.severity == Severity.ERROR)
     warnings = sum(1 for d in all_diags if d.severity == Severity.WARNING)
     infos = sum(1 for d in all_diags if d.severity == Severity.INFO)
 
-    print(
-        f"\n--- Linted {len(files)} file(s): "
-        f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
-    )
+    if fmt == "json-v1":
+        print(to_json_v1("forgeds-lint", all_diags))
+    else:
+        for diag in all_diags:
+            print(diag)
+        print(
+            f"\n--- Linted {len(files)} file(s): "
+            f"{errors} error(s), {warnings} warning(s), {infos} info(s) ---"
+        )
 
-    sys.exit(2 if errors > 0 else 1 if warnings > 0 else 0)
+    return 2 if errors > 0 else 1 if warnings > 0 else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
