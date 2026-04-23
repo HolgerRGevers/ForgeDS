@@ -701,6 +701,30 @@ def run_kb_rules(db: HybridDB, kb) -> list[Diagnostic]:
 
 
 # ============================================================
+# Widget hybrid rules (WG001-WG003)
+# ============================================================
+
+def check_wg001(
+    widgets: dict,
+    project_root: Path,
+) -> list:
+    """WG001: Widget `root` directory missing on disk."""
+    diags = []
+    for name, decl in (widgets or {}).items():
+        root_rel = decl.get("root", "")
+        root_path = project_root / root_rel
+        if not root_path.is_dir():
+            diags.append(Diagnostic(
+                file="forgeds.yaml",
+                line=1,
+                rule="WG001",
+                severity=Severity.ERROR,
+                message=f"widget '{name}' root directory does not exist: {root_rel}",
+            ))
+    return diags
+
+
+# ============================================================
 # Main pipeline
 # ============================================================
 
