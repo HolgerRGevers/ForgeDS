@@ -1,0 +1,12 @@
+project:
+  name: "config_only_warnings"
+  version: "0.0.1"
+
+custom_apis:
+  - known_api
+
+widgets:
+  bad_widget:
+    root: src/widgets/bad/
+    consumes_apis:
+      - undeclared_api
