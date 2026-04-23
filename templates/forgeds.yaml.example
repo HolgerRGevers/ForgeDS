@@ -166,3 +166,21 @@ widgets:
     consumes_apis:
       - get_pending_claims
       - approve_claim
+
+# Extended custom_apis form (Phase 2A, opt-in per project — do not mix with bare-list form above).
+# Uncomment and replace the bare list above to enable per-api parameter / return typing.
+# Phase 2A only validates the schema and emits CFG### diagnostics; typegen emission is deferred.
+#
+# custom_apis:
+#   get_pending_claims:
+#     params:
+#       - { name: "status", type: "string", required: true }
+#       - { name: "limit",  type: "integer", required: false, default: 50 }
+#     returns: "PendingClaim[]"
+#     permissions: ["api.read"]
+#     description: "Lists claims awaiting approval."
+#   approve_claim:
+#     params:
+#       - { name: "claim_id", type: "integer", required: true }
+#     returns: "ApprovalResult"
+#     permissions: ["api.write"]
