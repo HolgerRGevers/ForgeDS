@@ -1,0 +1,37 @@
+project:
+  name: "runtime_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  - get_pending_claims
+  - approve_claim
+  - delete_claim
+
+widgets:
+  good_runtime_widget:
+    root: good_runtime_widget/
+    consumes_apis: [get_pending_claims, approve_claim]
+
+  bad_widget_undeclared_call:
+    root: bad_widget_undeclared_call/
+    consumes_apis: [get_pending_claims]
+
+  bad_widget_unused_declaration:
+    root: bad_widget_unused_declaration/
+    consumes_apis: [get_pending_claims, approve_claim]
+
+  bad_widget_throws_in_init:
+    root: bad_widget_throws_in_init/
+    consumes_apis: [get_pending_claims]
+
+  bad_widget_permission_mismatch:
+    root: bad_widget_permission_mismatch/
+    consumes_apis: [approve_claim]
+
+  bad_widget_missing_entry:
+    root: bad_widget_missing_entry/
+    consumes_apis: [get_pending_claims]
+
+  bad_widget_timeout:
+    root: bad_widget_timeout/
+    consumes_apis: [get_pending_claims]
