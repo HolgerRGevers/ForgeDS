@@ -1,0 +1,21 @@
+project:
+  name: "widget_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  - get_pending_claims
+  - approve_claim
+
+widgets:
+  good_widget:
+    root: tests/fixtures/widgets/good_widget/
+    consumes_apis: [get_pending_claims]
+  bad_widget_missing_manifest:
+    root: tests/fixtures/widgets/bad_widget_missing_manifest/
+    consumes_apis: [get_pending_claims]
+  bad_widget_invalid_manifest:
+    root: tests/fixtures/widgets/bad_widget_invalid_manifest/
+    consumes_apis: [get_pending_claims]
+  bad_widget_undeclared_api:
+    root: tests/fixtures/widgets/bad_widget_undeclared_api/
+    consumes_apis: [undeclared_api_name]
