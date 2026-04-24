@@ -1,0 +1,23 @@
+/* Overrides dockview-react CSS variables to match Tailwind dark palette.
+ * Applied via the `dockview-theme-forgeds` class set by DockviewHost on <DockviewReact />. */
+
+.dockview-theme-forgeds {
+  --dv-background-color: #111827;                    /* gray-900 */
+  --dv-paneview-active-outline-color: #6366f1;       /* indigo-500 */
+  --dv-tabs-and-actions-container-background-color: #1f2937; /* gray-800 */
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tab-divider-color: #374151;                   /* gray-700 */
+  --dv-tab-background-color: #1f2937;
+  --dv-tab-active-background-color: #111827;
+  --dv-tab-hover-background-color: #374151;
+  --dv-activegroup-visiblepanel-tab-background-color: #111827;
+  --dv-activegroup-visiblepanel-tab-color: #e5e7eb;  /* gray-200 */
+  --dv-activegroup-hiddenpanel-tab-color: #9ca3af;   /* gray-400 */
+  --dv-inactivegroup-visiblepanel-tab-background-color: #1f2937;
+  --dv-inactivegroup-visiblepanel-tab-color: #9ca3af;
+  --dv-inactivegroup-hiddenpanel-tab-color: #6b7280; /* gray-500 */
+  --dv-separator-border: #374151;
+  --dv-drag-over-background-color: rgba(99, 102, 241, 0.2);
+  --dv-drag-over-border-color: #6366f1;
+  --dv-group-view-background-color: #111827;
+}
