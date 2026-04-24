@@ -159,6 +159,7 @@ def test_scaffold_is_idempotent_on_unchanged_spec(tmp_path, capsys):
 
     target = tmp_path / "src_widgets" / "expense_dashboard"
     first_bytes = {f.name: f.read_bytes() for f in target.iterdir()}
+    first_mtimes = {f.name: f.stat().st_mtime_ns for f in target.iterdir()}
 
     # Second run without --force should be a no-op
     rc2 = _run_scaffold(tmp_path, "spec_minimal")
@@ -169,6 +170,10 @@ def test_scaffold_is_idempotent_on_unchanged_spec(tmp_path, capsys):
     # File bytes unchanged
     for name, b in first_bytes.items():
         assert (target / name).read_bytes() == b
+    # Review finding P1-4: mtimes must not change either -- true no-op
+    for name, t in first_mtimes.items():
+        assert (target / name).stat().st_mtime_ns == t, \
+            f"{name} mtime changed on idempotent re-run"
 
 
 def test_scaffold_idempotency_drift_SCF004(tmp_path, capsys):

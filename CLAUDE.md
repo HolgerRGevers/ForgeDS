@@ -154,11 +154,12 @@ Bundler rule allocation (`BND###`, Phase 2C):
 - `BND006` — output ZIP collision without `--force`
 
 Deployer rule allocation (`DPY###`, Phase 2C):
-- `DPY001` — `--confirm` without `--target`, or spike gate closed
+- `DPY001` — `--confirm` without `--target`
 - `DPY002` — conflicting flags (`--dry-run --confirm`)
 - `DPY003` — no OAuth source resolved (lists every attempted source; value never logged)
 - `DPY004` — OAuth source resolved / dry-run preview / non-interactive abort (info)
 - `DPY005` — publish endpoint returned non-3000 code (UNVERIFIED shape)
+- `DPY006` — spike gate: `--confirm` gated on the §7.5 research spike (exit 3 until spike lands)
 
 Build-app rule allocation (`BLD###`, Phase 2C):
 - `BLD001` — `--target` required when `deploy` is in `--stages`

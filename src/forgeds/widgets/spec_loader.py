@@ -177,6 +177,11 @@ def check_cross_refs(
             ))
 
     consumes = spec.get("consumes_apis") or []
+    # Distinguish "config has no custom_apis key at all" from "custom_apis is
+    # explicitly empty" so that the first case can skip the check (the user
+    # hasn't wired custom_apis yet) and the second case can still flag orphan
+    # consumes entries. Review finding P1-1.
+    custom_apis_present = "custom_apis" in config
     custom_apis = config.get("custom_apis") or []
     # custom_apis may be list-of-strings (Form A) or dict-of-dicts (Form B)
     if isinstance(custom_apis, dict):
@@ -186,9 +191,9 @@ def check_cross_refs(
     else:
         declared = set()
 
-    if isinstance(consumes, list):
+    if isinstance(consumes, list) and custom_apis_present:
         for api in consumes:
-            if isinstance(api, str) and declared and api not in declared:
+            if isinstance(api, str) and api not in declared:
                 diags.append(_diag(
                     file_label, Severity.WARNING, "WSP004",
                     f"consumes_apis entry {api!r} is not declared in forgeds.yaml custom_apis",

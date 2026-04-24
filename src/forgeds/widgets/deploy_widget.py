@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Spike gate — only checked when --confirm is requested
     if args.confirm and not _spike_gate_open():
-        diagnostics.append(_diag("(spike)", Severity.ERROR, "DPY001",
+        diagnostics.append(_diag("(spike)", Severity.ERROR, "DPY006",
                                  _SPIKE_MESSAGE))
         _emit_output(tool, diagnostics, fmt)
         return 3

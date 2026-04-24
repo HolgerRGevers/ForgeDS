@@ -98,8 +98,14 @@ def _post_to_orchestrator(
     url: str,
     payload: dict,
     timeout_s: int,
-) -> tuple[bytes | None, Diagnostic | None]:
-    """POST the plan request; return (raw_response_bytes, diag_or_None)."""
+) -> tuple[bytes | None, Diagnostic | None, int]:
+    """POST the plan request. Returns (raw_bytes, diag, exit_code_on_failure).
+
+    Per spec §8.6:
+      exit 2 — caller-side error (4xx, missing --target, etc.)
+      exit 3 — toolchain / unreachable orchestrator (5xx, URLError, timeout)
+    Review finding P1-3.
+    """
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url, data=data,
@@ -108,20 +114,21 @@ def _post_to_orchestrator(
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-            return (resp.read(), None)
+            return (resp.read(), None, 0)
     except urllib.error.HTTPError as exc:
         if exc.code >= 500:
             return (None, _diag(url, Severity.ERROR, "BLD002",
                                 f"orchestrator HTTP {exc.code}; use --plan-only to "
-                                "preview dispatch."))
+                                "preview dispatch."), 3)
         return (None, _diag(url, Severity.ERROR, "BLD002",
-                            f"orchestrator HTTP {exc.code}"))
+                            f"orchestrator HTTP {exc.code} (caller-side)"), 2)
     except (urllib.error.URLError, OSError) as exc:
         return (None, _diag(url, Severity.ERROR, "BLD002",
                             f"Node Orchestrator Service not reachable at {url} ({exc}). "
                             "Use --plan-only to preview dispatch. The orchestrator "
                             "is designed but not yet implemented; see "
-                            "2026-04-23-forgeds-widgets-phase2-orchestration-design.md."))
+                            "2026-04-23-forgeds-widgets-phase2-orchestration-design.md."),
+                3)
 
 
 def _assemble_report(
@@ -280,11 +287,11 @@ def main(argv: list[str] | None = None) -> int:
 
     # POST to orchestrator
     orch_url = args.orchestrator_url.rstrip("/") + "/orchestrate"
-    raw, post_diag = _post_to_orchestrator(orch_url, plan_request, args.timeout)
+    raw, post_diag, post_exit = _post_to_orchestrator(orch_url, plan_request, args.timeout)
     if post_diag is not None:
         diagnostics.append(post_diag)
         _emit_output(tool, diagnostics, fmt)
-        return 3
+        return post_exit
 
     # Assemble report
     report = _assemble_report(raw or b"", args.target, args.collect_all)

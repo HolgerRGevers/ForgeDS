@@ -177,6 +177,19 @@ def test_build_app_orchestrator_http_500_BLD002(tmp_path, monkeypatch, capsys):
     assert "BLD002" in capsys.readouterr().out
 
 
+def test_build_app_orchestrator_http_400_exits_2(tmp_path, monkeypatch, capsys):
+    """Review finding P1-3: 4xx from orchestrator is caller-side -> exit 2."""
+    _write_forgeds_yaml(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    http_err = urllib.error.HTTPError("url", 400, "Bad Request", {}, None)
+    with patch("forgeds.widgets.build_app.urllib.request.urlopen",
+               side_effect=http_err):
+        rc = main([])
+    assert rc == 2
+    assert "BLD002" in capsys.readouterr().out
+
+
 # ---------------------------------------------------------------------------
 # Successful POST + report generation
 # ---------------------------------------------------------------------------

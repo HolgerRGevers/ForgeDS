@@ -315,6 +315,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     for path, content in planned_paths:
+        # Skip writes for files whose content already matches. This keeps
+        # the idempotent second run from churning mtimes. Review finding P1-4.
+        if path.exists() and _existing_content_matches(path, content):
+            continue
         try:
             path.write_text(content, encoding="utf-8")
         except OSError as exc:

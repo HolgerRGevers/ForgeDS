@@ -104,7 +104,7 @@ def test_deploy_confirm_returns_exit3_until_spike(
     out = capsys.readouterr().out
     assert rc == 3
     assert "§7.5" in out or "7.5" in out
-    assert "DPY001" in out
+    assert "DPY006" in out
 
 
 def test_deploy_spike_gate_env_alone_not_sufficient(
@@ -118,7 +118,7 @@ def test_deploy_spike_gate_env_alone_not_sufficient(
 
     rc = deploy_main(["--confirm", "--target", "creator:app-id=a", "--non-interactive"])
     assert rc == 3
-    assert "DPY001" in capsys.readouterr().out
+    assert "DPY006" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

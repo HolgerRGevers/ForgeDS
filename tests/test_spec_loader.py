@@ -214,3 +214,22 @@ def test_cross_ref_all_match_no_diagnostics():
     config = {"custom_apis": ["api1"]}
     diags = check_cross_refs(spec, manifest, directory_name="w", config=config)
     assert diags == []
+
+
+def test_cross_ref_custom_apis_explicitly_empty_flags_orphans():
+    """Review finding P1-1: when custom_apis is present but empty, consumes
+    entries must still be flagged as orphans."""
+    spec = {"name": "w", "consumes_apis": ["api1", "api2"]}
+    config = {"custom_apis": []}
+    diags = check_cross_refs(spec, manifest=None, directory_name=None, config=config)
+    wsp004 = [d for d in diags if d.rule == "WSP004"]
+    assert len(wsp004) == 2
+
+
+def test_cross_ref_custom_apis_absent_skips_check():
+    """Review finding P1-1: when custom_apis is absent from config, the user
+    hasn't wired it yet -- don't flag consumes entries."""
+    spec = {"name": "w", "consumes_apis": ["api1"]}
+    config = {}  # no custom_apis key at all
+    diags = check_cross_refs(spec, manifest=None, directory_name=None, config=config)
+    assert [d for d in diags if d.rule == "WSP004"] == []
