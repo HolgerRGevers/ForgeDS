@@ -252,6 +252,13 @@ python -m bridge
 
 Then open [https://holgerrgevers.github.io/ForgeDS/](https://holgerrgevers.github.io/ForgeDS/) in your browser.
 
+## Skills Journey
+
+This repository spans **Phase 2** (development engine) and **Phase 6** (web IDE)
+of a development journey that began with a Zoho Creator assessment and grew
+into five repositories, a mathematical framework, and a C runtime. See the
+[full narrative](https://github.com/holgergevers-hub/Portfolio) for context.
+
 ## License
 
 MIT
