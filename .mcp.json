@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "node-server-orchestrator": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "node-server-orchestrator"
+      ]
+    }
+  }
+}
