@@ -68,7 +68,7 @@
 - Modify: `package.json`
 - Modify: `src/main.tsx`
 
-- [ ] **Step 1: Install the dependency**
+- [x] **Step 1: Install the dependency**
 
 Run (from `web/`):
 
@@ -78,7 +78,7 @@ npm install dockview-react@^3
 
 Expected output: installation succeeds, `package.json` shows `"dockview-react"` in `dependencies`. If the exact minor version published differs, that's fine — pick the latest published under major v3.
 
-- [ ] **Step 2: Confirm install**
+- [x] **Step 2: Confirm install**
 
 ```bash
 ls node_modules/dockview-react/package.json
@@ -87,7 +87,7 @@ cat node_modules/dockview-react/package.json | grep '"version"' | head -1
 
 Expected: file exists, version begins with `3.`.
 
-- [ ] **Step 3: Import dockview CSS at the app entry point**
+- [x] **Step 3: Import dockview CSS at the app entry point**
 
 Open `src/main.tsx`. Find the existing CSS imports near the top (there should be `./index.css`). Add **immediately after** `./index.css`:
 
@@ -95,7 +95,7 @@ Open `src/main.tsx`. Find the existing CSS imports near the top (there should be
 import "dockview-react/dist/styles/dockview.css";
 ```
 
-- [ ] **Step 4: Verify Vite still builds**
+- [x] **Step 4: Verify Vite still builds**
 
 ```bash
 npm run build
@@ -103,7 +103,7 @@ npm run build
 
 Expected: build succeeds with no CSS resolution errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json package-lock.json src/main.tsx
@@ -117,7 +117,7 @@ git commit -m "feat(ide): add dockview-react dependency"
 **Files:**
 - Modify: `src/types/ide.ts`
 
-- [ ] **Step 1: Add new types to `src/types/ide.ts`**
+- [x] **Step 1: Add new types to `src/types/ide.ts`**
 
 Open `src/types/ide.ts`. Add the following **after** the existing `ConsoleTab` type alias (currently line 115):
 
@@ -149,7 +149,7 @@ export interface PanelDockHint {
 export type AppLoadSource = "wizard" | "repo" | "upload" | "bridge-auto" | null;
 ```
 
-- [ ] **Step 2: Extend the `IdeStore` interface**
+- [x] **Step 2: Extend the `IdeStore` interface**
 
 In the same file, find `export interface IdeStore {` (currently around line 119). Locate the `// Dev console` block and replace
 
@@ -194,7 +194,7 @@ with:
   markCompleteScriptShown: (appName: string) => void;
 ```
 
-- [ ] **Step 3: TypeScript check — expected to report errors**
+- [x] **Step 3: TypeScript check — expected to report errors**
 
 ```bash
 npx tsc -b --noEmit
@@ -202,7 +202,7 @@ npx tsc -b --noEmit
 
 Expected: errors in `src/stores/ideStore.ts` (missing implementations for new actions, stale `activeConsoleTab` / `setActiveConsoleTab` references) and `src/components/ide/DevConsole.tsx` (uses the old names). These are fixed by Task 3 and Task 9.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/types/ide.ts
@@ -217,7 +217,7 @@ git commit -m "feat(ide): add shell-overhaul types (ScriptsTab, PanelDockHint, C
 - Modify: `src/stores/ideStore.ts`
 - Test: `tests/stores/ideStore.test.ts` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/stores/ideStore.test.ts`:
 
@@ -304,7 +304,7 @@ describe("ideStore — shell overhaul additions", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/stores/ideStore.test.ts
@@ -312,7 +312,7 @@ npx vitest run tests/stores/ideStore.test.ts
 
 Expected: test file does compile only partially (due to store not having the new actions), or tests fail at runtime with "setActiveConsoleCategory is not a function". This is the red phase.
 
-- [ ] **Step 3: Update `src/stores/ideStore.ts`**
+- [x] **Step 3: Update `src/stores/ideStore.ts`**
 
 Open `src/stores/ideStore.ts`. Replace the whole file with:
 
@@ -518,7 +518,7 @@ export const useIdeStore = create<IdeStore>((set, get) => ({
 }));
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/stores/ideStore.test.ts
@@ -526,7 +526,7 @@ npx vitest run tests/stores/ideStore.test.ts
 
 Expected: all 5 tests pass.
 
-- [ ] **Step 5: TypeScript check — residual errors expected**
+- [x] **Step 5: TypeScript check — residual errors expected**
 
 ```bash
 npx tsc -b --noEmit
@@ -534,7 +534,7 @@ npx tsc -b --noEmit
 
 Expected: `src/components/ide/DevConsole.tsx` still references `activeConsoleTab` / `setActiveConsoleTab` (fixed in Task 9). Other files should compile.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/stores/ideStore.ts tests/stores/ideStore.test.ts
@@ -549,7 +549,7 @@ git commit -m "feat(ide): extend ideStore with two-level console + appLoadSource
 - Create: `src/stores/layoutStore.ts`
 - Test: `tests/stores/layoutStore.test.ts` (new)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/stores/layoutStore.test.ts`:
 
@@ -623,7 +623,7 @@ describe("layoutStore", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/stores/layoutStore.test.ts
@@ -631,7 +631,7 @@ npx vitest run tests/stores/layoutStore.test.ts
 
 Expected: fails with "Cannot find module '../../src/stores/layoutStore'".
 
-- [ ] **Step 3: Implement `src/stores/layoutStore.ts`**
+- [x] **Step 3: Implement `src/stores/layoutStore.ts`**
 
 Create the file with contents:
 
@@ -717,7 +717,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
 }));
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/stores/layoutStore.test.ts
@@ -725,7 +725,7 @@ npx vitest run tests/stores/layoutStore.test.ts
 
 Expected: all 5 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/stores/layoutStore.ts tests/stores/layoutStore.test.ts
@@ -741,7 +741,7 @@ git commit -m "feat(ide): add layoutStore for dockview state persistence"
 
 No dedicated unit test — covered by the integration test in Task 19. Behavior-testing dockview in jsdom is brittle; integration test hits the real API surface.
 
-- [ ] **Step 1: Create `src/components/ide/DockviewHost.tsx`**
+- [x] **Step 1: Create `src/components/ide/DockviewHost.tsx`**
 
 ```tsx
 import { useCallback, useEffect, useRef } from "react";
@@ -929,7 +929,7 @@ export function DockviewHost({ registry, onReady }: DockviewHostProps) {
 }
 ```
 
-- [ ] **Step 2: TypeScript check**
+- [x] **Step 2: TypeScript check**
 
 ```bash
 npx tsc -b --noEmit
@@ -937,7 +937,7 @@ npx tsc -b --noEmit
 
 Expected: no new errors in DockviewHost. Residual errors in IdePage/DevConsole still present (fixed later).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/ide/DockviewHost.tsx
@@ -952,7 +952,7 @@ git commit -m "feat(ide): add DockviewHost wrapping dockview-react with persiste
 - Create: `src/components/ide/ActivityBar.tsx`
 - Test: `tests/components/ide/ActivityBar.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/components/ide/ActivityBar.test.tsx`:
 
@@ -1012,7 +1012,7 @@ describe("ActivityBar", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/components/ide/ActivityBar.test.tsx
@@ -1020,7 +1020,7 @@ npx vitest run tests/components/ide/ActivityBar.test.tsx
 
 Expected: fails with "Cannot find module '.../ActivityBar'".
 
-- [ ] **Step 3: Implement `src/components/ide/ActivityBar.tsx`**
+- [x] **Step 3: Implement `src/components/ide/ActivityBar.tsx`**
 
 ```tsx
 import type { ConsoleCategory } from "../../types/ide";
@@ -1074,7 +1074,7 @@ export function ActivityBar({ onToggle, onConsoleCategory }: ActivityBarProps) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/components/ide/ActivityBar.test.tsx
@@ -1082,7 +1082,7 @@ npx vitest run tests/components/ide/ActivityBar.test.tsx
 
 Expected: all 5 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/ActivityBar.tsx tests/components/ide/ActivityBar.test.tsx
@@ -1098,7 +1098,7 @@ git commit -m "feat(ide): add ActivityBar with 6 icon buttons"
 - Delete: `src/components/ide/DevConsole.tsx`
 - Modify: `src/components/ide/index.ts`
 
-- [ ] **Step 1: Create `src/components/ide/DevToolsCategory.tsx`**
+- [x] **Step 1: Create `src/components/ide/DevToolsCategory.tsx`**
 
 Copy the internal helper functions and sub-tab components from the existing `DevConsole.tsx`, but export only a component that renders the active Dev Tools sub-tab. No tab bar, no collapse button, no outer header — those move to `ConsolePanel` (Task 10).
 
@@ -1442,13 +1442,13 @@ export function DevToolsCategory() {
 }
 ```
 
-- [ ] **Step 2: Delete `src/components/ide/DevConsole.tsx`**
+- [x] **Step 2: Delete `src/components/ide/DevConsole.tsx`**
 
 ```bash
 git rm src/components/ide/DevConsole.tsx
 ```
 
-- [ ] **Step 3: Update `src/components/ide/index.ts` exports**
+- [x] **Step 3: Update `src/components/ide/index.ts` exports**
 
 Open `src/components/ide/index.ts`. Replace:
 
@@ -1462,7 +1462,7 @@ with:
 export { DevToolsCategory } from "./DevToolsCategory";
 ```
 
-- [ ] **Step 4: TypeScript check**
+- [x] **Step 4: TypeScript check**
 
 ```bash
 npx tsc -b --noEmit
@@ -1470,7 +1470,7 @@ npx tsc -b --noEmit
 
 Expected: `src/pages/IdePage.tsx` still imports `DevConsole` — fixed in later tasks. DevToolsCategory itself compiles.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/DevToolsCategory.tsx src/components/ide/index.ts
@@ -1485,7 +1485,7 @@ git commit -m "refactor(ide): rename DevConsole to DevToolsCategory (strip outer
 - Create: `src/components/ide/CompleteScriptView.tsx`
 - Test: `tests/components/ide/CompleteScriptView.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/components/ide/CompleteScriptView.test.tsx`:
 
@@ -1549,7 +1549,7 @@ describe("CompleteScriptView", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/components/ide/CompleteScriptView.test.tsx
@@ -1557,7 +1557,7 @@ npx vitest run tests/components/ide/CompleteScriptView.test.tsx
 
 Expected: fails with "Cannot find module '.../CompleteScriptView'".
 
-- [ ] **Step 3: Implement `src/components/ide/CompleteScriptView.tsx`**
+- [x] **Step 3: Implement `src/components/ide/CompleteScriptView.tsx`**
 
 ```tsx
 import { useCallback } from "react";
@@ -1651,7 +1651,7 @@ export function CompleteScriptView() {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/components/ide/CompleteScriptView.test.tsx
@@ -1659,7 +1659,7 @@ npx vitest run tests/components/ide/CompleteScriptView.test.tsx
 
 Expected: all 3 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/CompleteScriptView.tsx tests/components/ide/CompleteScriptView.test.tsx
@@ -1674,7 +1674,7 @@ git commit -m "feat(ide): add CompleteScriptView summary + open-in-editor action
 - Create: `src/components/ide/WorkflowFormSidebar.tsx`
 - Test: `tests/components/ide/WorkflowFormSidebar.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 // tests/components/ide/WorkflowFormSidebar.test.tsx
@@ -1739,7 +1739,7 @@ describe("WorkflowFormSidebar", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/components/ide/WorkflowFormSidebar.test.tsx
@@ -1747,7 +1747,7 @@ npx vitest run tests/components/ide/WorkflowFormSidebar.test.tsx
 
 Expected: fails with module resolution error.
 
-- [ ] **Step 3: Implement `src/components/ide/WorkflowFormSidebar.tsx`**
+- [x] **Step 3: Implement `src/components/ide/WorkflowFormSidebar.tsx`**
 
 ```tsx
 export interface WorkflowFormEntry {
@@ -1837,7 +1837,7 @@ function FormRow({
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/components/ide/WorkflowFormSidebar.test.tsx
@@ -1845,7 +1845,7 @@ npx vitest run tests/components/ide/WorkflowFormSidebar.test.tsx
 
 Expected: all 4 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/WorkflowFormSidebar.tsx tests/components/ide/WorkflowFormSidebar.test.tsx
@@ -1860,7 +1860,7 @@ git commit -m "feat(ide): add WorkflowFormSidebar (forms with/without sections)"
 - Create: `src/components/ide/WorkflowDetailTable.tsx`
 - Test: `tests/components/ide/WorkflowDetailTable.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 // tests/components/ide/WorkflowDetailTable.test.tsx
@@ -1920,7 +1920,7 @@ describe("WorkflowDetailTable", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/components/ide/WorkflowDetailTable.test.tsx
@@ -1928,7 +1928,7 @@ npx vitest run tests/components/ide/WorkflowDetailTable.test.tsx
 
 Expected: module-resolution failure.
 
-- [ ] **Step 3: Implement `src/components/ide/WorkflowDetailTable.tsx`**
+- [x] **Step 3: Implement `src/components/ide/WorkflowDetailTable.tsx`**
 
 ```tsx
 export interface WorkflowRow {
@@ -1983,7 +1983,7 @@ export function WorkflowDetailTable({
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/components/ide/WorkflowDetailTable.test.tsx
@@ -1991,7 +1991,7 @@ npx vitest run tests/components/ide/WorkflowDetailTable.test.tsx
 
 Expected: all 3 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/WorkflowDetailTable.tsx tests/components/ide/WorkflowDetailTable.test.tsx
@@ -2006,7 +2006,7 @@ git commit -m "feat(ide): add WorkflowDetailTable with Name/Status/Created colum
 - Create: `src/components/ide/WorkflowTabView.tsx`
 - Test: `tests/components/ide/WorkflowTabView.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 // tests/components/ide/WorkflowTabView.test.tsx
@@ -2058,7 +2058,7 @@ describe("WorkflowTabView", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/components/ide/WorkflowTabView.test.tsx
@@ -2066,7 +2066,7 @@ npx vitest run tests/components/ide/WorkflowTabView.test.tsx
 
 Expected: module-resolution failure.
 
-- [ ] **Step 3: Implement `src/components/ide/WorkflowTabView.tsx`**
+- [x] **Step 3: Implement `src/components/ide/WorkflowTabView.tsx`**
 
 ```tsx
 import { useMemo, useState } from "react";
@@ -2165,7 +2165,7 @@ export function WorkflowTabView({ workflowType }: WorkflowTabViewProps) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/components/ide/WorkflowTabView.test.tsx
@@ -2173,7 +2173,7 @@ npx vitest run tests/components/ide/WorkflowTabView.test.tsx
 
 Expected: all 3 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/WorkflowTabView.tsx tests/components/ide/WorkflowTabView.test.tsx
@@ -2188,7 +2188,7 @@ git commit -m "feat(ide): add WorkflowTabView (empty-state scaffold for 7 workfl
 - Create: `src/components/ide/ConsolePanel.tsx`
 - Test: `tests/components/ide/ConsolePanel.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 // tests/components/ide/ConsolePanel.test.tsx
@@ -2242,7 +2242,7 @@ describe("ConsolePanel", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/components/ide/ConsolePanel.test.tsx
@@ -2250,7 +2250,7 @@ npx vitest run tests/components/ide/ConsolePanel.test.tsx
 
 Expected: module-resolution failure.
 
-- [ ] **Step 3: Implement `src/components/ide/ConsolePanel.tsx`**
+- [x] **Step 3: Implement `src/components/ide/ConsolePanel.tsx`**
 
 ```tsx
 import { useEffect, useRef, useState } from "react";
@@ -2463,7 +2463,7 @@ function NarrowHeader(props: HeaderProps) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/components/ide/ConsolePanel.test.tsx
@@ -2471,7 +2471,7 @@ npx vitest run tests/components/ide/ConsolePanel.test.tsx
 
 Expected: all 3 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ide/ConsolePanel.tsx tests/components/ide/ConsolePanel.test.tsx
@@ -2486,7 +2486,7 @@ git commit -m "feat(ide): add ConsolePanel with two-level tabs and narrow-width 
 - Create: `src/hooks/useIdeBootstrap.ts`
 - Test: `tests/hooks/useIdeBootstrap.test.tsx` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 // tests/hooks/useIdeBootstrap.test.tsx
@@ -2602,7 +2602,7 @@ describe("useIdeBootstrap first-load matrix", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 npx vitest run tests/hooks/useIdeBootstrap.test.tsx
@@ -2610,7 +2610,7 @@ npx vitest run tests/hooks/useIdeBootstrap.test.tsx
 
 Expected: module-resolution failure.
 
-- [ ] **Step 3: Implement `src/hooks/useIdeBootstrap.ts`**
+- [x] **Step 3: Implement `src/hooks/useIdeBootstrap.ts`**
 
 Open the current `src/pages/IdePage.tsx` and extract the effects into the hook. Write:
 
@@ -2853,7 +2853,7 @@ export function useIdeBootstrap() {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npx vitest run tests/hooks/useIdeBootstrap.test.tsx
@@ -2861,7 +2861,7 @@ npx vitest run tests/hooks/useIdeBootstrap.test.tsx
 
 Expected: all 5 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/hooks/useIdeBootstrap.ts tests/hooks/useIdeBootstrap.test.tsx
@@ -2876,7 +2876,7 @@ git commit -m "feat(ide): extract useIdeBootstrap hook with first-load trigger"
 - Create: `src/components/ide/IdeShell.tsx`
 - Create: `src/components/ide/EditorPanel.tsx` (tiny wrapper — dockview components expect panel-shaped props)
 
-- [ ] **Step 1: Create `src/components/ide/EditorPanel.tsx`**
+- [x] **Step 1: Create `src/components/ide/EditorPanel.tsx`**
 
 Dockview registers components that receive `IDockviewPanelProps`. Our existing components (`RepoExplorer`, `InspectorPanel`, etc.) don't take those props, but they don't need them — the wrapper ignores props and renders the component.
 
@@ -2889,7 +2889,7 @@ export function EditorPanel(_props: IDockviewPanelProps) {
 }
 ```
 
-- [ ] **Step 2: Create `src/components/ide/IdeShell.tsx`**
+- [x] **Step 2: Create `src/components/ide/IdeShell.tsx`**
 
 ```tsx
 import { useCallback, useRef } from "react";
@@ -3072,7 +3072,7 @@ export function IdeShell() {
 }
 ```
 
-- [ ] **Step 3: TypeScript check**
+- [x] **Step 3: TypeScript check**
 
 ```bash
 npx tsc -b --noEmit
@@ -3080,7 +3080,7 @@ npx tsc -b --noEmit
 
 Expected: clean for these two files. `IdePage.tsx` still uses old layout — fixed in Task 15.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/ide/IdeShell.tsx src/components/ide/EditorPanel.tsx
@@ -3095,7 +3095,7 @@ git commit -m "feat(ide): add IdeShell combining activity bar + dockview + top b
 - Modify: `src/pages/IdePage.tsx`
 - Modify: `src/components/ide/index.ts`
 
-- [ ] **Step 1: Replace `src/pages/IdePage.tsx`**
+- [x] **Step 1: Replace `src/pages/IdePage.tsx`**
 
 Entire file contents:
 
@@ -3107,7 +3107,7 @@ export default function IdePage() {
 }
 ```
 
-- [ ] **Step 2: Update `src/components/ide/index.ts` exports**
+- [x] **Step 2: Update `src/components/ide/index.ts` exports**
 
 Add exports for the new components by opening `src/components/ide/index.ts` and making the full contents:
 
@@ -3132,7 +3132,7 @@ export { WorkflowFormSidebar } from "./WorkflowFormSidebar";
 export { WorkflowTabView } from "./WorkflowTabView";
 ```
 
-- [ ] **Step 3: TypeScript check**
+- [x] **Step 3: TypeScript check**
 
 ```bash
 npx tsc -b --noEmit
@@ -3140,7 +3140,7 @@ npx tsc -b --noEmit
 
 Expected: clean.
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 npx vitest run
@@ -3148,7 +3148,7 @@ npx vitest run
 
 Expected: all existing tests still pass, new ones pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/pages/IdePage.tsx src/components/ide/index.ts
@@ -3162,7 +3162,7 @@ git commit -m "feat(ide): replace IdePage with IdeShell; update component index"
 **Files:**
 - Modify: `src/pages/BuildingPage.tsx`
 
-- [ ] **Step 1: Add the tag immediately before `loadGeneratedFiles`**
+- [x] **Step 1: Add the tag immediately before `loadGeneratedFiles`**
 
 Open `src/pages/BuildingPage.tsx`. Find the line (currently near line 227):
 
@@ -3177,7 +3177,7 @@ Replace it with:
           useIdeStore.getState().loadGeneratedFiles(files);
 ```
 
-- [ ] **Step 2: TypeScript check**
+- [x] **Step 2: TypeScript check**
 
 ```bash
 npx tsc -b --noEmit
@@ -3185,7 +3185,7 @@ npx tsc -b --noEmit
 
 Expected: clean.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/pages/BuildingPage.tsx
@@ -3200,7 +3200,7 @@ git commit -m "feat(ide): tag wizard-generated app loads with appLoadSource='wiz
 - Create: `src/components/ide/DockviewErrorBoundary.tsx`
 - Modify: `src/components/ide/IdeShell.tsx`
 
-- [ ] **Step 1: Create the error boundary**
+- [x] **Step 1: Create the error boundary**
 
 ```tsx
 // src/components/ide/DockviewErrorBoundary.tsx
@@ -3266,7 +3266,7 @@ export class DockviewErrorBoundary extends Component<Props, State> {
 }
 ```
 
-- [ ] **Step 2: Wrap `DockviewHost` in `IdeShell`**
+- [x] **Step 2: Wrap `DockviewHost` in `IdeShell`**
 
 Open `src/components/ide/IdeShell.tsx`. Find the `<DockviewHost ... />` usage. Wrap it:
 
@@ -3281,7 +3281,7 @@ import { DockviewErrorBoundary } from "./DockviewErrorBoundary";
         </DockviewErrorBoundary>
 ```
 
-- [ ] **Step 3: TypeScript check**
+- [x] **Step 3: TypeScript check**
 
 ```bash
 npx tsc -b --noEmit
@@ -3289,7 +3289,7 @@ npx tsc -b --noEmit
 
 Expected: clean.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/ide/DockviewErrorBoundary.tsx src/components/ide/IdeShell.tsx
@@ -3304,7 +3304,7 @@ git commit -m "feat(ide): add DockviewErrorBoundary with Reset Layout recovery"
 - Create: `src/styles/dockview-theme.css`
 - Modify: `src/main.tsx`
 
-- [ ] **Step 1: Create the theme file**
+- [x] **Step 1: Create the theme file**
 
 ```css
 /* src/styles/dockview-theme.css
@@ -3336,7 +3336,7 @@ git commit -m "feat(ide): add DockviewErrorBoundary with Reset Layout recovery"
 }
 ```
 
-- [ ] **Step 2: Import the theme after dockview's own CSS**
+- [x] **Step 2: Import the theme after dockview's own CSS**
 
 Open `src/main.tsx`. After the `import "dockview-react/dist/styles/dockview.css";` line (added in Task 1), add:
 
@@ -3344,7 +3344,7 @@ Open `src/main.tsx`. After the `import "dockview-react/dist/styles/dockview.css"
 import "./styles/dockview-theme.css";
 ```
 
-- [ ] **Step 3: Verify the build**
+- [x] **Step 3: Verify the build**
 
 ```bash
 npm run build
@@ -3352,7 +3352,7 @@ npm run build
 
 Expected: build succeeds.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/styles/dockview-theme.css src/main.tsx
@@ -3368,7 +3368,7 @@ git commit -m "style(ide): theme dockview to match existing dark palette"
 
 Integration tests mount the full shell. We stub dockview's heavy rendering (jsdom can't render canvas-style splitters) by mocking `dockview-react` to a simple div that registers panels as data attributes. This lets us test first-load wiring and localStorage handling without dockview's real DOM.
 
-- [ ] **Step 1: Write the integration test**
+- [x] **Step 1: Write the integration test**
 
 ```tsx
 // tests/integration/IdeShell.integration.test.tsx
@@ -3494,7 +3494,7 @@ describe("IdeShell integration", () => {
 });
 ```
 
-- [ ] **Step 2: Run the integration test**
+- [x] **Step 2: Run the integration test**
 
 ```bash
 npx vitest run tests/integration/IdeShell.integration.test.tsx
@@ -3502,7 +3502,7 @@ npx vitest run tests/integration/IdeShell.integration.test.tsx
 
 Expected: all 3 tests pass.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/integration/IdeShell.integration.test.tsx
@@ -3515,7 +3515,7 @@ git commit -m "test(ide): add IdeShell integration tests (panel registration + f
 
 No new files. This task runs the full suite, build, and a manual smoke check.
 
-- [ ] **Step 1: Run the full test suite**
+- [x] **Step 1: Run the full test suite**
 
 ```bash
 npx vitest run
@@ -3523,7 +3523,7 @@ npx vitest run
 
 Expected: **all** tests pass. If any failures, address them before proceeding.
 
-- [ ] **Step 2: Type check everything**
+- [x] **Step 2: Type check everything**
 
 ```bash
 npx tsc -b --noEmit
@@ -3531,7 +3531,7 @@ npx tsc -b --noEmit
 
 Expected: zero errors.
 
-- [ ] **Step 3: Build the production bundle**
+- [x] **Step 3: Build the production bundle**
 
 ```bash
 npm run build
@@ -3539,7 +3539,7 @@ npm run build
 
 Expected: build succeeds. If the bundle size budget is tight, check that `dockview-react` is added to `dependencies` (not dev) and shows up in the output stats.
 
-- [ ] **Step 4: Start the dev server**
+- [x] **Step 4: Start the dev server**
 
 ```bash
 npm run dev
@@ -3547,7 +3547,7 @@ npm run dev
 
 Expected: server starts, IDE page loads in browser at the reported URL.
 
-- [ ] **Step 5: Manual smoke checklist**
+- [ ] **Step 5: Manual smoke checklist** _(human smoke pending — all automated gates green: tsc, vitest 59/59, `npm run build`)_
 
 Walk through the manual QA checklist from the spec:
 
@@ -3560,7 +3560,7 @@ Walk through the manual QA checklist from the spec:
 - [ ] Simulate wizard completion: from the dashboard or via dev tools, call `useIdeStore.getState().setAppLoadSource("wizard")` then `loadAppStructure(...)`. Verify the `.ds` editor tab opens and Complete Script becomes active.
 - [ ] Reload with a pre-loaded app (no new acquisition) — layout and console state undisturbed.
 
-- [ ] **Step 6: Commit the final QA marker if any minor fixes were required**
+- [x] **Step 6: Commit the final QA marker if any minor fixes were required**
 
 If the smoke test required any small adjustments:
 
@@ -3571,7 +3571,7 @@ git commit -m "chore(ide): post-QA polish for shell overhaul"
 
 If nothing needed fixing, skip this step.
 
-- [ ] **Step 7: Final summary**
+- [x] **Step 7: Final summary**
 
 Confirm to the user:
 - All automated tests pass.
