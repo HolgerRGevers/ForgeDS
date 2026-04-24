@@ -1,0 +1,4 @@
+location: form_view
+description: A widget without a name.
+consumes_apis:
+  - get_pending_claims

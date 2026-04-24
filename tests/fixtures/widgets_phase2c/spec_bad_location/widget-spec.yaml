@@ -1,0 +1,5 @@
+name: bad_location_widget
+location: weird_value
+description: A widget with an invalid location enum.
+consumes_apis:
+  - get_pending_claims

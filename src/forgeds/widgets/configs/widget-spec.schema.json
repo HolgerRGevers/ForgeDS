@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ForgeDS widget-spec.yaml",
+  "description": "Per-widget authoring grammar colocated with plugin-manifest.json. Phase 2C. Note: v1 requires single-line scalars for 'description' (multi-line folded/block scalars not supported by the stdlib YAML loader).",
+  "type": "object",
+  "required": ["name", "location", "description", "consumes_apis"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "location": {
+      "type": "string",
+      "enum": ["form_view", "report_view", "standalone"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "consumes_apis": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "ui_primitives": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "state_model": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "events_bound": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "last_uploaded_at": {"type": ["string", "null"]},
+        "last_uploaded_version": {"type": ["string", "null"]},
+        "last_uploaded_target": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

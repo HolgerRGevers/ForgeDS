@@ -1,0 +1,6 @@
+name: expense_dashboard
+location: form_view
+description: Displays expense claims awaiting approval.
+consumes_apis:
+  - get_pending_claims
+  - approve_claim
