@@ -169,6 +169,16 @@ widgets:
     # Optional Phase 2B override; relative to `root`. Defaults to <root>/index.js.
     # entry_point: src/main.js
 
+# Deploy-pipeline hints (Phase 2C, optional). OAuth credentials are never
+# stored here -- use ZOHO_ACCESS_TOKEN / ZOHO_REFRESH_TOKEN env vars or
+# config/zoho-api.yaml (gitignored). The deploy: block is a free-form hint
+# block; unknown keys are preserved.
+#
+# deploy:
+#   oauth_env_prefix: ZOHO          # default; env vars are ZOHO_ACCESS_TOKEN, ...
+#   auth_base: https://accounts.zoho.com   # override for non-US data centres
+#   default_target: creator:app-id=abc123  # default --target for forgeds-deploy-widget
+
 # Extended custom_apis form (Phase 2A, opt-in per project — do not mix with bare-list form above).
 # Uncomment and replace the bare list above to enable per-api parameter / return typing.
 # Phase 2A only validates the schema and emits CFG### diagnostics; typegen emission is deferred.

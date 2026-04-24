@@ -1,0 +1,27 @@
+# Starter .gitignore additions for a ForgeDS consumer project.
+# Merge these into your project's existing .gitignore.
+
+# ForgeDS generated language / SDK databases (stored next to the project)
+deluge_lang.db
+access_vba_lang.db
+zoho_widget_sdk.db
+
+# Widget runtime / build artefacts
+src/forgeds/widgets/runtime/sdk_mock.js   # generated; regenerate via forgeds-gen-sdk-mock
+dist/widgets/                             # forgeds-bundle-widget output
+dist/build-report.json                    # forgeds-build-app output
+dist/reports/                             # future: retained build reports
+
+# OAuth / deploy credentials -- NEVER commit
+config/zoho-api.yaml
+
+# Python build
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
