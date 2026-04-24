@@ -96,6 +96,11 @@ All linters emit `Diagnostic` objects with a `rule` field using these prefixes:
 | `JS:<rule>` | `forgeds.widgets.lint_widgets` | ESLint rule ID, foreign provenance (includes `JS:zoho-widget/...` from the local plugin) |
 | `CFG###` | `forgeds._shared.config` | Config-schema diagnostics (custom_apis, widgets, types) |
 | `STA###` | `forgeds.status.*` | `forgeds-status` aggregate-check diagnostics |
+| `WSP###` | `forgeds.widgets.spec_loader` | `widget-spec.yaml` schema / cross-ref violations (Phase 2C) |
+| `SCF###` | `forgeds.widgets.scaffold_widget` | Scaffolder diagnostics (collision, force-overwrite, drift) |
+| `BND###` | `forgeds.widgets.bundle_widget` | Bundler diagnostics (manifest/spec mismatch, zet stderr, size limits) |
+| `DPY###` | `forgeds.widgets.deploy_widget` | Deployer diagnostics (OAuth source, spike gate, conflicting flags) |
+| `BLD###` | `forgeds.widgets.build_app` | Build-app orchestrator-entry diagnostics (config validation, orchestrator unreachable, stage flag parsing) |
 
 Widget rule allocation:
 - `WG001` — widget root directory missing
@@ -126,6 +131,41 @@ Status rule allocation (`STA###`):
 - `STA004` — Node required by widgets but not on PATH
 - `STA005` — ESLint required but not resolvable via `npx`
 - `STA006` — a linter subprocess exited non-zero for non-lint reasons (crash)
+
+Widget-spec rule allocation (`WSP###`, Phase 2C):
+- `WSP001` — `widget-spec.yaml` missing or unparseable
+- `WSP002` — schema violation (missing required / wrong type / bad enum)
+- `WSP003` — name mismatch: `widget-spec.name` vs `plugin-manifest.name` vs directory name
+- `WSP004` — `consumes_apis[i]` not in `forgeds.yaml custom_apis` (warning; duplicate of WG003/CFG012 when invoked outside hybrid lint)
+- `WSP005` — decorative field has wrong type (warning, proceed)
+
+Scaffolder rule allocation (`SCF###`, Phase 2C):
+- `SCF001` — output file collision without `--force` (error)
+- `SCF002` — `--force` overwrote an existing file (warning per file)
+- `SCF003` — cannot create output dir / write file
+- `SCF004` — idempotency drift: on-disk content differs from re-scaffold baseline (warning)
+
+Bundler rule allocation (`BND###`, Phase 2C):
+- `BND001` — validation chain failure (aggregate of spec/manifest/cross-ref/structural)
+- `BND002` — `zet pack` non-zero exit (or pure-Python fallback raised OSError)
+- `BND003` — `zet pack` / lint subprocess stderr warnings
+- `BND004` — file-size sanity check exceeded (manifest > 64 KB, any JS > 2 MB — **UNVERIFIED** limits from community posts)
+- `BND005` — `TODO` token present in `index.js` at bundle time (ship-as-skeleton warning)
+- `BND006` — output ZIP collision without `--force`
+
+Deployer rule allocation (`DPY###`, Phase 2C):
+- `DPY001` — `--confirm` without `--target`, or spike gate closed
+- `DPY002` — conflicting flags (`--dry-run --confirm`)
+- `DPY003` — no OAuth source resolved (lists every attempted source; value never logged)
+- `DPY004` — OAuth source resolved / dry-run preview / non-interactive abort (info)
+- `DPY005` — publish endpoint returned non-3000 code (UNVERIFIED shape)
+
+Build-app rule allocation (`BLD###`, Phase 2C):
+- `BLD001` — `--target` required when `deploy` is in `--stages`
+- `BLD002` — Node Orchestrator Service unreachable (exit 3; points at `--plan-only`)
+- `BLD003` — invalid `--stages` token
+- `BLD004` — `forgeds.yaml` validation surfaced CFG diagnostics (warning, non-halting)
+- `BLD005` — `forgeds.yaml` not found from cwd upward
 
 ### Envelope versioning policy
 
@@ -196,3 +236,49 @@ global state between widgets. Default per-widget timeout is 10 s
 Entry-point discovery: default `<widget.root>/index.js`. Optional
 `entry_point:` under each widget in `forgeds.yaml` (relative to the
 widget's `root`) overrides the default.
+
+## Widget build pipeline (Phase 2C)
+
+Four new CLIs ship the widget end-to-end:
+
+- `forgeds-scaffold-widget` — emit a widget tree from `widget-spec.yaml`.
+- `forgeds-bundle-widget`   — validate + ZIP the tree for upload.
+- `forgeds-deploy-widget`   — upload the ZIP (dry-run default, spike-gated).
+- `forgeds-build-app`       — thin entry that POSTs a BuildPlan to the Node Orchestrator Service, or emits `build-plan-request.json` with `--plan-only`.
+
+ZET (Zoho Extension Toolkit) posture mirrors Phase 1 ESLint:
+
+- `npx zet --version` succeeds → `forgeds-bundle-widget` runs normally.
+- Absent → exit **3** with an install hint. Pass `--no-zet` to use the
+  pure-Python `zipfile` fallback. The fallback excludes `widget-spec.yaml`
+  from the bundle (authoring-only, not runtime).
+
+Dry-run posture asymmetry (§9.1 of the spec):
+
+| Command | Default |
+|---|---|
+| `forgeds-scaffold-widget` | writes files |
+| `forgeds-bundle-widget`   | writes files (no network) |
+| `forgeds-deploy-widget`   | **dry-run (no network)** unless `--confirm` |
+| `forgeds-build-app`       | POSTs to orchestrator; deploy stage itself is dry-run unless invoked directly |
+
+**Spike gate on `forgeds-deploy-widget --confirm`:** The publish
+endpoint shape is UNVERIFIED (spec §7.5). `--confirm` exits **3** until
+a research spike confirms the endpoint. Bypassable only from pytest via
+`FORGEDS_DEPLOY_SPIKE_OVERRIDE_TESTONLY=1` AND `PYTEST_CURRENT_TEST`
+set (the second is set automatically by pytest; production runs have
+neither and always exit 3). Do not set the override env var outside of
+a pytest run — behaviour is undefined.
+
+**Orchestrator service status:** `forgeds-build-app` POSTs to
+`http://127.0.0.1:9878/orchestrate`. The Node Orchestrator Service is
+designed (see `docs/superpowers/specs/2026-04-23-forgeds-widgets-phase2-orchestration-design.md`)
+but not yet implemented. Until it lands, use `--plan-only` — `build-app`
+emits the plan-request JSON to stdout and exits 0.
+
+**Token handling:** OAuth resolution order (spec §7.2): `--token` arg →
+`ZOHO_ACCESS_TOKEN` env → `config/zoho-api.yaml` → full refresh flow.
+The token value is **never** printed, never stored in results; only
+the source *name* (`env:ZOHO_ACCESS_TOKEN`, `config:zoho-api.yaml`,
+etc.) appears in logs. Unit tests assert this; don't change without
+re-asserting.

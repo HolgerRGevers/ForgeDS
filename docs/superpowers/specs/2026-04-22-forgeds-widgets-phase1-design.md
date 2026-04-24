@@ -30,9 +30,9 @@ Phase 1 delivers a minimum widget-lint infrastructure so downstream tools have s
 | Gap | Reason for deferral |
 |---|---|
 | G5 | Runtime verification (Node + vitest + mocked SDK) — separate project-scale effort |
-| G8 | Widget scaffolder — not blocking any downstream agent |
+| G8 | Widget scaffolder — not blocking any downstream agent (**picked up in Phase 2C** — see `2026-04-23-forgeds-widgets-phase2c-build-design.md` §5 and plan `2026-04-23-forgeds-widgets-phase2c.md` Task 4) |
 | G9 | OpenAPI/TS typegen from Custom APIs — consumer-ergonomics only |
-| G10 | Widget zip/bundle pipeline — deployment concern, not verification |
+| G10 | Widget zip/bundle pipeline — deployment concern, not verification (**picked up in Phase 2C** — spec §6 / plan Task 6) |
 
 ## 3. Architecture
 
