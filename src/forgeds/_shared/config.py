@@ -8,6 +8,10 @@ defaults when no config file is found, so tools work out-of-the-box.
 import os
 from pathlib import Path
 
+from forgeds._shared.diagnostics import Diagnostic, Severity
+
+_PRIMITIVE_TYPES = {"string", "integer", "number", "boolean", "any"}
+
 
 def _load_yaml_simple(path: str) -> dict:
     """Minimal YAML loader — handles the subset used by forgeds.yaml.
@@ -81,9 +85,10 @@ def _load_yaml_simple(path: str) -> dict:
 
             # Inline list item: - [a, b]
             if item_text.startswith("[") and item_text.endswith("]"):
-                inner = item_text[1:-1]
-                parts = [p.strip().strip('"').strip("'") for p in inner.split(",")]
-                active_list.append(parts)
+                active_list.append(_parse_inline_list(item_text))
+            # Inline dict item: - { key: value, ... }
+            elif item_text.startswith("{") and item_text.endswith("}"):
+                active_list.append(_parse_inline_dict(item_text))
             # Dict list item: - key: value
             elif ": " in item_text and not item_text.startswith('"'):
                 k, v = item_text.split(": ", 1)
@@ -151,12 +156,70 @@ def _load_yaml_simple(path: str) -> dict:
     return result
 
 
+def _split_respecting_brackets(text: str, delim: str = ",") -> list[str]:
+    """Split `text` on `delim` but ignore separators inside [] / {} / quotes."""
+    parts: list[str] = []
+    depth_sq = depth_cu = 0
+    in_single = in_double = False
+    buf: list[str] = []
+    for ch in text:
+        if ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "'" and not in_double:
+            in_single = not in_single
+        elif not (in_single or in_double):
+            if ch == "[":
+                depth_sq += 1
+            elif ch == "]":
+                depth_sq -= 1
+            elif ch == "{":
+                depth_cu += 1
+            elif ch == "}":
+                depth_cu -= 1
+            elif ch == delim and depth_sq == 0 and depth_cu == 0:
+                parts.append("".join(buf).strip())
+                buf = []
+                continue
+        buf.append(ch)
+    tail = "".join(buf).strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _parse_inline_dict(text: str) -> dict:
+    """Parse `{ k: v, k2: v2, ... }` into a dict. Nested inline collections supported."""
+    inner = text.strip()[1:-1].strip()
+    if not inner:
+        return {}
+    out: dict = {}
+    for part in _split_respecting_brackets(inner, ","):
+        if ":" not in part:
+            continue
+        k, v = part.split(":", 1)
+        out[k.strip().strip('"').strip("'")] = _parse_value(v.strip())
+    return out
+
+
+def _parse_inline_list(text: str) -> list:
+    """Parse `[a, b, {k: v}]` into a list."""
+    inner = text.strip()[1:-1].strip()
+    if not inner:
+        return []
+    return [_parse_value(p) for p in _split_respecting_brackets(inner, ",")]
+
+
 def _parse_value(text: str):
-    """Parse a YAML scalar value."""
+    """Parse a YAML scalar or inline-collection value."""
+    text = text.strip()
     if text.startswith('"') and text.endswith('"'):
         return text[1:-1]
     if text.startswith("'") and text.endswith("'"):
         return text[1:-1]
+    if text.startswith("{") and text.endswith("}"):
+        return _parse_inline_dict(text)
+    if text.startswith("[") and text.endswith("]"):
+        return _parse_inline_list(text)
     if text.lower() == "true":
         return True
     if text.lower() == "false":
@@ -211,7 +274,154 @@ def load_config(start: str = None) -> dict:
             "exclude_fields": ["ID", "Added_User"],
         },
         "seed_data_dir": "config/seed-data",
+        "custom_apis": [],
+        "widgets": {},
     }
+
+
+def _cfg_diag(rule: str, severity: Severity, message: str, file: str = "forgeds.yaml") -> Diagnostic:
+    return Diagnostic(file=file, line=1, rule=rule, severity=severity, message=message)
+
+
+def _base_type(type_str: str) -> str:
+    """Strip a trailing `[]` to get the element type."""
+    t = type_str.strip()
+    while t.endswith("[]"):
+        t = t[:-2]
+    return t
+
+
+def validate_custom_apis(cfg: dict) -> list[Diagnostic]:
+    """Validate `custom_apis` (Form A or Form B) and widget cross-refs.
+
+    Emits:
+      - CFG010 ERROR  when mixed list/dict forms detected
+      - CFG011 INFO   once per config when Form A (bare list) is used
+      - CFG012 ERROR  when widgets[*].consumes_apis[i] is not declared
+      - CFG013 WARNING when `returns` or `params[i].type` is an unknown named type
+      - CFG014 ERROR  when a param dict is missing `name` or `type`
+      - CFG015 ERROR  when `permissions` is not a list of strings
+    """
+    diags: list[Diagnostic] = []
+    apis = cfg.get("custom_apis")
+    if apis is None:
+        apis = []
+
+    form_a = isinstance(apis, list) and all(isinstance(x, str) for x in apis)
+    form_b = isinstance(apis, dict)
+    list_with_dicts = isinstance(apis, list) and any(isinstance(x, dict) for x in apis)
+
+    if list_with_dicts or (isinstance(apis, list) and not form_a and apis):
+        diags.append(_cfg_diag(
+            "CFG010", Severity.ERROR,
+            "custom_apis: mixes bare-list and dict forms. Pick one per project.",
+        ))
+        return diags
+
+    if form_a and apis:
+        diags.append(_cfg_diag(
+            "CFG011", Severity.INFO,
+            "custom_apis declared in short (bare-list) form; typegen will skip.",
+        ))
+
+    if form_b:
+        known_types = {name for name in apis.keys()} | _PRIMITIVE_TYPES
+        for api_name, api_def in apis.items():
+            if not isinstance(api_def, dict):
+                continue
+
+            params = api_def.get("params") or []
+            if not isinstance(params, list):
+                continue
+            for i, p in enumerate(params):
+                if not isinstance(p, dict):
+                    continue
+                missing = [k for k in ("name", "type") if k not in p]
+                if missing:
+                    diags.append(_cfg_diag(
+                        "CFG014", Severity.ERROR,
+                        f"custom_apis.{api_name}.params[{i}] missing required key(s): "
+                        f"{', '.join(missing)}",
+                    ))
+                    continue
+                p_type = p.get("type")
+                if isinstance(p_type, str):
+                    base = _base_type(p_type)
+                    if base not in known_types:
+                        diags.append(_cfg_diag(
+                            "CFG013", Severity.WARNING,
+                            f"custom_apis.{api_name}.params[{i}].type references "
+                            f"unknown named type {base!r}",
+                        ))
+
+            returns = api_def.get("returns")
+            if isinstance(returns, str) and returns:
+                base = _base_type(returns)
+                if base not in known_types:
+                    diags.append(_cfg_diag(
+                        "CFG013", Severity.WARNING,
+                        f"custom_apis.{api_name}.returns references unknown named type "
+                        f"{base!r}",
+                    ))
+
+            perms = api_def.get("permissions")
+            if perms is not None:
+                if not (isinstance(perms, list) and all(isinstance(s, str) for s in perms)):
+                    diags.append(_cfg_diag(
+                        "CFG015", Severity.ERROR,
+                        f"custom_apis.{api_name}.permissions must be a list of strings",
+                    ))
+
+    # CFG012 — widget consumes_apis[i] must appear in custom_apis
+    declared = set()
+    if form_a:
+        declared = set(apis)
+    elif form_b:
+        declared = set(apis.keys())
+
+    widgets = cfg.get("widgets") or {}
+    if isinstance(widgets, dict):
+        for w_name, w_def in widgets.items():
+            if not isinstance(w_def, dict):
+                continue
+            for api_ref in w_def.get("consumes_apis") or []:
+                if api_ref not in declared:
+                    diags.append(_cfg_diag(
+                        "CFG012", Severity.ERROR,
+                        f"widget {w_name!r} consumes_apis entry {api_ref!r} "
+                        "is not in custom_apis",
+                    ))
+    return diags
+
+
+def normalize_custom_apis(cfg: dict) -> dict:
+    """Return a new cfg dict with custom_apis in dict-of-dicts form (in-memory).
+
+    Form A (`["a", "b"]`) → `{"a": {}, "b": {}}`. Form B is returned unchanged.
+    The original form is recorded at `cfg["_custom_apis_form"]` = `"A" | "B"`.
+    """
+    out = dict(cfg)
+    apis = cfg.get("custom_apis")
+    if isinstance(apis, list) and all(isinstance(x, str) for x in apis):
+        out["custom_apis"] = {name: {} for name in apis}
+        out["_custom_apis_form"] = "A"
+    elif isinstance(apis, dict):
+        out["custom_apis"] = apis
+        out["_custom_apis_form"] = "B"
+    else:
+        out["_custom_apis_form"] = "A"
+    return out
+
+
+def load_config_with_diagnostics(start: str = None) -> tuple[dict, list[Diagnostic]]:
+    """Load forgeds.yaml and return (cfg, CFG diagnostics).
+
+    The returned cfg is normalized (custom_apis always a dict) with the
+    original shape recorded at cfg['_custom_apis_form'].
+    """
+    raw = load_config(start)
+    diags = validate_custom_apis(raw)
+    return normalize_custom_apis(raw), diags
 
 
 def get_db_dir() -> Path:

@@ -1,0 +1,7 @@
+project:
+  name: "mixed_fixture"
+  version: "0.0.1"
+
+custom_apis:
+  - bare_item
+  - { name: "dict_in_list", type: "string" }

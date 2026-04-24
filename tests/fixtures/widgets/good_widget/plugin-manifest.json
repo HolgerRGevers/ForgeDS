@@ -1,0 +1,10 @@
+{
+  "name": "good_widget",
+  "version": "1.0.0",
+  "config": {
+    "widgets": [
+      {"location": "sidebar", "url": "index.html"}
+    ]
+  },
+  "permissions": ["ZOHO.CREATOR.API.read"]
+}

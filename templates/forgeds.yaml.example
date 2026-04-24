@@ -148,3 +148,39 @@ knowledge:
       module: creator-api
       follow_links: true
       max_depth: 3
+
+# Custom API registry — the Custom APIs this project exposes server-side.
+# Widget lint (WG003) cross-checks widgets[*].consumes_apis against this list.
+# Phase 2 may autodiscover from .ds / custom-api/*.dg; Phase 1 is declare-first.
+custom_apis:
+  - get_pending_claims
+  - approve_claim
+
+# Widget declarations — dict keyed by widget name.
+# Each entry declares the directory root (containing plugin-manifest.json) and
+# the list of custom_apis this widget is allowed to consume.
+# Permissions/roles/entry point are read from plugin-manifest.json at lint time.
+widgets:
+  expense_dashboard:
+    root: src/widgets/expense_dashboard/
+    consumes_apis:
+      - get_pending_claims
+      - approve_claim
+
+# Extended custom_apis form (Phase 2A, opt-in per project — do not mix with bare-list form above).
+# Uncomment and replace the bare list above to enable per-api parameter / return typing.
+# Phase 2A only validates the schema and emits CFG### diagnostics; typegen emission is deferred.
+#
+# custom_apis:
+#   get_pending_claims:
+#     params:
+#       - { name: "status", type: "string", required: true }
+#       - { name: "limit",  type: "integer", required: false, default: 50 }
+#     returns: "PendingClaim[]"
+#     permissions: ["api.read"]
+#     description: "Lists claims awaiting approval."
+#   approve_claim:
+#     params:
+#       - { name: "claim_id", type: "integer", required: true }
+#     returns: "ApprovalResult"
+#     permissions: ["api.write"]
