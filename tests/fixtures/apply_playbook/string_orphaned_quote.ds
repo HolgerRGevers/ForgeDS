@@ -1,0 +1,39 @@
+application "Test App"
+{
+	date format = "dd-MMM-yyyy"
+	time zone = "America/Los_Angeles"
+	time format = "24-hr"
+
+	forms
+	{
+		form orphaned_form
+		{
+			displayname = "unterminated
+			Section
+			(
+				type = section
+				row = 1
+				column = 0
+				width = medium
+			)
+			notes
+			(
+				type = textarea
+				displayname = "Notes"
+				row = 1
+				column = 1
+				width = medium
+			)
+			actions
+			{
+				on add
+				{
+					submit ( type = submit displayname = "Submit" )
+				}
+			}
+		}
+	}
+	reports
+	{
+	}
+}

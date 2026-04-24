@@ -1,0 +1,97 @@
+application "Test App"
+{
+	date format = "dd-MMM-yyyy"
+	time zone = "America/Los_Angeles"
+	time format = "24-hr"
+
+	forms
+	{
+		form expense_claims
+		{
+			displayname = "Expense Claims"
+			Section
+			(
+				type = section
+				row = 1
+				column = 0
+				width = medium
+			)
+			Email
+			(
+				type = email
+				row = 1
+				column = 1
+				width = medium
+			)
+			amount_zar
+			(
+				type = currency
+				displayname = "Amount (ZAR)"
+				row = 1
+				column = 1
+				width = medium
+			)
+			status
+			(
+				type = picklist
+				values = {"Pending LM Approval","Approved"}
+				row = 1
+				column = 1
+				width = medium
+			)
+			Key_1_Approver
+			(
+				type = text
+				row = 1
+				column = 1
+				width = medium
+			)
+			actions
+			{
+				on add
+				{
+					submit ( type = submit displayname = "Submit" )
+					reset ( type = reset displayname = "Reset" )
+				}
+			}
+		}
+		form departments
+		{
+			displayname = "Departments"
+			Section
+			(
+				type = section
+				row = 1
+				column = 0
+				width = medium
+			)
+			dept_name
+			(
+				type = text
+				row = 1
+				column = 1
+				width = medium
+			)
+			actions
+			{
+				on add
+				{
+					submit ( type = submit displayname = "Submit" )
+					reset ( type = reset displayname = "Reset" )
+				}
+			}
+		}
+	}
+	reports
+	{
+		list expense_claims_Report
+		{
+			displayName = "All Claims"
+			show all rows from expense_claims
+			(
+				Email
+				status as "Status"
+			)
+		}
+	}
+}
