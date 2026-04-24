@@ -93,7 +93,7 @@ class DSParser:
             if m and i + 1 < len(self.lines) and self.lines[i + 1].strip() == "{":
                 form_name = m.group(1)
                 form = self._parse_single_form(form_name, i)
-                if form and form.fields:
+                if form:
                     self.forms.append(form)
             i += 1
 
@@ -147,8 +147,6 @@ class DSParser:
 
             i += 1
 
-        if not fields:
-            return None
         return FormDef(name=form_name, display_name=display_name, fields=fields)
 
     def _parse_field(self, link_name: str, paren_start: int) -> FormField | None:
